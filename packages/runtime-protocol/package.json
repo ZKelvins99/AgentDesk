@@ -1,0 +1,13 @@
+{
+  "name": "@agentdesk/runtime-protocol",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "AgentDesk Runtime/Event/Capability/Artifact 协议类型（零依赖）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@agentdesk/runtime-pi",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Pi Runtime 适配器：复用 pi-web HTTP/SSE API（Windows 兼容）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agentdesk/runtime-protocol": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

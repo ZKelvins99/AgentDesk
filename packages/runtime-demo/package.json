@@ -1,0 +1,16 @@
+{
+  "name": "@agentdesk/runtime-demo",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "演示 Runtime：证明协议层可被完全假的 Runtime 实现（G02/G03/G22）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agentdesk/runtime-protocol": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

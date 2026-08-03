@@ -1,0 +1,56 @@
+# ===== 依赖 =====
+
+node_modules/
+
+# ===== 构建产物 =====
+
+dist/
+build/
+out/
+release/
+*.tsbuildinfo
+
+# ===== 包管理器 / monorepo 缓存 =====
+
+.turbo/
+.bun/
+.pnpm-store/
+.cache/
+
+# ===== 环境变量与密钥 =====
+
+.env
+.env.*
+!.env.example
+
+# ===== 日志 =====
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== 测试 / 覆盖率 =====
+
+coverage/
+.nyc_output/
+
+# ===== 本地工具索引 =====
+
+.codegraph/
+
+# ===== vendor 上游零修改拷贝（各自独立 git 仓库，按 UPSTREAM_SYNC.md 从 开源参考/ 重新同步） =====
+
+vendor/opencode/
+vendor/pi/
+vendor/pi-web/
+
+# ===== 操作系统 / 编辑器 =====
+
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*~
