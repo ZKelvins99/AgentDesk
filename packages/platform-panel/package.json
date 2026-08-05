@@ -15,6 +15,7 @@
     "@agentdesk/runtime-pi": "*",
     "@agentdesk/storage-core": "*",
     "@agentdesk/artifact-core": "*",
+    "@agentdesk/tool-core": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

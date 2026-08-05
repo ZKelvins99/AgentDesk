@@ -130,6 +130,19 @@ const server = createServer(async (req, res) => {
       json(res, 200, { ok: true, uri: artifact.uri })
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/tools") {
+      json(res, 200, { tools: panel.listTools() })
+      return
+    }
+    if (req.method === "POST" && url.pathname === "/api/tools/execute") {
+      const body = await readBody(req)
+      const result = await panel.executeTool(
+        String(body.toolId ?? ""),
+        typeof body.input === "object" && body.input !== null ? (body.input as Record<string, unknown>) : {},
+      )
+      json(res, 200, result)
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/switch") {
       const body = await readBody(req)
       const id = String(body.runtimeId ?? "")

@@ -3,6 +3,14 @@ import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
 import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
 import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
 import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
+import {
+  ToolRegistry,
+  fileReadTool,
+  fileWriteTool,
+  fileListTool,
+  fileStatTool,
+  pythonTool,
+} from "@agentdesk/tool-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
@@ -66,6 +74,7 @@ export class AgentDeskPanel {
   private readonly recovery?: CrashRecovery
   private readonly artifactStore?: ArtifactStore
   private readonly workspacePath?: string
+  private readonly toolRegistry: ToolRegistry
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -87,6 +96,13 @@ export class AgentDeskPanel {
       this.artifactStore = new ArtifactStore(this.storage)
       this.workspacePath = options.workspacePath
     }
+    // M13: 平台工具注册（filesystem + python）
+    this.toolRegistry = new ToolRegistry()
+    this.toolRegistry.register(fileReadTool)
+    this.toolRegistry.register(fileWriteTool)
+    this.toolRegistry.register(fileListTool)
+    this.toolRegistry.register(fileStatTool)
+    this.toolRegistry.register(pythonTool)
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -284,6 +300,19 @@ export class AgentDeskPanel {
   /** M12: 按 id 取单个 Artifact（最新版本） */
   getArtifact(id: string): Artifact | undefined {
     return this.artifactStore?.getLatest(id)
+  }
+
+  /** M13: 列出平台工具 */
+  listTools(): { id: string; description: string }[] {
+    return this.toolRegistry.list().map((t) => ({ id: t.id, description: t.description }))
+  }
+
+  /** M13: 执行平台工具（过 Permission Core） */
+  executeTool(id: string, input: Record<string, unknown>): Promise<{ ok: boolean; output?: unknown; error?: string; denied?: boolean }> {
+    return this.toolRegistry.execute(id, {
+      workspacePath: this.workspacePath ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace",
+      allowWrite: true,
+    }, input)
   }
 }
 

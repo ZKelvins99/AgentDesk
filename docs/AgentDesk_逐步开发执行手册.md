@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M13
-current_task: M13-T01
+current_phase: M14
+current_task: M14-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1204,6 +1204,8 @@ html
 
 ## M13-T01 Tool Protocol
 
+- [x]  packages/tool-core：AgentDeskTool 接口（id/description/inputSchema/execute）+ ToolResult/ToolExecutionContext
+
 ```ts
 interface AgentDeskTool {
   id: string
@@ -1215,9 +1217,13 @@ interface AgentDeskTool {
 
 ## M13-T02 Tool Registry
 
+- [x]  ToolRegistry：register/unregister/list/get/execute（execute 过 Permission Core）
+
 支持 register / unregister / list / get。
 
 ## M13-T03 Filesystem Tool
+
+- [x]  platform.file.read / write / list / stat，工作区路径限定（越界拒绝）
 
 先实现：
 
@@ -1229,9 +1235,13 @@ platform.file.list
 
 ## M13-T04 Python Tool
 
+- [x]  platform.python：隔离子进程执行（超时 30s、密钥/代理不继承、uv python find 定位解释器），实测 sum(1..100)=5050
+
 支持数据处理，必须隔离执行环境。
 
 ## M13-T05 Permission
+
+- [x]  PermissionCore：规则匹配（支持通配），deny 拦截平台工具；Native Tool 仍走 Native Permission Engine
 
 Platform Tool 走 AgentDesk Permission Core；Native Tool 仍可走 Native Permission Engine。
 
@@ -2748,6 +2758,28 @@ Verified:
 Pending:
 - M13-T01（Platform Tool System：Tool Protocol）
 
+## 2026-08-05（续 10）
+
+Completed:
+- M13-T01（Tool Protocol：AgentDeskTool 接口）
+- M13-T02（Tool Registry：register/unregister/list/get/execute）
+- M13-T03（Filesystem Tool：platform.file.read/write/list/stat，工作区限定）
+- M13-T04（Python Tool：隔离执行 + 超时 + uv 定位）
+- M13-T05（Permission：PermissionCore deny/allow + 通配匹配）
+- Gate G13（平台工具独立执行 + 统一权限）
+
+Changed:
+- packages/tool-core/（新增：protocol/permission/registry/filesystem-tools/python-tool + 7 测试）
+- packages/platform-panel/src/panel.ts + server.ts（/api/tools、/api/tools/execute）
+- packages/platform-panel/package.json（依赖 @agentdesk/tool-core）
+
+Verified:
+- tool.test.ts 7/7、根测试、typecheck、隔离检查通过
+- Panel 实测：工具列表 5 项、file.read/list、python sum=5050
+
+Pending:
+- M14-T01（Document/PDF Work：document.create）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3301,3 +3333,59 @@ Verification:
 Status: PASS
 
 - Artifact 预览按类型分支（text/code/image），UI 无大型 switch-case，类型由 server 端 mime 判断
+
+## M13-T01 Tool Protocol
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/protocol.ts（AgentDeskTool / ToolExecutionContext / ToolResult / okResult / errResult）
+
+Verification:
+- tool.test.ts：协议结构断言
+
+## M13-T02 Tool Registry
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/registry.ts（register/unregister/list/get/execute）
+
+Verification:
+- tool.test.ts：注册/注销/查询/执行
+
+## M13-T03 Filesystem Tool
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/filesystem-tools.ts（platform.file.read/write/list/stat）
+
+Verification:
+- 工作区路径限定（越界拒绝）；write 需 allowWrite；实测 hello.txt 读取 + 目录列表
+
+## M13-T04 Python Tool
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/python-tool.ts（隔离子进程 + 30s 超时 + 环境净化 + uv python find 定位）
+
+Verification:
+- 实测 sum(range(101)) = 5050；Windows Store python stub 通过 uv 定位真实解释器绕过
+
+## M13-T05 Permission
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/permission.ts（PermissionCore + matchPattern 通配）
+
+Verification:
+- deny 规则拦截 platform.file.write（denied=true）；未命中规则默认 allow
+
+## Gate G13
+
+Status: PASS
+
+- Platform Tool 独立于 Pi/OpenCode Runtime 执行（Panel /api/tools 直接调用），受统一 Permission Core 控制
