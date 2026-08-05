@@ -2,6 +2,7 @@ import { AgentDeskPlatform } from "@agentdesk/platform-core"
 import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
 import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
 import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
+import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
@@ -63,6 +64,7 @@ export class AgentDeskPanel {
   private readonly storage?: AgentDeskDatabase
   private readonly workspaceStore?: WorkspaceStore
   private readonly recovery?: CrashRecovery
+  private readonly artifactStore?: ArtifactStore
   private readonly workspacePath?: string
 
   constructor(options: AgentDeskPanelOptions = {}) {
@@ -82,6 +84,7 @@ export class AgentDeskPanel {
       this.storage = new AgentDeskDatabase(options.storageFile)
       this.workspaceStore = new WorkspaceStore(this.storage)
       this.recovery = new CrashRecovery(this.storage)
+      this.artifactStore = new ArtifactStore(this.storage)
       this.workspacePath = options.workspacePath
     }
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
@@ -267,6 +270,15 @@ export class AgentDeskPanel {
 
   recoverySnapshot(): RecoveryView {
     return this.restoreWorkspace()
+  }
+
+  /** M11: 创建 Artifact（平台级，供任意 Runtime 通过协议产出） */
+  createArtifact(input: CreateArtifactInput): Artifact | undefined {
+    return this.artifactStore?.create(input)
+  }
+
+  listArtifacts(): Artifact[] {
+    return this.artifactStore?.list() ?? []
   }
 }
 

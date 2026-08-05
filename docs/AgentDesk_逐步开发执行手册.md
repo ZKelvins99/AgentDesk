@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M11
-current_task: M11-T01
+current_phase: M12
+current_task: M12-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1106,6 +1106,8 @@ Desktop 崩溃后能恢复 Workspace。
 
 ## M11-T01 Artifact 定义
 
+- [x]  packages/artifact-core：Artifact 接口（id/type/title/uri/ownerRuntimeId/ownerAgentId/version/createdAt/metadata/parentIds）
+
 ```ts
 interface Artifact {
   id: string
@@ -1121,6 +1123,8 @@ interface Artifact {
 ```
 
 ## M11-T02 ArtifactType
+
+- [x]  ARTIFACT_TYPES 枚举：code/text/document/spreadsheet/slides/pdf/image/chart/dataset/html + mimeForType
 
 至少：
 
@@ -1139,9 +1143,13 @@ html
 
 ## M11-T03 Artifact Store
 
+- [x]  ArtifactStore：SQLite 持久化（artifacts 表，metadata/血缘/owner）+ 创建/查询/按 owner 列表 + create/update 事件
+
 统一保存 Artifact metadata。
 
 ## M11-T04 Artifact Version
+
+- [x]  支持 v1/v2/v3：update 生成新版本并保留历史，maxVersions 裁剪（retention）
 
 支持 v1 / v2 / v3。
 
@@ -2687,6 +2695,28 @@ Verified:
 Pending:
 - M11-T01（Artifact Protocol：Artifact 定义与核心）
 
+## 2026-08-05（续 8）
+
+Completed:
+- M11-T01（Artifact 定义：packages/artifact-core）
+- M11-T02（ArtifactType：10 类型 + mime 映射）
+- M11-T03（Artifact Store：SQLite 持久化 + 创建/查询/事件）
+- M11-T04（Artifact Version：多版本 + 历史保留 + retention 裁剪）
+- Gate G11（任意 Runtime 可仅通过协议创建 Artifact）
+
+Changed:
+- packages/artifact-core/（新增：artifact + artifact-store + 7 测试）
+- packages/storage-core/src/database.ts（artifacts 表迁移）
+- packages/platform-panel/src/panel.ts + server.ts（/api/artifacts GET/POST）
+- packages/platform-panel/package.json（依赖 @agentdesk/artifact-core）
+
+Verified:
+- artifact.test.ts 7/7、根测试、typecheck、隔离检查通过
+- Panel API 实测：创建 pdf/code artifact，SQLite 落库并列出
+
+Pending:
+- M12-T01（Artifact UI：右侧产物面板 + Preview）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3148,3 +3178,45 @@ Verification:
 Status: PASS
 
 - 应用关闭重开可恢复 Workspace 与 Native Session 映射（SQLite 持久化）
+
+## M11-T01 Artifact 定义
+
+Status: DONE
+
+Files changed:
+- packages/artifact-core/src/artifact.ts（Artifact 接口 + CreateArtifactInput + toArtifactRef + mimeForType）
+
+Verification:
+- artifact.test.ts：接口字段/类型断言通过
+
+## M11-T02 ArtifactType
+
+Status: DONE
+
+Verification:
+- ARTIFACT_TYPES 含 10 种类型；mimeForType 映射正确（pdf → application/pdf 等）
+
+## M11-T03 Artifact Store
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/src/database.ts（artifacts 表迁移）
+- packages/artifact-core/src/artifact-store.ts（create/list/listByOwner/get/versions/subscribe）
+- packages/platform-panel/src/panel.ts + server.ts（/api/artifacts GET/POST）
+
+Verification:
+- artifact.test.ts 7/7；Panel API 实测创建 + 列表持久化
+
+## M11-T04 Artifact Version
+
+Status: DONE
+
+Verification:
+- update 递增版本并保留历史；maxVersions 裁剪（retention 测试：保留最近 3 版）
+
+## Gate G11
+
+Status: PASS
+
+- 任意 Runtime 可通过平台协议（Panel POST /api/artifacts 或 ArtifactStore API）创建 Artifact，无需依赖 UI

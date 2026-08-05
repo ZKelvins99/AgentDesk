@@ -80,6 +80,24 @@ const server = createServer(async (req, res) => {
       json(res, 200, panel.recoverySnapshot())
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/artifacts") {
+      json(res, 200, { artifacts: panel.listArtifacts() })
+      return
+    }
+    if (req.method === "POST" && url.pathname === "/api/artifacts") {
+      const body = await readBody(req)
+      const artifact = panel.createArtifact({
+        type: String(body.type ?? "text"),
+        title: String(body.title ?? "untitled"),
+        uri: String(body.uri ?? ""),
+        ownerRuntimeId: body.ownerRuntimeId ? String(body.ownerRuntimeId) : undefined,
+        ownerAgentId: body.ownerAgentId ? String(body.ownerAgentId) : undefined,
+        metadata: typeof body.metadata === "object" && body.metadata !== null ? (body.metadata as Record<string, unknown>) : undefined,
+        parentIds: Array.isArray(body.parentIds) ? (body.parentIds as string[]) : undefined,
+      })
+      json(res, 200, { ok: true, artifact })
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/switch") {
       const body = await readBody(req)
       const id = String(body.runtimeId ?? "")

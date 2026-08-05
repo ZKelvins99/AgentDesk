@@ -50,6 +50,22 @@ export class AgentDeskDatabase {
         updated_at TEXT NOT NULL
       )
     `)
+    // M11: artifacts（metadata + 版本 + 血缘）
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS artifacts (
+        id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        uri TEXT NOT NULL,
+        owner_runtime_id TEXT,
+        owner_agent_id TEXT,
+        parent_ids_json TEXT NOT NULL DEFAULT '[]',
+        metadata_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (id, version)
+      )
+    `)
   }
 
   exec(sql: string): void {
