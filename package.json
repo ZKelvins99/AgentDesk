@@ -14,6 +14,24 @@
     "check:isolation": "node scripts/check-platform-isolation.ts",
     "index": "codegraph index ."
   },
+  "build": {
+    "appId": "com.agentdesk.desktop",
+    "productName": "AgentDesk",
+    "files": [
+      "packages/**/dist/**",
+      "packages/platform-panel/public/**"
+    ],
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"]
+    }
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"

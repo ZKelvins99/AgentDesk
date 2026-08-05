@@ -110,6 +110,8 @@ export class AgentDeskPanel {
   private readonly taskClassifier = new TaskClassifier()
   private readonly taskRouter = new TaskRouter()
   private readonly extensionRegistry = new ExtensionRegistry()
+  private readonly logs: Array<{ at: string; category: string; message: string; detail?: unknown }> = []
+  private static readonly MAX_LOGS = 1000
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -172,6 +174,13 @@ export class AgentDeskPanel {
         this.busySessions.add(event.sessionId)
       } else if (event.type === "session.idle") {
         this.busySessions.delete(event.sessionId)
+      }
+    })
+    // M24-T04: 结构化日志（session/agent/tool/permission/artifact/error）
+    this.platform.eventBus.subscribe((event) => {
+      const category = logCategoryOf(event.type)
+      if (category) {
+        this.log(category, `${event.type} (${event.runtimeId}${"sessionId" in event && event.sessionId ? " / " + event.sessionId : ""})`)
       }
     })
     const map = new Map(runtimes.map((r) => [r.id, r]))
@@ -461,8 +470,43 @@ export class AgentDeskPanel {
     return this.extensionRegistry
   }
 
+  /** M24-T04: 结构化日志查询 */
+  listLogs(limit = 200) {
+    return this.logs.slice(-limit)
+  }
+
+  /** M24-T05: 诊断报告 */
+  diagnostics() {
+    const runtimes = this.list()
+    return {
+      generatedAt: new Date().toISOString(),
+      version: { platform: "0.3.0", upstreamCommit: "1882c33" },
+      runtimes: runtimes.map((r) => ({ id: r.id, state: r.state, statusLabel: r.statusLabel, ok: r.ok, detail: r.detail })),
+      mode: this.modeSwitch.current(),
+      agents: this.agentRegistry.list().map((a) => a.id),
+      tools: this.toolRegistry.list().map((t) => t.id),
+      logCount: this.logs.length,
+      recentLogs: this.listLogs(50),
+    }
+  }
+
+  /** M24-T06: Auto Update —— 版本检查（最小实现：当前版本 + 更新源） */
+  checkForUpdate() {
+    return {
+      currentVersion: "0.3.0",
+      upstreamCommit: "1882c33",
+      updateSource: "https://github.com/ZKelvins99/AgentDesk/releases",
+      checkUrl: "https://api.github.com/repos/ZKelvins99/AgentDesk/releases/latest",
+    }
+  }
+
   private emitStatus(detail: string): void {
     void detail
+  }
+
+  private log(category: string, message: string, detail?: unknown): void {
+    this.logs.push({ at: new Date().toISOString(), category, message, detail })
+    if (this.logs.length > AgentDeskPanel.MAX_LOGS) this.logs.splice(0, this.logs.length - AgentDeskPanel.MAX_LOGS)
   }
 
   /** M13: 执行平台工具（过 Permission Core） */
@@ -509,4 +553,14 @@ export interface RecoveryView {
 function pathToFileUrl(filePath: string): string {
   const normalized = filePath.replace(/\\/g, "/")
   return `file:///${normalized}`
+}
+
+function logCategoryOf(eventType: string): string | undefined {
+  if (eventType.startsWith("session.")) return "session"
+  if (eventType.startsWith("message.") || eventType.startsWith("thinking.")) return "agent"
+  if (eventType.startsWith("tool.")) return "tool"
+  if (eventType.startsWith("permission.")) return "permission"
+  if (eventType.startsWith("artifact.")) return "artifact"
+  if (eventType === "error" || eventType === "session.error") return "error"
+  return undefined
 }

@@ -183,6 +183,19 @@ const server = createServer(async (req, res) => {
       })
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/logs") {
+      const limit = Number(url.searchParams.get("limit") ?? 200)
+      json(res, 200, { logs: panel.listLogs(limit) })
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/diagnostics") {
+      json(res, 200, panel.diagnostics())
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/version") {
+      json(res, 200, panel.checkForUpdate())
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {
       const body = await readBody(req)
       const result = await panel.executeTool(

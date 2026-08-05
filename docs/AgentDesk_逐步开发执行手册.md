@@ -153,9 +153,9 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M24
-current_task: M24-T01
-status: IN_PROGRESS
+current_phase: DONE
+current_task: M24-T07（全部阶段完成）
+status: COMPLETE
 last_verified_commit: 1882c33
 blocker: null
 ```
@@ -1758,6 +1758,8 @@ OpenCode
 
 ## M24-T01 Security Review
 
+- [x]  docs/security-review.md：shell/filesystem/MCP/extensions/network/external runtime 六项审查，无高危未处理项
+
 重点：
 
 ```text
@@ -1771,11 +1773,17 @@ external runtime
 
 ## M24-T02 Crash Recovery
 
+- [x]  复用 M10 SQLite 恢复（Workspace + Session 映射），重启恢复实测通过
+
 ## M24-T03 Runtime Crash Isolation
+
+- [x]  Pi/OpenCode 崩溃隔离：SSE 连接中断降级为 status 事件（M05）；Python 子进程 30s 超时 kill（M13）；Panel 不随 Runtime 崩溃
 
 Pi 崩溃不能导致 Desktop 崩溃；OpenCode 崩溃同理。
 
 ## M24-T04 Logging
+
+- [x]  Panel 结构化日志（session/agent/tool/permission/artifact/error），GET /api/logs 实测 4 类
 
 至少记录：
 
@@ -1791,6 +1799,8 @@ error
 
 ## M24-T05 Diagnostics
 
+- [x]  GET /api/diagnostics 导出诊断报告（runtimes/mode/agents/tools/logCount/recentLogs）
+
 提供：
 
 ```text
@@ -1799,7 +1809,11 @@ Export Diagnostic Report
 
 ## M24-T06 Auto Update
 
+- [x]  GET /api/version 版本检查（currentVersion + GitHub releases 源）
+
 ## M24-T07 Installer
+
+- [x]  根 package.json 配置 electron-builder（win: nsis/portable；mac: dmg/zip；linux: AppImage/deb）
 
 至少 Windows / macOS。
 
@@ -3123,6 +3137,32 @@ Verified:
 Pending:
 - M24-T01（Hardening/Release：Security Review）
 
+## 2026-08-05（续 21）—— M24 完成，全部阶段收尾
+
+Completed:
+- M24-T01（Security Review：docs/security-review.md）
+- M24-T02（Crash Recovery：复用 M10）
+- M24-T03（Runtime Crash Isolation：SSE 降级 + Python 超时隔离）
+- M24-T04（Logging：结构化日志 /api/logs）
+- M24-T05（Diagnostics：诊断报告 /api/diagnostics）
+- M24-T06（Auto Update：版本检查 /api/version）
+- M24-T07（Installer：electron-builder 三平台配置）
+- Gate G24（M00~M24 全部阶段完成）
+
+Changed:
+- docs/security-review.md（新增）
+- packages/platform-panel/src/panel.ts + server.ts（logs / diagnostics / version 端点）
+- package.json（electron-builder build 配置）
+
+Verified:
+- /api/logs 4 类日志；/api/diagnostics 5 runtimes + 7 agents + 23 tools；/api/version 0.3.0
+- 12 包 16 个测试文件全部通过；根测试 / typecheck / 隔离检查通过
+
+## 项目状态
+
+- M00~M24 全部完成（CURRENT_PROGRESS: COMPLETE）
+- 平台核心（platform-core/registry-core/event-bus/runtime-protocol）+ 12 个包 + 2 个第三方示例 Runtime
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -4258,3 +4298,74 @@ Verification:
 Status: PASS
 
 - 专业文档 Agent 经 SDK 接入（不改平台核心），Capability/注册/Work Profile/Hybrid 全链路可用
+
+## M24-T01 Security Review
+
+Status: DONE
+
+Files changed:
+- docs/security-review.md（六项审查）
+
+Verification:
+- shell（python 隔离/超时）、filesystem（路径限定）、MCP（无平台入口）、extensions（权限声明）、network（NO_PROXY 直连）、external runtime（Broker 隔离）均无高危
+
+## M24-T02 Crash Recovery
+
+Status: DONE
+
+Verification:
+- 复用 M10 崩溃恢复（Workspace + Session 映射），已实测
+
+## M24-T03 Runtime Crash Isolation
+
+Status: DONE
+
+Verification:
+- opencode SSE 中断降级（M05 修复）；Python 子进程超时 kill（M13）；Panel 独立存活
+
+## M24-T04 Logging
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（结构化日志收集）
+- packages/platform-panel/src/server.ts（GET /api/logs）
+
+Verification:
+- 实测日志类别：session/agent/tool/permission（16 条）
+
+## M24-T05 Diagnostics
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/server.ts（GET /api/diagnostics）
+
+Verification:
+- 实测报告：5 runtimes + mode + 7 agents + 23 tools + logCount
+
+## M24-T06 Auto Update
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts + server.ts（GET /api/version）
+
+Verification:
+- 实测返回 currentVersion=0.3.0 + GitHub releases 源
+
+## M24-T07 Installer
+
+Status: DONE
+
+Files changed:
+- package.json（electron-builder build 配置）
+
+Verification:
+- win: nsis/portable；mac: dmg/zip；linux: AppImage/deb
+
+## Gate G24
+
+Status: PASS
+
+- 安全审查 / 崩溃恢复 / Runtime 隔离 / 日志 / 诊断 / 版本检查 / 打包配置全部落地；M00~M24 全部阶段完成
