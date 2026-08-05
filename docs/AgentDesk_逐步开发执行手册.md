@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M16
-current_task: M16-T01
+current_phase: M17
+current_task: M17-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1359,19 +1359,33 @@ Spreadsheet
 
 ## M16-T01 slides.create
 
+- [x]  platform.slides.create：创建演示文稿返回 deckId（内存会话级）
+
 ## M16-T02 slides.add_slide
+
+- [x]  platform.slides.add_slide：追加页（title/bullets/table）
 
 ## M16-T03 slides.update_slide
 
+- [x]  platform.slides.update_slide：更新指定页
+
 ## M16-T04 slides.delete_slide
 
+- [x]  platform.slides.delete_slide：删除指定页（越界拒绝）
+
 ## M16-T05 slides.render
+
+- [x]  platform.slides.render：导出 PPTX + 生成 SVG 页面预览图
 
 生成页面预览图。
 
 ## M16-T06 PPTX Export
 
+- [x]  pptxgenjs 导出 .pptx（实测 汇报.pptx 2 页）
+
 ## M16-T07 Artifact Integration
+
+- [x]  slides.render 产物自动入 Artifact（slides 类型，实测 演示.pptx 入库）
 
 ---
 
@@ -2867,6 +2881,31 @@ Verified:
 Pending:
 - M16-T01（Slides：slides.create）
 
+## 2026-08-05（续 13）
+
+Completed:
+- M16-T01（slides.create：deckId 会话级演示文稿）
+- M16-T02（slides.add_slide：追加页）
+- M16-T03（slides.update_slide：更新页）
+- M16-T04（slides.delete_slide：删除页）
+- M16-T05（slides.render：PPTX + SVG 预览）
+- M16-T06（PPTX Export：pptxgenjs）
+- M16-T07（Artifact Integration：slides 产物自动入库）
+- Gate G16（一句话生成可打开 PPTX）
+
+Changed:
+- packages/tool-core/src/slides-tools.ts（新增 5 工具 + 内存 deck 存储）
+- packages/tool-core/package.json（pptxgenjs 依赖）
+- packages/tool-core/tests/slides.test.ts（4 用例）
+- packages/platform-panel/src/panel.ts（注册 slides 工具 + presentation→slides 类型映射）
+
+Verified:
+- slides.test.ts 4/4、根测试、typecheck、隔离检查通过
+- Panel 实测：create/add/update/delete/render + slides Artifact 自动入库
+
+Pending:
+- M17-T01（Platform Skill System：Skill Manifest）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3615,3 +3654,64 @@ Verification:
 Status: PASS
 
 - 能读取现有 XLSX、分析并生成新的 XLSX/Chart，公式与结构保留（exceljs roundtrip）
+
+## M16-T01 slides.create
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/slides-tools.ts（create/add_slide/update_slide/delete_slide/render + 内存 deck 存储）
+
+Verification:
+- 实测返回 deckId，会话级内存保存
+
+## M16-T02 slides.add_slide
+
+Status: DONE
+
+Verification:
+- 追加页（title/bullets/table），实测 3 页
+
+## M16-T03 slides.update_slide
+
+Status: DONE
+
+Verification:
+- 更新指定页标题/要点
+
+## M16-T04 slides.delete_slide
+
+Status: DONE
+
+Verification:
+- 删除指定页 + 越界拒绝（单元测试）
+
+## M16-T05 slides.render
+
+Status: DONE
+
+Verification:
+- pptxgenjs 导出 PPTX + 自绘 SVG 每页缩略预览
+
+## M16-T06 PPTX Export
+
+Status: DONE
+
+Verification:
+- 实测导出 汇报.pptx（2 页）
+
+## M16-T07 Artifact Integration
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（artifact 类型映射：presentation → slides）
+
+Verification:
+- 实测 演示.pptx 自动入 Artifact（type=slides）
+
+## Gate G16
+
+Status: PASS
+
+- 用户一句话可生成可打开的 PPTX（slides.create → add/update/delete → render → Artifact）

@@ -23,6 +23,11 @@ import {
   spreadsheetFormatTool,
   spreadsheetChartTool,
   spreadsheetAnalyzeTool,
+  slidesCreateTool,
+  slidesAddSlideTool,
+  slidesUpdateSlideTool,
+  slidesDeleteSlideTool,
+  slidesRenderTool,
 } from "@agentdesk/tool-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
@@ -129,6 +134,11 @@ export class AgentDeskPanel {
     this.toolRegistry.register(spreadsheetFormatTool)
     this.toolRegistry.register(spreadsheetChartTool)
     this.toolRegistry.register(spreadsheetAnalyzeTool)
+    this.toolRegistry.register(slidesCreateTool)
+    this.toolRegistry.register(slidesAddSlideTool)
+    this.toolRegistry.register(slidesUpdateSlideTool)
+    this.toolRegistry.register(slidesDeleteSlideTool)
+    this.toolRegistry.register(slidesRenderTool)
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -345,11 +355,15 @@ export class AgentDeskPanel {
       "platform.document.edit",
       "platform.spreadsheet.create",
       "platform.spreadsheet.chart",
+      "platform.slides.render",
     ])
     if (result.ok && this.artifactStore && artifactProducing.has(id)) {
       const out = result.output as { path?: string; mime?: string; sizeBytes?: number } | undefined
       if (out?.path) {
-        const type = out.mime?.includes("spreadsheet") ? "spreadsheet" : out.mime?.includes("svg") ? "chart" : "document"
+        const type = out.mime?.includes("spreadsheet") ? "spreadsheet"
+          : out.mime?.includes("presentation") ? "slides"
+          : out.mime?.includes("svg") ? "chart"
+          : "document"
         this.artifactStore.create({
           type,
           title: out.path.split(/[\\/]/).pop() ?? "document",
