@@ -13,6 +13,7 @@ import { readFileSync, existsSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { AgentDeskPanel } from "./panel.ts"
+import { ensureSidecars, sidecarChildren } from "./sidecar.ts"
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const PORT = Number(process.env.AGENTDESK_PANEL_PORT ?? 8787)
@@ -20,6 +21,10 @@ const OPENCODE_URL = process.env.AGENTDESK_OPENCODE_URL ?? "http://127.0.0.1:409
 const PI_URL = process.env.AGENTDESK_PI_URL ?? "http://127.0.0.1:30141"
 const STORAGE_FILE = process.env.AGENTDESK_STORAGE_FILE
 const WORKSPACE_PATH = process.env.AGENTDESK_WORKSPACE_PATH
+
+// 一键启动：自动拉起 opencode（4096）+ pi-web（30141），已运行则跳过
+const sidecar = await ensureSidecars()
+console.log(`[sidecar] opencode=${sidecar.opencode ? "ready" : "unavailable"} pi-web=${sidecar.piWeb ? "ready" : "unavailable"}`)
 
 const panel = new AgentDeskPanel({
   opencodeBaseUrl: OPENCODE_URL,
@@ -194,6 +199,10 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/version") {
       json(res, 200, panel.checkForUpdate())
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/sidecars") {
+      json(res, 200, { ...sidecar, childPids: sidecarChildren().map((c) => c.pid) })
       return
     }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {

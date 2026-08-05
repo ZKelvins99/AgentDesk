@@ -1817,6 +1817,11 @@ Export Diagnostic Report
 
 至少 Windows / macOS。
 
+## M24-T08 一键启动（补充）
+
+- [x]  Panel 内置 sidecar 管理器：启动时自动拉起 opencode（:4096）+ pi-web（:30141），已运行则跳过；实测杀光三服务后仅启动 Panel 即全部恢复
+- [x]  docs/runbook.md 启动手册
+
 ---
 
 # 5. 推荐实际开发顺序
