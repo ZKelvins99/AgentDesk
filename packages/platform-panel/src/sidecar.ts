@@ -48,11 +48,9 @@ async function ensureOpencode(): Promise<boolean> {
       HTTPS_PROXY: "http://127.0.0.1:7890",
       NO_PROXY: "127.0.0.1,localhost,128.128.2.6",
     },
-    detached: true,
     windowsHide: true,
     stdio: ["ignore", out, err],
   })
-  child.unref()
   children.push(child)
   return waitForPort(4096, 30000)
 }
@@ -70,11 +68,9 @@ async function ensurePiWeb(): Promise<boolean> {
       ...process.env,
       NEXT_TELEMETRY_DISABLED: "1",
     },
-    detached: true,
     windowsHide: true,
     stdio: ["ignore", out, err],
   })
-  child.unref()
   children.push(child)
   return waitForPort(30141, 60000)
 }

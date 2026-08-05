@@ -276,6 +276,14 @@ const server = createServer(async (req, res) => {
   }
 })
 
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`AgentDesk Panel 已在运行：http://localhost:${PORT}`)
+    process.exit(0)
+  }
+  throw error
+})
+
 server.listen(PORT, () => {
   console.log(`AgentDesk Panel: http://localhost:${PORT}`)
 })
