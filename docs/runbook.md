@@ -5,11 +5,13 @@
 AgentDesk Panel 内置 sidecar 管理器，启动时自动拉起 OpenCode（:4096）与 Pi Web（:30141）。
 
 ```powershell
-# 前置：Node 24+、bun 1.3.x、用户环境变量 AGENTDESK_INTERNAL_API_KEY
-powershell -NoProfile -ExecutionPolicy Bypass -File "D:\code_kj\Agent工具开发\AgentDesk\.devlogs\start-panel.ps1"
+cd D:\code_kj\Agent工具开发\AgentDesk
+npm start
 ```
 
 打开 http://localhost:8787
+
+（本机另有 PowerShell 快捷方式 `.devlogs\start-panel.ps1`，仅开发用，不入库。）
 
 启动日志（`.devlogs/`）：
 - `panel.out.log`：`[sidecar] opencode=ready pi-web=ready`
