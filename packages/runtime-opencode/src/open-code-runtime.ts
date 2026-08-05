@@ -92,6 +92,16 @@ export class OpenCodeRuntime implements AgentRuntime {
       baseUrl: this.baseUrl,
       ...(this.directory ? { directory: this.directory } : {}),
     })
+    // M05: attach global event stream; non-fatal when server not reachable yet
+    this.attachGlobalEventStream().catch((error) => {
+      this.emit({
+        type: "status",
+        runtimeId: this.id,
+        status: "event-stream-unavailable",
+        detail: error instanceof Error ? error.message : String(error),
+        at: now(),
+      })
+    })
   }
 
   async dispose(): Promise<void> {
@@ -143,7 +153,18 @@ export class OpenCodeRuntime implements AgentRuntime {
       cwd: directory,
     }
     if (input?.initialMessage) {
-      await this.send({ sessionId, message: input.initialMessage })
+      // fire-and-forget: prompt streams back via subscribed events
+      void this.send({ sessionId, message: input.initialMessage }).catch((error) => {
+        this.emit({
+          type: "error",
+          runtimeId: this.id,
+          sessionId,
+          code: "opencode.prompt",
+          message: error instanceof Error ? error.message : String(error),
+          recoverable: true,
+          at: now(),
+        })
+      })
     }
     return ref
   }
@@ -178,7 +199,11 @@ export class OpenCodeRuntime implements AgentRuntime {
         parts: [{ type: "text", text: input.message }],
       },
     })
-    if (result.error) throw new Error(String(result.error))
+    const error = result.error
+    if (error) {
+      const detail = typeof error === "object" ? JSON.stringify(error) : String(error)
+      throw new Error(`opencode prompt failed: ${detail}`)
+    }
     return {
       sessionId: input.sessionId,
       runtimeId: this.id,
@@ -207,9 +232,21 @@ export class OpenCodeRuntime implements AgentRuntime {
     if (!res.ok) throw new Error(`opencode /global/event failed: HTTP ${res.status}`)
 
     void (async () => {
-      for await (const raw of readSseEvents(res, controller.signal)) {
-        if (controller.signal.aborted) break
-        this.emit(mapOpenCodeEvent(raw, this.id))
+      try {
+        for await (const raw of readSseEvents(res, controller.signal)) {
+          if (controller.signal.aborted) break
+          this.emit(mapOpenCodeEvent(raw, this.id))
+        }
+      } catch (error) {
+        // server restart / connection reset: degrade gracefully instead of crashing
+        if (controller.signal.aborted) return
+        this.emit({
+          type: "status",
+          runtimeId: this.id,
+          status: "event-stream-unavailable",
+          detail: error instanceof Error ? error.message : String(error),
+          at: now(),
+        })
       }
     })()
 
@@ -217,9 +254,25 @@ export class OpenCodeRuntime implements AgentRuntime {
   }
 
   // ---- 原生元数据透传（M05-T12/T14 骨架；skills 元数据走 nativeSkills 占位） ----
+  /** M05-T08 Native Settings Passthrough: passthrough OpenCode config (models/agents/permission etc.) */
+  async nativeConfig(): Promise<unknown> {
+    try {
+      const result = await this.requireClient().config.get({ query: { directory: this.directory } })
+      if (result.error) return { error: String(result.error) }
+      return result.data
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) }
+    }
+  }
+
   async nativeAgents(): Promise<ReadonlyArray<unknown>> {
-    const result = await this.requireClient().app.agents()
-    return (result.data as unknown as readonly unknown[] | undefined) ?? []
+    try {
+      const result = await this.requireClient().app.agents()
+      return (result.data as unknown as readonly unknown[] | undefined) ?? []
+    } catch {
+      // server unreachable: gracefully degrade to no native agents
+      return []
+    }
   }
 
   async nativeSkills(): Promise<ReadonlyArray<unknown>> {

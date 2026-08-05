@@ -12,6 +12,9 @@ import {
   type Timestamp,
   type Unsubscribe,
 } from "@agentdesk/runtime-protocol"
+import { readdirSync, readFileSync, statSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import { mapPiWebEvent } from "./mappers.ts"
 import { readSse } from "./sse.ts"
 
@@ -98,6 +101,32 @@ export class PiWebRuntime implements AgentRuntime {
     this.listeners.clear()
   }
 
+  /** M07-T01 Pi Native Settings：透传全局与项目配置（不解析、不改写） */
+  async nativeConfig(): Promise<unknown> {
+    const globalDir = join(homedir(), ".pi", "agent")
+    const globalSettings = readJsonFile(join(globalDir, "settings.json"))
+    const globalModels = readJsonFile(join(globalDir, "models.json"))
+    const projectSettings = this.cwd ? readJsonFile(join(this.cwd, ".pi", "settings.json")) : undefined
+    return {
+      global: {
+        settings: globalSettings,
+        models: globalModels,
+      },
+      project: {
+        settings: projectSettings,
+      },
+    }
+  }
+
+  /** M07-T02 Pi Native Skills：透传项目与用户级 skill 目录元数据（不解析内容） */
+  async nativeSkills(): Promise<ReadonlyArray<unknown>> {
+    const dirs = [
+      this.cwd ? join(this.cwd, ".pi", "skills") : undefined,
+      join(homedir(), ".pi", "agent", "skills"),
+    ].filter((d): d is string => typeof d === "string")
+    return dirs.flatMap((dir) => listSkillFiles(dir))
+  }
+
   async health(): Promise<HealthStatus> {
     try {
       const res = await fetch(`${this.baseUrl}/api/sessions`)
@@ -120,7 +149,11 @@ export class PiWebRuntime implements AgentRuntime {
     const cwd = input?.cwd ?? input?.directory ?? this.cwd
     if (!cwd) throw new Error("PiWebRuntime.createSession requires cwd")
 
-    const body: Record<string, unknown> = { cwd }
+    // pi-web /api/agent/new 需要 type 字段：带首条消息用 prompt，否则 ensure_session 只建会话
+    const body: Record<string, unknown> = {
+      cwd,
+      type: input?.initialMessage ? "prompt" : "ensure_session",
+    }
     if (input?.initialMessage) body.message = input.initialMessage
 
     const res = await fetch(`${this.baseUrl}/api/agent/new`, {
@@ -167,7 +200,7 @@ export class PiWebRuntime implements AgentRuntime {
     const res = await fetch(`${this.baseUrl}/api/agent/${encodeURIComponent(nativeId)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "user_message", message: input.message }),
+      body: JSON.stringify({ type: "prompt", message: input.message }),
     })
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { error?: string }
@@ -184,7 +217,21 @@ export class PiWebRuntime implements AgentRuntime {
   }
 
   async cancel(sessionId: SessionId): Promise<void> {
-    // pi-web 当前无独立 cancel 端点；透传原生事件（M06-T09 待实现）
+    // pi RPC abort 命令：终止当前 generation
+    this.assertAlive()
+    const nativeId = toNativeId(sessionId)
+    try {
+      const res = await fetch(`${this.baseUrl}/api/agent/${encodeURIComponent(nativeId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "abort" }),
+      })
+      if (!res.ok) throw new Error(`pi-web abort failed: HTTP ${res.status}`)
+    } catch (error) {
+      // 服务不可达时兜底：发结束事件
+      this.emit({ type: "session.ended", runtimeId: this.id, sessionId, at: now() })
+      return
+    }
     this.emit({ type: "session.ended", runtimeId: this.id, sessionId, at: now() })
   }
 
@@ -232,4 +279,38 @@ export class PiWebRuntime implements AgentRuntime {
 /** sessionId（pi:xxx）→ 原生 id */
 export function toNativeId(sessionId: SessionId): string {
   return sessionId.replace(/^pi:/, "")
+}
+
+/** 读取 JSON 配置文件；不存在或解析失败返回 undefined（透传场景优雅降级） */
+function readJsonFile(filePath: string): unknown {
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8")) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+/** 列出 skill 目录下的 SKILL.md（含顶层 .md 文件）；目录缺失返回空数组 */
+function listSkillFiles(dir: string): Array<{ path: string; name: string }> {
+  try {
+    const out: Array<{ path: string; name: string }> = []
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name !== "node_modules" && !entry.name.startsWith(".")) {
+        // 子目录：递归查找 SKILL.md
+        const nested = join(dir, entry.name, "SKILL.md")
+        try {
+          if (statSync(nested).isFile()) {
+            out.push({ path: nested, name: entry.name })
+          }
+        } catch {
+          // 无 SKILL.md 的目录跳过
+        }
+      } else if (entry.isFile() && entry.name === "SKILL.md") {
+        out.push({ path: join(dir, entry.name), name: dir.split(/[\\/]/).pop() ?? "skill" })
+      }
+    }
+    return out
+  } catch {
+    return []
+  }
 }

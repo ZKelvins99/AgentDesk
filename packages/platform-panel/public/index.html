@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>AgentDesk Panel (M04)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; background: #16181d; color: #e6e6e6; margin: 0; padding: 20px; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .runtimes { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .runtime { border: 1px solid #333; border-radius: 8px; padding: 10px 14px; cursor: pointer; min-width: 160px; }
+    .runtime.active { border-color: #4ade80; background: #1c2a1e; }
+    .runtime .name { font-weight: 600; }
+    .runtime .state { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .dot.ok { background: #4ade80; }
+    .dot.bad { background: #f87171; }
+    .row { display: flex; gap: 8px; margin-bottom: 16px; }
+    input { flex: 1; background: #1f2128; border: 1px solid #333; color: #e6e6e6; border-radius: 6px; padding: 8px 10px; }
+    button { background: #2563eb; border: 0; color: #fff; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+    .log { background: #101216; border: 1px solid #26282f; border-radius: 8px; padding: 12px; height: 50vh; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; }
+    .log .msg { color: #a5b4fc; }
+    .log .tool { color: #fbbf24; }
+    .log .perm { color: #f472b6; }
+    .log .err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>AgentDesk Panel — Runtime Selector (M04-T05/T06)</h1>
+  <div id="runtimes" class="runtimes"></div>
+  <div class="row">
+    <input id="message" placeholder="输入消息（例如 hello）后发送…" />
+    <button id="send">发送</button>
+  </div>
+  <div id="log" class="log"></div>
+
+  <script>
+    const state = { active: null, sessions: new Map() }
+    const $ = (id) => document.getElementById(id)
+
+    function renderRuntimes(runtimes) {
+      $("runtimes").innerHTML = ""
+      for (const r of runtimes) {
+        const el = document.createElement("div")
+        el.className = "runtime" + (r.active ? " active" : "")
+        const dot = r.ok ? "ok" : "bad"
+        el.innerHTML = `<div class="name"><span class="dot ${dot}"></span>${r.displayName}</div>` +
+          `<div class="state">${r.state}${r.detail ? " · " + r.detail : ""}</div>`
+        el.onclick = () => switchRuntime(r.id)
+        $("runtimes").appendChild(el)
+      }
+    }
+
+    async function refresh() {
+      const res = await fetch("/api/runtimes")
+      const data = await res.json()
+      state.active = data.active
+      renderRuntimes(data.runtimes)
+    }
+
+    async function switchRuntime(id) {
+      await fetch("/api/switch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ runtimeId: id }),
+      })
+      await refresh()
+      log("system", `切换到 Runtime: ${id}`)
+    }
+
+    async function send() {
+      const message = $("message").value.trim()
+      if (!message) return
+      $("message").value = ""
+      log("msg", `[你 → ${state.active}] ${message}`)
+      await fetch("/api/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message }),
+      })
+    }
+
+    function log(kind, text) {
+      const line = document.createElement("div")
+      line.className = kind
+      line.textContent = text
+      $("log").appendChild(line)
+      $("log").scrollTop = $("log").scrollHeight
+    }
+
+    function onEvent(e) {
+      switch (e.type) {
+        case "session.created":
+          state.sessions.set(e.sessionId, "")
+          break
+        case "message.delta":
+          state.sessions.set(e.sessionId, (state.sessions.get(e.sessionId) ?? "") + e.delta)
+          break
+        case "message.completed":
+          log("msg", `[${e.runtimeId}] ${state.sessions.get(e.sessionId) ?? ""}`)
+          state.sessions.delete(e.sessionId)
+          break
+        case "tool.started":
+          log("tool", `[${e.runtimeId}] tool.start ${e.toolName}`)
+          break
+        case "tool.completed":
+          log("tool", `[${e.runtimeId}] tool.completed ${e.toolName}`)
+          break
+        case "permission.request":
+          log("perm", `[${e.runtimeId}] permission.request ${e.action}`)
+          break
+        case "permission.resolved":
+          log("perm", `[${e.runtimeId}] permission.resolved ${e.action} → ${e.decision}`)
+          break
+        case "session.idle":
+          log("system", `[${e.runtimeId}] session idle`)
+          break
+        default:
+          break
+      }
+    }
+
+    $("send").onclick = send
+    $("message").addEventListener("keydown", (e) => { if (e.key === "Enter") send() })
+
+    const events = new EventSource("/api/events")
+    events.onmessage = (ev) => {
+      const e = JSON.parse(ev.data)
+      if (e.type === "panel.ready") return
+      onEvent(e)
+    }
+
+    refresh()
+    setInterval(refresh, 5000)
+  </script>
+</body>
+</html>

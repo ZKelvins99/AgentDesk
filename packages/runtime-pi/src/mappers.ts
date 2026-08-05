@@ -84,6 +84,16 @@ function extractPiText(raw: PiWebRawEvent): string {
     const value = raw[key]
     if (typeof value === "string" && value.length > 0) return value
   }
+  // pi-web removes assistantMessageEvent, keeps message (AgentMessage.content)
+  const agentMessage = raw.message as { content?: unknown[] } | undefined
+  if (agentMessage && Array.isArray(agentMessage.content)) {
+    const text = agentMessage.content
+      .filter((part): part is { type: string; text?: string } => typeof part === "object" && part !== null)
+      .filter((part) => part.type === "text" && typeof part.text === "string")
+      .map((part) => part.text ?? "")
+      .join("")
+    if (text.length > 0) return text
+  }
   const assistant = raw.assistantMessageEvent as Record<string, unknown> | undefined
   if (assistant) {
     const parts = Array.isArray(assistant.parts) ? assistant.parts : []

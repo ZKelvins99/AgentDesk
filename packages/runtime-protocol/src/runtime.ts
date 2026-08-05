@@ -7,6 +7,10 @@ import type { AgentId, HealthStatus, ProfileId, RuntimeId, SessionId, Unsubscrib
 export interface RuntimeManifest {
   readonly id: RuntimeId
   readonly displayName: string
+  /** Optional description (M01-T03 RuntimeMetadata.description) */
+  readonly description?: string
+  /** Optional icon (M01-T03 RuntimeMetadata.icon) */
+  readonly icon?: string
   /** AgentDesk adapter 版本 */
   readonly version: string
   /** 上游项目信息，用于 UPSTREAM_SYNC 追踪 */

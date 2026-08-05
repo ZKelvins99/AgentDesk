@@ -104,7 +104,7 @@ export function permissionReducer(
 ): ReadonlyMap<string, PermissionState> {
   const next = new Map(state)
   switch (event.type) {
-    case "permission.requested": {
+    case "permission.request": {
       const key = `${event.sessionId}:${event.action}`
       next.set(key, { action: event.action, sessionId: event.sessionId, status: "pending" })
       break
