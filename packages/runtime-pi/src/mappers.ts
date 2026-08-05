@@ -63,6 +63,24 @@ export function mapPiWebEvent(
       return { type: "session.idle", runtimeId, sessionId: sid, at: at() }
     case "agent_settled":
       return { type: "session.idle", runtimeId, sessionId: sid, at: at() }
+    case "extension_ui_request": {
+      // M08: Pi Extension UI Bridge —— confirm/select/input/notify/status 统一映射
+      const method = String(raw.method ?? "unknown")
+      const id = raw.id ? String(raw.id) : `pi-ui:${at()}`
+      return {
+        type: "ui.request",
+        runtimeId,
+        sessionId: sid,
+        requestId: id,
+        method,
+        title: raw.title ? String(raw.title) : undefined,
+        message: raw.message ? String(raw.message) : undefined,
+        options: Array.isArray(raw.options) ? (raw.options as unknown[]).map(String) : undefined,
+        placeholder: raw.placeholder ? String(raw.placeholder) : undefined,
+        detail: raw as unknown,
+        at: at(),
+      }
+    }
     case "session_error":
     case "error":
       return {

@@ -21,6 +21,20 @@ export type AgentEvent =
   | { readonly type: "session.idle"; readonly runtimeId: RuntimeId; readonly sessionId: SessionId; readonly at: Timestamp }
   | { readonly type: "session.error"; readonly runtimeId: RuntimeId; readonly sessionId: SessionId; readonly error: SessionError; readonly at: Timestamp }
   | { readonly type: "session.ended"; readonly runtimeId: RuntimeId; readonly sessionId: SessionId; readonly at: Timestamp }
+  /** M08: Pi Extension UI Bridge —— 原生 UI 交互请求（confirm/select/input/notify 等） */
+  | {
+      readonly type: "ui.request"
+      readonly runtimeId: RuntimeId
+      readonly sessionId: SessionId
+      readonly requestId: string
+      readonly method: "confirm" | "select" | "input" | "notify" | "status" | string
+      readonly title?: string
+      readonly message?: string
+      readonly options?: readonly string[]
+      readonly placeholder?: string
+      readonly detail?: unknown
+      readonly at: Timestamp
+    }
   | { readonly type: "heartbeat"; readonly runtimeId: RuntimeId; readonly at: Timestamp }
   /** Native Event Escape Hatch（文档 8.3）：不认识的原始事件原样透传 */
   | { readonly type: "native"; readonly runtimeId: RuntimeId; readonly sessionId?: SessionId; readonly payload: unknown; readonly at: Timestamp }

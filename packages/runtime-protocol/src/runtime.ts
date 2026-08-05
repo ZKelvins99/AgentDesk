@@ -71,6 +71,15 @@ export interface AgentRuntime {
 
   capabilities(): AgentCapabilities
 
+  /** M08: 响应原生 UI 请求（confirm/select/input 等）。不支持时返回 false。 */
+  respondUi?(input: {
+    readonly sessionId: SessionId
+    readonly requestId: string
+    readonly value?: string
+    readonly confirmed?: boolean
+    readonly cancelled?: boolean
+  }): Promise<boolean>
+
   // ---- 可选原生元数据读取（透传，平台不解析内部格式） ----
   nativeConfig?(): Promise<unknown>
   nativeAgents?(): Promise<ReadonlyArray<unknown>>

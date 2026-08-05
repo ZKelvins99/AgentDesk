@@ -139,6 +139,20 @@ export class AgentDeskPanel {
     await runtime.cancel(sessionId)
   }
 
+  /** M08: 响应原生 UI 请求（Pi Extension confirm/select/input 等） */
+  async respondUi(
+    sessionId: string,
+    requestId: string,
+    body: { value?: string; confirmed?: boolean; cancelled?: boolean },
+    runtimeId?: RuntimeId,
+  ): Promise<boolean> {
+    const target = runtimeId ?? this.active
+    const runtime = this.platform.runtimeRegistry.get(target)
+    if (!runtime) throw new Error(`Unknown runtime: ${target}`)
+    if (!runtime.respondUi) return false
+    return runtime.respondUi({ sessionId, requestId, ...body })
+  }
+
   subscribe(listener: (event: AgentEvent) => void): () => void {
     return this.platform.eventBus.subscribe(listener)
   }

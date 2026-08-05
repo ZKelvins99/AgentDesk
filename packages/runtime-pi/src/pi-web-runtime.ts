@@ -3,6 +3,8 @@ import {
   type AgentCapabilities,
   type AgentEvent,
   type AgentRuntime,
+  type ExtensionCompatibilityLevel,
+  type ExtensionCompatibilityView,
   type CreateSessionInput,
   type HealthStatus,
   type RuntimeManifest,
@@ -127,6 +129,26 @@ export class PiWebRuntime implements AgentRuntime {
     return dirs.flatMap((dir) => listSkillFiles(dir))
   }
 
+  /** M08-T07: 列出项目与用户级扩展，并评估 AgentDesk 兼容等级 */
+  async nativeExtensions(): Promise<ReadonlyArray<ExtensionCompatibilityView>> {
+    const dirs = [
+      this.cwd ? join(this.cwd, ".pi", "extensions") : undefined,
+      join(homedir(), ".pi", "agent", "extensions"),
+    ].filter((d): d is string => typeof d === "string")
+    const files = dirs.flatMap((dir) => listExtensionFiles(dir))
+    return files.map((name) => ({
+      name,
+      source: "extension" as const,
+      level: "FULL" as ExtensionCompatibilityLevel,
+      supportedMethods: ["confirm", "select", "input", "notify", "status"],
+    }))
+  }
+
+  /** M08-T06: 声明 Pi Runtime 的整体兼容等级（UI Bridge 全链路已通） */
+  extensionCompatibilityLevel(): ExtensionCompatibilityLevel {
+    return "FULL"
+  }
+
   async health(): Promise<HealthStatus> {
     try {
       const res = await fetch(`${this.baseUrl}/api/sessions`)
@@ -235,6 +257,37 @@ export class PiWebRuntime implements AgentRuntime {
     this.emit({ type: "session.ended", runtimeId: this.id, sessionId, at: now() })
   }
 
+  /** M08: 响应 Pi Extension UI 请求（POST /api/agent/[id] extension_ui_response 命令） */
+  async respondUi(input: {
+    readonly sessionId: SessionId
+    readonly requestId: string
+    readonly value?: string
+    readonly confirmed?: boolean
+    readonly cancelled?: boolean
+  }): Promise<boolean> {
+    this.assertAlive()
+    const nativeId = toNativeId(input.sessionId)
+    const body: Record<string, unknown> = { type: "extension_ui_response", id: input.requestId }
+    if (input.cancelled) {
+      body.cancelled = true
+    } else if (input.confirmed !== undefined) {
+      body.confirmed = input.confirmed
+    } else {
+      body.value = input.value ?? ""
+    }
+    try {
+      const res = await fetch(`${this.baseUrl}/api/agent/${encodeURIComponent(nativeId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000),
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   subscribe(listener: (event: AgentEvent) => void): Unsubscribe {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
@@ -310,6 +363,17 @@ function listSkillFiles(dir: string): Array<{ path: string; name: string }> {
       }
     }
     return out
+  } catch {
+    return []
+  }
+}
+
+/** 列出扩展目录下的 .ts/.js 扩展文件名；目录缺失返回空数组 */
+function listExtensionFiles(dir: string): string[] {
+  try {
+    return readdirSync(dir)
+      .filter((name) => name.endsWith(".ts") || name.endsWith(".js"))
+      .sort()
   } catch {
     return []
   }

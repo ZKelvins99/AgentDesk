@@ -189,3 +189,48 @@ test("M06: Pi message_update with AgentMessage.content extracts text", () => {
   assert.equal(delta?.type, "message.delta")
   if (delta?.type === "message.delta") assert.equal(delta.delta, "流式")
 })
+
+// ---- M08: Pi Extension UI Bridge ----
+test("M08: extension_ui_request confirm → ui.request", () => {
+  const req = mapPiWebEvent(
+    { type: "extension_ui_request", sessionId: "p1", id: "u1", method: "confirm", title: "确认", message: "继续?" },
+    "pi",
+    "pi:p1",
+  )
+  assert.equal(req?.type, "ui.request")
+  if (req?.type === "ui.request") {
+    assert.equal(req.method, "confirm")
+    assert.equal(req.requestId, "u1")
+    assert.equal(req.title, "确认")
+    assert.equal(req.message, "继续?")
+  }
+})
+
+test("M08: extension_ui_request select/input/notify → ui.request", () => {
+  const select = mapPiWebEvent(
+    { type: "extension_ui_request", sessionId: "p1", id: "u2", method: "select", title: "选择", options: ["a", "b"] },
+    "pi",
+    "pi:p1",
+  )
+  assert.equal(select?.type, "ui.request")
+  if (select?.type === "ui.request") {
+    assert.equal(select.method, "select")
+    assert.deepEqual(select.options, ["a", "b"])
+  }
+
+  const input = mapPiWebEvent(
+    { type: "extension_ui_request", sessionId: "p1", id: "u3", method: "input", title: "输入", placeholder: "名字" },
+    "pi",
+    "pi:p1",
+  )
+  assert.equal(input?.type, "ui.request")
+  if (input?.type === "ui.request") assert.equal(input.placeholder, "名字")
+
+  const notify = mapPiWebEvent(
+    { type: "extension_ui_request", sessionId: "p1", id: "u4", method: "notify", message: "完成" },
+    "pi",
+    "pi:p1",
+  )
+  assert.equal(notify?.type, "ui.request")
+  if (notify?.type === "ui.request") assert.equal(notify.method, "notify")
+})

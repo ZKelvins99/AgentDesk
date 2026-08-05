@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M08
-current_task: M08-T01
+current_phase: M09
+current_task: M09-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -958,6 +958,8 @@ Pi Extension → AgentDesk Extension 格式转换
 
 ## M08-T01 confirm
 
+- [x]  extension_ui_request(confirm) → ui.request 事件 → Panel /api/ui/respond 回传，实测工具返回 M08-CONFIRM-YES
+
 ```text
 ctx.ui.confirm
 → AgentDesk Dialog
@@ -965,21 +967,31 @@ ctx.ui.confirm
 
 ## M08-T02 select
 
+- [x]  select → ui.request(options) → respond value，实测选择 B 返回 M08-SELECT-B
+
 映射下拉/列表选择。
 
 ## M08-T03 input
+
+- [x]  input → ui.request(placeholder) → respond value，实测输入 AgentDesk 被工具接收
 
 映射文本输入。
 
 ## M08-T04 notify
 
+- [x]  notify → ui.request(notify)，SSE 捕获确认
+
 映射 Toast / Notification。
 
 ## M08-T05 status
 
+- [x]  setStatus → ui.request(status)，SSE 捕获 statusKey/statusText 确认
+
 映射 Runtime Status。
 
 ## M08-T06 Compatibility Level
+
+- [x]  runtime-protocol 定义 ExtensionCompatibilityLevel（FULL/PARTIAL/TUI_ONLY/UNSUPPORTED）；Pi = FULL（UI Bridge 全链路已通）
 
 定义：
 
@@ -991,6 +1003,8 @@ UNSUPPORTED
 ```
 
 ## M08-T07 Extension Compatibility UI
+
+- [x]  PiWebRuntime.nativeExtensions() 返回各扩展兼容状态（level + supportedMethods），实测列出 ui-ask/ui-input/ui-multi 均 FULL
 
 显示每个 Pi Extension 的兼容状态。
 
@@ -2582,6 +2596,33 @@ Verified:
 Pending:
 - M08-T01（Pi Extension UI Bridge：ctx.ui.confirm → AgentDesk Dialog）
 
+## 2026-08-05（续 5）
+
+Completed:
+- M08-T01（confirm：ctx.ui.confirm → ui.request → /api/ui/respond，工具返回 M08-CONFIRM-YES）
+- M08-T02（select：respond value，选择 B 返回 M08-SELECT-B）
+- M08-T03（input：respond 文本，输入 AgentDesk 被工具接收）
+- M08-T04（notify：extension_ui_request 捕获确认）
+- M08-T05（status：setStatus statusKey 捕获确认）
+- M08-T06（Compatibility Level：FULL/PARTIAL/TUI_ONLY/UNSUPPORTED 定义，Pi = FULL）
+- M08-T07（Extension Compatibility UI：nativeExtensions() 返回各扩展 level + supportedMethods）
+
+Changed:
+- packages/runtime-protocol/src/event.ts（ui.request 事件）
+- packages/runtime-protocol/src/runtime.ts（respondUi? 接口）
+- packages/runtime-protocol/src/compatibility.ts（新增：兼容等级类型）
+- packages/runtime-pi/src/mappers.ts（extension_ui_request → ui.request）
+- packages/runtime-pi/src/pi-web-runtime.ts（respondUi / nativeExtensions / extensionCompatibilityLevel）
+- packages/platform-panel/src/panel.ts + server.ts（/api/ui/respond）
+- tests/contracts/mappers.test.ts + runtime-pi.contract.test.ts（M08 用例，根测试 36/36）
+
+Verified:
+- 端到端 confirm/select/input/notify/status 全链路（Panel SSE 捕获 + respond 回传 + 工具结果断言）
+- 根契约测试 36/36、typecheck、隔离检查通过
+
+Pending:
+- M09-T01（Desktop Runtime UX：Runtime Selector OpenCode/Pi/Echo 桌面化）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -2866,3 +2907,67 @@ Status: PASS
 
 - Pi Extension / Skill / Package / Provider 全部原生复用，无格式转换
 - 实测链路：AgentDesk Panel → PiWebRuntime → pi-web → Pi Native（Extension/Skill/Package/Provider 原样加载）
+
+## M08-T01 confirm
+
+Status: DONE
+
+Files changed:
+- packages/runtime-protocol/src/event.ts（AgentEvent 增加 ui.request）
+- packages/runtime-protocol/src/runtime.ts（AgentRuntime 增加 respondUi?）
+- packages/runtime-pi/src/mappers.ts（extension_ui_request → ui.request）
+- packages/runtime-pi/src/pi-web-runtime.ts（respondUi → POST /api/agent/[id] extension_ui_response）
+- packages/platform-panel/src/panel.ts + server.ts（/api/ui/respond 端点）
+- tests/contracts/mappers.test.ts（M08 映射用例）
+
+Verification:
+- 端到端：ui-ask 扩展触发 ctx.ui.confirm → SSE extension_ui_request → ui.request 事件 → /api/ui/respond(confirmed=true) → 工具返回 M08-CONFIRM-YES
+
+## M08-T02 select
+
+Status: DONE
+
+Verification:
+- ui-multi 扩展 select(A/B/C) → ui.request(options) → respond(value=B) → 工具返回 M08-SELECT-B
+
+## M08-T03 input
+
+Status: DONE
+
+Verification:
+- ui-input 扩展 input(placeholder=请输入名字) → respond(value=AgentDesk) → 工具收到输入并回复
+
+## M08-T04 notify
+
+Status: DONE
+
+Verification:
+- ui-multi 扩展 ctx.ui.notify → extension_ui_request(method=notify) 被 SSE 捕获
+
+## M08-T05 status
+
+Status: DONE
+
+Verification:
+- ui-multi 扩展 ctx.ui.setStatus("m08", ...) → extension_ui_request(method=setStatus, statusKey=m08) 被捕获
+
+## M08-T06 Compatibility Level
+
+Status: DONE
+
+Files changed:
+- packages/runtime-protocol/src/compatibility.ts（ExtensionCompatibilityLevel + ExtensionCompatibilityView）
+- packages/runtime-pi/src/pi-web-runtime.ts（extensionCompatibilityLevel() = FULL）
+
+Verification:
+- 根契约测试 36 用例通过（含 M08-T06/T07 用例）
+
+## M08-T07 Extension Compatibility UI
+
+Status: DONE
+
+Files changed:
+- packages/runtime-pi/src/pi-web-runtime.ts（nativeExtensions()：列出扩展 + level + supportedMethods）
+
+Verification:
+- 实测列出 ui-ask.ts / ui-input.ts / ui-multi.ts，均 FULL（supportedMethods: confirm/select/input/notify/status）

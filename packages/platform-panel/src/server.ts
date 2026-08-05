@@ -85,6 +85,21 @@ const server = createServer(async (req, res) => {
       json(res, 200, { ok: true })
       return
     }
+    if (req.method === "POST" && url.pathname === "/api/ui/respond") {
+      const body = await readBody(req)
+      const ok = await panel.respondUi(
+        String(body.sessionId ?? ""),
+        String(body.requestId ?? ""),
+        {
+          value: body.value ? String(body.value) : undefined,
+          confirmed: body.confirmed === undefined ? undefined : Boolean(body.confirmed),
+          cancelled: body.cancelled === undefined ? undefined : Boolean(body.cancelled),
+        },
+        body.runtimeId ? String(body.runtimeId) : undefined,
+      )
+      json(res, 200, { ok: true, delivered: ok })
+      return
+    }
     if (req.method === "GET" && url.pathname === "/api/events") {
       res.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",

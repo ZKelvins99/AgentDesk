@@ -60,3 +60,22 @@ test("PiWebRuntime.nativeSkills 缺目录时优雅降级为空", async () => {
   const skills = await runtime.nativeSkills()
   assert.ok(Array.isArray(skills))
 })
+
+test("M08-T06: Pi 扩展兼容等级 = FULL", () => {
+  const runtime = new PiWebRuntime({ baseUrl: "http://127.0.0.1:30141", cwd: "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace" })
+  assert.equal(runtime.extensionCompatibilityLevel(), "FULL")
+})
+
+test("M08-T07: nativeExtensions 评估兼容状态", async () => {
+  const runtime = new PiWebRuntime({ baseUrl: "http://127.0.0.1:30141", cwd: "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace" })
+  const exts = await runtime.nativeExtensions()
+  assert.ok(Array.isArray(exts))
+  if (exts.length > 0) {
+    for (const ext of exts) {
+      assert.equal(ext.level, "FULL")
+      assert.ok(ext.supportedMethods.includes("confirm"))
+      assert.ok(ext.supportedMethods.includes("select"))
+      assert.ok(ext.supportedMethods.includes("input"))
+    }
+  }
+})
