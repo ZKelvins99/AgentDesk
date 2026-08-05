@@ -16,6 +16,13 @@ import {
   documentEditTool,
   pdfReadTool,
   pdfMetaTool,
+  spreadsheetCreateTool,
+  spreadsheetReadTool,
+  spreadsheetSetCellsTool,
+  spreadsheetFormulaTool,
+  spreadsheetFormatTool,
+  spreadsheetChartTool,
+  spreadsheetAnalyzeTool,
 } from "@agentdesk/tool-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
@@ -115,6 +122,13 @@ export class AgentDeskPanel {
     this.toolRegistry.register(documentEditTool)
     this.toolRegistry.register(pdfReadTool)
     this.toolRegistry.register(pdfMetaTool)
+    this.toolRegistry.register(spreadsheetCreateTool)
+    this.toolRegistry.register(spreadsheetReadTool)
+    this.toolRegistry.register(spreadsheetSetCellsTool)
+    this.toolRegistry.register(spreadsheetFormulaTool)
+    this.toolRegistry.register(spreadsheetFormatTool)
+    this.toolRegistry.register(spreadsheetChartTool)
+    this.toolRegistry.register(spreadsheetAnalyzeTool)
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -325,11 +339,17 @@ export class AgentDeskPanel {
       workspacePath: this.workspacePath ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace",
       allowWrite: true,
     }, input)
-    // M14-T09: document 工具产物自动进入 Artifact
-    if (result.ok && this.artifactStore && (id === "platform.document.create" || id === "platform.document.edit")) {
+    // M14-T09 / M15: document/spreadsheet/chart 工具产物自动进入 Artifact
+    const artifactProducing = new Set([
+      "platform.document.create",
+      "platform.document.edit",
+      "platform.spreadsheet.create",
+      "platform.spreadsheet.chart",
+    ])
+    if (result.ok && this.artifactStore && artifactProducing.has(id)) {
       const out = result.output as { path?: string; mime?: string; sizeBytes?: number } | undefined
       if (out?.path) {
-        const type = out.mime?.includes("spreadsheet") ? "spreadsheet" : "document"
+        const type = out.mime?.includes("spreadsheet") ? "spreadsheet" : out.mime?.includes("svg") ? "chart" : "document"
         this.artifactStore.create({
           type,
           title: out.path.split(/[\\/]/).pop() ?? "document",

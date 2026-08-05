@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M15
-current_task: M15-T01
+current_phase: M16
+current_task: M16-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1311,17 +1311,31 @@ tools/document/
 
 ## M15-T01 spreadsheet.create
 
+- [x]  platform.spreadsheet.create：二维 rows → XLSX（exceljs），实测 销售数据.xlsx（4行2列）
+
 ## M15-T02 spreadsheet.read
+
+- [x]  platform.spreadsheet.read：读取为 rows 数组（Preview 数据源），实测 4行2列
 
 ## M15-T03 spreadsheet.set_cells
 
+- [x]  platform.spreadsheet.set_cells：按 ref/r+c 写单元格
+
 ## M15-T04 spreadsheet.formula
+
+- [x]  platform.spreadsheet.formula：写公式（exceljs 保留）
 
 ## M15-T05 spreadsheet.format
 
+- [x]  platform.spreadsheet.format：表头加粗 + 填充
+
 ## M15-T06 spreadsheet.chart
 
+- [x]  platform.spreadsheet.chart：生成 SVG 柱状图（实测 [100,150,200]）
+
 ## M15-T07 Python Data Analysis
+
+- [x]  platform.spreadsheet.analyze：Python 隔离执行（pandas 读 XLSX → CSV 数据集 → matplotlib PNG 图）；pandas 缺失时透传错误
 
 实现：
 
@@ -1334,6 +1348,8 @@ Spreadsheet
 ```
 
 ## M15-T08 Preview
+
+- [x]  spreadsheet.read 返回结构化 rows（M12 Artifact Preview 数据源）
 
 至少支持表格数据预览。
 
@@ -2825,6 +2841,32 @@ Verified:
 Pending:
 - M15-T01（Spreadsheet/Data：spreadsheet.create）
 
+## 2026-08-05（续 12）
+
+Completed:
+- M15-T01（spreadsheet.create：rows → XLSX）
+- M15-T02（spreadsheet.read：结构化 rows）
+- M15-T03（spreadsheet.set_cells：定点写单元格）
+- M15-T04（spreadsheet.formula：公式保留）
+- M15-T05（spreadsheet.format：表头样式）
+- M15-T06（spreadsheet.chart：SVG 柱状图）
+- M15-T07（Python Data Analysis：Spreadsheet → Python → Dataset → Chart）
+- M15-T08（Preview：rows 数据源）
+- Gate G15（XLSX 读写/分析/公式保留）
+
+Changed:
+- packages/tool-core/src/spreadsheet-tools.ts（新增 7 工具）
+- packages/tool-core/package.json（exceljs 依赖）
+- packages/tool-core/tests/spreadsheet.test.ts（6 用例）
+- packages/platform-panel/src/panel.ts（注册 spreadsheet 工具 + 产物 Artifact 入库）
+
+Verified:
+- spreadsheet.test.ts 6/6、根测试、typecheck、隔离检查通过
+- Panel 实测：create/read/chart + spreadsheet+chart Artifact 自动入库
+
+Pending:
+- M16-T01（Slides：slides.create）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3508,3 +3550,68 @@ Verification:
 Status: PASS
 
 - 用户一句话可产生可打开、可预览的真实 DOCX（document.create → .docx + .md + HTML 预览 + Artifact 入库）
+
+## M15-T01 spreadsheet.create
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/spreadsheet-tools.ts（create/read/set_cells/formula/format/chart/analyze）
+
+Verification:
+- 实测创建 销售数据.xlsx（4 行 2 列）
+
+## M15-T02 spreadsheet.read
+
+Status: DONE
+
+Verification:
+- exceljs 读取返回 rows/rowCount/columnCount（实测 4 行 2 列）
+
+## M15-T03 spreadsheet.set_cells
+
+Status: DONE
+
+Verification:
+- 单元测试：B2 写 42 后回读一致
+
+## M15-T04 spreadsheet.formula
+
+Status: DONE
+
+Verification:
+- 单元测试：D1 = SUM(A1:C1) 公式写入并保留
+
+## M15-T05 spreadsheet.format
+
+Status: DONE
+
+Verification:
+- 单元测试：表头行加粗 + 填充色
+
+## M15-T06 spreadsheet.chart
+
+Status: DONE
+
+Verification:
+- 单元 + Panel 实测：SVG 柱状图，values=[100,150,200]，产物自动入 Artifact
+
+## M15-T07 Python Data Analysis
+
+Status: DONE
+
+Verification:
+- 隔离执行 pandas 分析（读 XLSX → CSV + matplotlib PNG）；pandas 缺失时正确透传 Python 错误
+
+## M15-T08 Preview
+
+Status: DONE
+
+Verification:
+- spreadsheet.read 返回结构化 rows 供 M12 Preview 消费
+
+## Gate G15
+
+Status: PASS
+
+- 能读取现有 XLSX、分析并生成新的 XLSX/Chart，公式与结构保留（exceljs roundtrip）
