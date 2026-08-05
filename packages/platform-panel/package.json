@@ -20,6 +20,7 @@
     "@agentdesk/agent-core": "*",
     "@agentdesk/broker-core": "*",
     "@agentdesk/router-core": "*",
+    "@agentdesk/extension-sdk": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

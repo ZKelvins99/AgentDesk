@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M21
-current_task: M21-T01
+current_phase: M22
+current_task: M22-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1589,6 +1589,8 @@ Data Agent
 
 ## M21-T01 Extension API
 
+- [x]  packages/extension-sdk：ExtensionAPI（registerRuntime/Agent/Tool/Skill/ArtifactRenderer/Command/SidebarPanel）
+
 至少：
 
 ```ts
@@ -1603,9 +1605,15 @@ registerSidebarPanel()
 
 ## M21-T02 Extension Manifest
 
+- [x]  ExtensionManifest（id/name/version/permissions/entry/enabled）
+
 ## M21-T03 Extension Loader
 
+- [x]  loadExtensionsFromDir 扫描 .agentdesk/extensions/<id>/extension.json，Panel 动态 import 入口执行
+
 ## M21-T04 Extension Permission
+
+- [x]  权限声明 filesystem/network/shell/runtime/ui + 运行时 has() 检查
 
 第三方扩展需要声明：
 
@@ -3019,6 +3027,27 @@ Verified:
 Pending:
 - M21-T01（AgentDesk Extension SDK：registerRuntime/registerAgent/...）
 
+## 2026-08-05（续 18）
+
+Completed:
+- M21-T01（Extension API：7 类注册）
+- M21-T02（Extension Manifest）
+- M21-T03（Extension Loader：.agentdesk/extensions 动态执行）
+- M21-T04（Extension Permission：5 权限声明）
+- Gate G21
+
+Changed:
+- packages/extension-sdk/（新增：api/manifest/loader + 4 测试）
+- packages/platform-panel/src/panel.ts + server.ts（/api/extensions）
+- packages/platform-panel/package.json（依赖 @agentdesk/extension-sdk）
+
+Verified:
+- extension.test.ts 4/4、根测试、typecheck、隔离检查通过
+- Panel 实测：demo-ext 入口执行，tool + sidebar panel 注册成功
+
+Pending:
+- M22-T01（Third-party Runtime SDK：@agentdesk/runtime-sdk）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -4003,3 +4032,47 @@ Verification:
 Status: PASS
 
 - 规则路由 + Hybrid 编排可用：Data Agent → analysis artifact → Slides Agent → presentation（端到端链路已就绪）
+
+## M21-T01 Extension API
+
+Status: DONE
+
+Files changed:
+- packages/extension-sdk/src/api.ts（ExtensionAPI + ExtensionRegistry）
+
+Verification:
+- extension.test.ts：7 类注册全部断言
+
+## M21-T02 Extension Manifest
+
+Status: DONE
+
+Files changed:
+- packages/extension-sdk/src/manifest.ts（ExtensionManifest + ExtensionPermission）
+
+Verification:
+- extension.test.ts：manifest 结构断言
+
+## M21-T03 Extension Loader
+
+Status: DONE
+
+Files changed:
+- packages/extension-sdk/src/loader.ts（loadExtensionsFromDir）
+- packages/platform-panel/src/panel.ts（动态 import 入口执行）
+
+Verification:
+- 实测 .agentdesk/extensions/demo-ext 加载，index.ts 执行后 ext.hello 工具 + ext-panel 注册成功
+
+## M21-T04 Extension Permission
+
+Status: DONE
+
+Verification:
+- filesystem/network/shell/runtime/ui 声明 + api.permissions.has() 运行时检查（测试断言）
+
+## Gate G21
+
+Status: PASS
+
+- 第三方扩展经 SDK 注册 Runtime/Agent/Tool/Skill/Renderer/Command/SidebarPanel，权限声明强制

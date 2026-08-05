@@ -1,0 +1,20 @@
+{
+  "name": "@agentdesk/extension-sdk",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "AgentDesk Extension SDK（M21）：Extension API、Manifest、Loader、Permission 声明。",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agentdesk/runtime-protocol": "*",
+    "@agentdesk/agent-core": "*",
+    "@agentdesk/tool-core": "*",
+    "@agentdesk/skill-core": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test tests/*.test.ts"
+  }
+}

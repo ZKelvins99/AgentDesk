@@ -170,6 +170,19 @@ const server = createServer(async (req, res) => {
       json(res, 200, panel.routeTask(text))
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/extensions") {
+      const reg = panel.listExtensions()
+      json(res, 200, {
+        runtimes: reg.runtimes,
+        agents: reg.agents,
+        tools: reg.tools.map((t) => ({ id: t.id, description: t.description })),
+        skills: reg.skills.map((s) => ({ name: s.name, description: s.description })),
+        renderers: reg.artifactRenderers.map((r) => ({ type: r.type })),
+        commands: reg.commands.map((c) => ({ name: c.name })),
+        panels: reg.sidebarPanels.map((p) => ({ id: p.id, title: p.title })),
+      })
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {
       const body = await readBody(req)
       const result = await panel.executeTool(

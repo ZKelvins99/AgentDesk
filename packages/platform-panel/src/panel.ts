@@ -3,12 +3,14 @@ import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
 import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
 import type { SkillDescriptor } from "@agentdesk/runtime-protocol"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
 import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
 import { SkillRegistry, loadSkillsFromDir } from "@agentdesk/skill-core"
 import { AgentDefinitionRegistry, type AgentDefinition } from "@agentdesk/agent-core"
 import { AgentBroker, runtimeExecutor } from "@agentdesk/broker-core"
 import { ModeSwitch, TaskClassifier, TaskRouter, buildHybridWorkflow, type HybridMode } from "@agentdesk/router-core"
+import { ExtensionRegistry, loadExtensionsFromDir, type LoadedExtension, type ExtensionAPI } from "@agentdesk/extension-sdk"
 import {
   ToolRegistry,
   fileReadTool,
@@ -105,6 +107,7 @@ export class AgentDeskPanel {
   private readonly modeSwitch = new ModeSwitch()
   private readonly taskClassifier = new TaskClassifier()
   private readonly taskRouter = new TaskRouter()
+  private readonly extensionRegistry = new ExtensionRegistry()
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -156,6 +159,8 @@ export class AgentDeskPanel {
     for (const skill of loadSkillsFromDir(skillDir)) {
       this.skillRegistry.register(skill)
     }
+    // M21: 扩展加载（.agentdesk/extensions/）
+    void this.loadExtensions()
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -413,6 +418,37 @@ export class AgentDeskPanel {
     const agent = this.taskRouter.route(taskType, this.agentRegistry.list())
     const workflow = this.modeSwitch.isHybrid ? buildHybridWorkflow(taskType) : undefined
     return { taskType, agentId: agent?.id, workflow }
+  }
+
+  /** M21: 加载 .agentdesk/extensions/ 并注册到各核心 */
+  private async loadExtensions(): Promise<void> {
+    const dir = join(this.workspacePath ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace", ".agentdesk", "extensions")
+    for (const ext of loadExtensionsFromDir(dir)) {
+      await this.registerExtension(ext)
+    }
+  }
+
+  async registerExtension(ext: LoadedExtension): Promise<void> {
+    const api = this.extensionRegistry.createAPI(
+      { id: ext.manifest.id, name: ext.manifest.name, version: ext.manifest.version },
+      ext.manifest.permissions ?? [],
+    )
+    try {
+      const entryUrl = new URL(pathToFileURL(join(ext.rootDir, ext.manifest.entry)).href + `?t=${Date.now()}`)
+      const entry = await import(entryUrl.href)
+      const setup = (entry.default ?? entry) as (api: ExtensionAPI) => unknown
+      if (typeof setup === "function") await setup(api)
+    } catch (error) {
+      this.emitStatus(`extension load failed: ${ext.manifest.id} - ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  listExtensions() {
+    return this.extensionRegistry
+  }
+
+  private emitStatus(detail: string): void {
+    void detail
   }
 
   /** M13: 执行平台工具（过 Permission Core） */
