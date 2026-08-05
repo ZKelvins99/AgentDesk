@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M07
-current_task: M07-T03
+current_phase: M08
+current_task: M08-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -910,25 +910,37 @@ Echo
 
 ## M07-T03 Pi Extensions
 
+- [x]  `.pi/extensions/pi-verify.ts` 加载验证：pi-hello 工具注册成功，模型实际调用返回 PI-EXT-TOOL-OK
+
 验证 Extension 可以加载。
 
 ## M07-T04 Pi Package
+
+- [x]  本地 Pi Package（package.json pi 清单 + extensions/）经项目 settings.packages 声明，pi-pkg-tool 加载并调用成功（PI-PKG-OK）
 
 验证 Pi Package 能加载。
 
 ## M07-T05 Pi Custom Tool
 
+- [x]  Extension 注册的 pi-hello / Package 注册的 pi-pkg-tool 均可被 Pi Agent 调用（tool 事件 + 返回内容断言）
+
 Extension 注册的 Tool 必须可被 Pi Agent 调用。
 
 ## M07-T06 Pi Hooks
+
+- [x]  extension 的 pi.on("session_start") 生效：pi-web 日志 `session_start dispatched to extensions`
 
 验证 Extension lifecycle hook 生效。
 
 ## M07-T07 Pi Provider
 
+- [x]  自定义 provider「公司」（models.json，baseUrl=128.128.2.6:4000/v1）全程未被阻断：M06/M07 所有 Pi 对话均经其完成
+
 Pi 自定义 Provider 机制不能被 AgentDesk 阻断。
 
 ### Gate G07
+
+- [x]  无需 Pi Extension → AgentDesk Extension 格式转换：Pi 原生扩展直接复用（不解析/不转换，仅透传）
 
 AgentDesk 不允许要求：
 
@@ -2551,6 +2563,25 @@ Verified:
 Pending:
 - M07-T03（Pi Extensions：验证 Extension 可以加载）
 
+## 2026-08-05（续 4）
+
+Completed:
+- M07-T03（Pi Extensions：.pi/extensions 扩展加载，pi-hello 工具可调用）
+- M07-T04（Pi Package：本地 Pi Package 经 settings.packages 加载，pi-pkg-tool 可调用）
+- M07-T05（Pi Custom Tool：扩展/包注册工具均可被 Pi Agent 调用）
+- M07-T06（Pi Hooks：session_start hook 分发确认）
+- M07-T07（Pi Provider：自定义 provider「公司」未被阻断）
+- Gate G07（Pi 生态全部原生复用，无格式转换）
+
+Verified:
+- pi-hello / pi-pkg-tool 工具调用成功（SSE tool 事件 + 回复内容断言）
+- pi-web 日志 `session_start dispatched to extensions` 确认 hook
+- models.json 自定义 provider「公司」（128.128.2.6:4000/v1）全程可用
+- 根契约测试 32/32、typecheck 通过
+
+Pending:
+- M08-T01（Pi Extension UI Bridge：ctx.ui.confirm → AgentDesk Dialog）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -2790,3 +2821,48 @@ Verification:
 Notes:
 - Pi 项目级 skill 需要项目信任（pi-web POST /api/project-trust）才会进入 systemPrompt；用户级 ~/.agents/skills 始终受信
 - pi-web /api/agent/new 同步等待首条 prompt 完成，SSE 需在 send 前建立才能收到流式事件
+
+## M07-T03 Pi Extensions
+
+Status: DONE
+
+Verification:
+- 在 test-workspace/.pi/extensions/pi-verify.ts 注册 pi-hello 工具 + session_start hook
+- 项目信任后（/api/project-trust trusted=true），新会话 pi-hello 工具可被模型实际调用（tool 事件 pi-hello，回复 PI-EXT-TOOL-OK）
+
+## M07-T04 Pi Package
+
+Status: DONE
+
+Verification:
+- 本地 Pi Package（package.json `pi.extensions` 清单 + extensions/pkg-tool.ts）经项目 .pi/settings.json `packages` 声明
+- 重启 pi-web 后 pi-pkg-tool 加载并被调用（回复 PI-PKG-OK）
+
+## M07-T05 Pi Custom Tool
+
+Status: DONE
+
+Verification:
+- Extension 注册工具 pi-hello 与 Package 注册工具 pi-pkg-tool 均由 Pi Agent 实际调用成功（SSE tool 事件断言 + 返回内容断言）
+
+## M07-T06 Pi Hooks
+
+Status: DONE
+
+Verification:
+- pi-verify.ts 的 pi.on("session_start") 生效：pi-web 日志输出 `[pi-web] session_start dispatched to extensions for session ...`
+
+## M07-T07 Pi Provider
+
+Status: DONE
+
+Verification:
+- models.json 自定义 provider「公司」（baseUrl=http://128.128.2.6:4000/v1，models: mimo-v2.5-pro/deepseek-v4-pro/gpt-5.6-sol）
+- AgentDesk 未解析/改写 Pi 配置：M06/M07 全部 Pi 对话均经该 provider 完成（模型 mimo-v2.5-pro 回复 OK）
+
+## Gate G07
+
+Status: PASS
+
+- Pi Extension / Skill / Package / Provider 全部原生复用，无格式转换
+- 实测链路：AgentDesk Panel → PiWebRuntime → pi-web → Pi Native（Extension/Skill/Package/Provider 原样加载）
