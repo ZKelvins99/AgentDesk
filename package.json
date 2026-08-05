@@ -5,7 +5,8 @@
   "type": "module",
   "description": "可插拔多 Agent 桌面平台（vendor 完整拷贝策略）",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

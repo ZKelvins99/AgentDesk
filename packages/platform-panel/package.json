@@ -21,6 +21,7 @@
     "@agentdesk/broker-core": "*",
     "@agentdesk/router-core": "*",
     "@agentdesk/extension-sdk": "*",
+    "third-party-demo-runtime": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

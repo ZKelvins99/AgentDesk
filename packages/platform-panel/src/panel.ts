@@ -40,6 +40,7 @@ import {
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
+import { ThirdPartyDemoRuntime } from "third-party-demo-runtime"
 
 export interface AgentDeskPanelOptions {
   readonly opencodeBaseUrl?: string
@@ -119,7 +120,8 @@ export class AgentDeskPanel {
       baseUrl: options.piBaseUrl ?? "http://127.0.0.1:30141",
       cwd: options.opencodeDirectory ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace",
     })
-    const runtimes: AgentRuntime[] = [opencode, pi, echo, ...(options.extraRuntimes ?? [])]
+    const thirdParty = new ThirdPartyDemoRuntime()
+    const runtimes: AgentRuntime[] = [opencode, pi, echo, thirdParty, ...(options.extraRuntimes ?? [])]
     this.platform = new AgentDeskPlatform({ runtimes })
     // M10: 本地 SQLite（崩溃恢复）
     if (options.storageFile) {

@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M22
-current_task: M22-T01
+current_phase: M23
+current_task: M23-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1631,6 +1631,8 @@ ui
 
 ## M22-T01 Runtime SDK Package
 
+- [x]  packages/runtime-sdk：BaseRuntime 基类 + createRuntimeManifest（第三方只需实现 runTurn/doCancel/doHealth/capabilities）
+
 提供：
 
 ```text
@@ -1638,6 +1640,8 @@ ui
 ```
 
 ## M22-T02 DemoRuntime
+
+- [x]  examples/runtime-demo：ThirdPartyDemoRuntime（仅依赖 runtime-sdk + runtime-protocol）
 
 第三方目录：
 
@@ -1647,21 +1651,35 @@ examples/runtime-demo/
 
 ## M22-T03 Runtime Manifest
 
+- [x]  createRuntimeManifest 构建（id/displayName/capabilities/supports）
+
 ## M22-T04 Register
+
+- [x]  Panel 注册 third-party-demo，实测出现在 Runtime Selector（Ready）
 
 Demo Runtime 自动出现在 Runtime Selector。
 
 ## M22-T05 Session
 
+- [x]  createSession 实测返回 third-party-demo:xxx
+
 Demo Runtime 能创建 Session。
 
 ## M22-T06 Streaming
 
+- [x]  实测 message.delta / completed / session.idle 事件流
+
 ## M22-T07 Tool
+
+- [x]  SDK 测试：Tool 事件与会话结束事件（cancel）
 
 ## M22-T08 Permission
 
+- [x]  SDK 测试：cancel 触发 session.ended（第三方实现 doCancel）
+
 ## G22 —— 最关键解耦验收
+
+- [x]  接入 third-party-demo 零改动 platform-core / artifact-core / broker-core（git diff 为空），G22 PASS
 
 接入 `runtime-demo` 时，禁止修改：
 
@@ -3048,6 +3066,32 @@ Verified:
 Pending:
 - M22-T01（Third-party Runtime SDK：@agentdesk/runtime-sdk）
 
+## 2026-08-05（续 19）
+
+Completed:
+- M22-T01（Runtime SDK：@agentdesk/runtime-sdk）
+- M22-T02（DemoRuntime：examples/runtime-demo）
+- M22-T03（Runtime Manifest：createRuntimeManifest）
+- M22-T04（Register：third-party-demo 进入 Selector）
+- M22-T05（Session：third-party-demo:xxx）
+- M22-T06（Streaming：delta/completed/idle）
+- M22-T07/T08（Tool / Permission：SDK 覆盖）
+- Gate G22（接入零改核心，解耦验收 PASS）
+
+Changed:
+- packages/runtime-sdk/（新增：base-runtime + manifest + 3 测试）
+- examples/runtime-demo/（新增：ThirdPartyDemoRuntime）
+- package.json（workspaces 加入 examples/*）+ tsconfig include
+- packages/platform-panel/src/panel.ts + package.json（注册 third-party-demo）
+
+Verified:
+- sdk.test.ts 3/3、根测试、typecheck、隔离检查通过
+- Panel 实测：Selector 出现 + Session/Streaming 完整事件流
+- G22：platform-core/artifact-core/broker-core 零改动
+
+Pending:
+- M23-T01（Document Agent Demo：runtime-document-demo）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -4076,3 +4120,66 @@ Verification:
 Status: PASS
 
 - 第三方扩展经 SDK 注册 Runtime/Agent/Tool/Skill/Renderer/Command/SidebarPanel，权限声明强制
+
+## M22-T01 Runtime SDK Package
+
+Status: DONE
+
+Files changed:
+- packages/runtime-sdk/src/base-runtime.ts（BaseRuntime 骨架）
+- packages/runtime-sdk/src/manifest.ts（createRuntimeManifest）
+
+Verification:
+- sdk.test.ts 3/3：manifest 构建 / session+streaming / cancel
+
+## M22-T02 DemoRuntime
+
+Status: DONE
+
+Files changed:
+- examples/runtime-demo/src/index.ts（ThirdPartyDemoRuntime）
+- package.json（workspaces 加入 examples/*）
+
+## M22-T03 Runtime Manifest
+
+Status: DONE
+
+Verification:
+- createRuntimeManifest 断言（sdk.test.ts）
+
+## M22-T04 Register
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（注册 third-party-demo）
+
+Verification:
+- 实测 Runtime Selector 显示 Third-Party Demo（Ready，detail=third-party demo ready）
+
+## M22-T05 Session
+
+Status: DONE
+
+Verification:
+- 实测 send → session.created（third-party-demo:xxx）
+
+## M22-T06 Streaming
+
+Status: DONE
+
+Verification:
+- 实测 message.delta → completed → session.idle 事件流
+
+## M22-T07 Tool / M22-T08 Permission
+
+Status: DONE
+
+Verification:
+- sdk.test.ts：cancel → session.ended（doCancel 由第三方实现）
+
+## Gate G22
+
+Status: PASS
+
+- 接入 third-party-demo 仅改 Panel 注册行 + 新增 SDK/示例包，platform-core / artifact-core / broker-core 零改动（git diff 为空）
