@@ -13,6 +13,7 @@
     "@agentdesk/runtime-echo": "*",
     "@agentdesk/runtime-opencode": "*",
     "@agentdesk/runtime-pi": "*",
+    "@agentdesk/storage-core": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

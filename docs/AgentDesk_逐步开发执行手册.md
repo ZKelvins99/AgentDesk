@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M10
-current_task: M10-T01
+current_phase: M11
+current_task: M11-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1055,9 +1055,13 @@ Pi Runtime Not Installed
 
 ## M10-T01 SQLite
 
+- [x]  packages/storage-core 建立（node:sqlite 零依赖），AgentDeskDatabase：WAL + 三张表迁移
+
 新增本地数据库。
 
 ## M10-T02 Workspace Table
+
+- [x]  workspaces 表（id/name/path/created_at/last_opened_at）+ WorkspaceStore CRUD/touch
 
 至少：
 
@@ -1071,6 +1075,8 @@ last_opened_at
 
 ## M10-T03 Session Mapping
 
+- [x]  session_bindings 表（agentdesk_session_id/runtime_id/native_session_id/workspace_id）+ bind/get/getByNative/listByWorkspace；Panel send 自动绑定
+
 ```text
 agentdesk_session_id
 runtime_id
@@ -1080,9 +1086,13 @@ workspace_id
 
 ## M10-T04 Runtime Config
 
+- [x]  runtime_configs 表：每 Runtime 保存 AgentDesk 级配置（JSON），Native Config 不混入
+
 保存每个 Runtime 的 AgentDesk 级配置。Native Config 仍归各 Runtime。
 
 ## M10-T05 Crash Recovery
+
+- [x]  CrashRecovery.snapshot/groupByWorkspace + Panel restoreWorkspace；实测杀进程重启后 Workspace 与 Session 映射完整恢复（Gate G10）
 
 Desktop 崩溃后能恢复 Workspace。
 
@@ -2654,6 +2664,29 @@ Verified:
 Pending:
 - M10-T01（Workspace/Storage：SQLite 本地数据库）
 
+## 2026-08-05（续 7）
+
+Completed:
+- M10-T01（SQLite：packages/storage-core，node:sqlite 零依赖）
+- M10-T02（Workspace Table：workspaces 表 + WorkspaceStore）
+- M10-T03（Session Mapping：session_bindings 表 + Panel 自动绑定）
+- M10-T04（Runtime Config：runtime_configs 表，AgentDesk 级配置独立保存）
+- M10-T05（Crash Recovery：崩溃重启恢复 Workspace + Session 映射，Gate G10 PASS）
+
+Changed:
+- packages/storage-core/（新增：database / workspace-store / runtime-config-store / recovery + 5 测试）
+- packages/platform-panel/src/panel.ts（storage 集成：restoreWorkspace / bindSession / recoverySnapshot）
+- packages/platform-panel/src/server.ts（GET /api/workspaces）
+- packages/platform-panel/package.json（依赖 @agentdesk/storage-core）
+- .devlogs/start-panel.ps1（AGENTDESK_STORAGE_FILE / AGENTDESK_WORKSPACE_PATH）
+
+Verified:
+- storage.test.ts 5/5、根测试、typecheck、隔离检查通过
+- 端到端：崩溃重启后 /api/workspaces 返回 workspace + binding（Gate G10）
+
+Pending:
+- M11-T01（Artifact Protocol：Artifact 定义与核心）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3053,3 +3086,65 @@ Status: PASS
 
 - Runtime Selector / Status / Settings / Install Check 四个 UX 端点全部实测通过
 - 根契约测试 36/36、panel 测试 7/7、typecheck、隔离检查通过
+
+## M10-T01 SQLite
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/package.json + tsconfig.json + src/database.ts（AgentDeskDatabase：node:sqlite + WAL + 迁移）
+
+Verification:
+- node:sqlite 实测建表/插入/查询正常（Node 24 内置，零依赖）
+- 根 typecheck / 测试通过
+
+## M10-T02 Workspace Table
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/src/workspace-store.ts（workspaces 表 + create/list/get/findByPath/touch）
+
+Verification:
+- storage.test.ts：Workspace CRUD + last_opened_at 刷新（5/5 通过）
+
+## M10-T03 Session Mapping
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/src/workspace-store.ts（session_bindings 表 + bind/get/getBindingByNative/listBindingsByWorkspace）
+- packages/platform-panel/src/panel.ts（send/resume 自动 bindSession）
+
+Verification:
+- 实测 Panel send 后 binding 落库（echo:cc0123... ↔ workspace ws_a01ef...）
+- storage.test.ts：按 AgentDesk id / 原生 id 双向反查，幂等去重
+
+## M10-T04 Runtime Config
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/src/runtime-config-store.ts（runtime_configs 表 + save/get）
+
+Verification:
+- storage.test.ts：pi / opencode 各自配置独立保存，互不混入
+
+## M10-T05 Crash Recovery
+
+Status: DONE
+
+Files changed:
+- packages/storage-core/src/recovery.ts（snapshot + groupBindingsByWorkspace）
+- packages/platform-panel/src/panel.ts（restoreWorkspace + recoverySnapshot）
+- packages/platform-panel/src/server.ts（GET /api/workspaces）
+- .devlogs/start-panel.ps1（AGENTDESK_STORAGE_FILE + AGENTDESK_WORKSPACE_PATH）
+
+Verification:
+- 实测：启动（创建 workspace）→ send（绑定 session）→ 杀 Panel（模拟崩溃）→ 重启 → /api/workspaces 恢复 workspace + binding（Gate G10 PASS）
+
+## Gate G10
+
+Status: PASS
+
+- 应用关闭重开可恢复 Workspace 与 Native Session 映射（SQLite 持久化）

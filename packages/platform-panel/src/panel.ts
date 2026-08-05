@@ -1,6 +1,7 @@
 import { AgentDeskPlatform } from "@agentdesk/platform-core"
 import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
 import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
+import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
@@ -10,6 +11,10 @@ export interface AgentDeskPanelOptions {
   readonly opencodeDirectory?: string
   /** pi-web HTTP/SSE 服务地址（M06，Windows 兼容 Transport） */
   readonly piBaseUrl?: string
+  /** M10: SQLite 数据库文件路径；缺省不持久化 */
+  readonly storageFile?: string
+  /** M10: 默认工作区（恢复时回填 last_opened_at） */
+  readonly workspacePath?: string
   /** extra runtimes to register (third-party decoupling demo) */
   readonly extraRuntimes?: readonly AgentRuntime[]
 }
@@ -55,6 +60,10 @@ export class AgentDeskPanel {
 
   private active: RuntimeId
   private readonly busySessions = new Set<SessionId>()
+  private readonly storage?: AgentDeskDatabase
+  private readonly workspaceStore?: WorkspaceStore
+  private readonly recovery?: CrashRecovery
+  private readonly workspacePath?: string
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -68,6 +77,13 @@ export class AgentDeskPanel {
     })
     const runtimes: AgentRuntime[] = [opencode, pi, echo, ...(options.extraRuntimes ?? [])]
     this.platform = new AgentDeskPlatform({ runtimes })
+    // M10: 本地 SQLite（崩溃恢复）
+    if (options.storageFile) {
+      this.storage = new AgentDeskDatabase(options.storageFile)
+      this.workspaceStore = new WorkspaceStore(this.storage)
+      this.recovery = new CrashRecovery(this.storage)
+      this.workspacePath = options.workspacePath
+    }
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -86,11 +102,13 @@ export class AgentDeskPanel {
     const map = this.runtimeMap()
     await this.lifecycle.startAll(map)
     await this.platform.start()
+    this.restoreWorkspace()
   }
 
   async stop(): Promise<void> {
     await this.lifecycle.stopAll(this.runtimeMap())
     await this.platform.stop()
+    this.storage?.close()
   }
 
   switchRuntime(id: RuntimeId): RuntimeId {
@@ -144,12 +162,14 @@ export class AgentDeskPanel {
     if (!runtime) throw new Error(`Unknown runtime: ${target}`)
     if (sessionId) {
       const ref = await this.platform.send(target, { sessionId, message })
+      if (ref.nativeSessionId) this.bindSession(ref.sessionId, ref.nativeSessionId, target)
       return ref.sessionId
     }
     const ref = await this.platform.createSession(target, {
       initialMessage: message,
       ...(directory ? { directory } : {}),
     })
+    if (ref.nativeSessionId) this.bindSession(ref.sessionId, ref.nativeSessionId, target)
     return ref.sessionId
   }
 
@@ -215,4 +235,43 @@ export class AgentDeskPanel {
   private runtimeMap(): Map<RuntimeId, AgentRuntime> {
     return new Map(this.platform.runtimeRegistry.list().map((r) => [r.id, r]))
   }
+
+  /** M10-T05/Gate G10: 崩溃后从 SQLite 恢复 Workspace + Session 映射 */
+  restoreWorkspace(): RecoveryView {
+    const empty: RecoveryView = { workspaces: [], bindings: [], recovered: false }
+    if (!this.workspaceStore || !this.recovery) return empty
+    const snapshot = this.recovery.snapshot()
+    let workspaces = snapshot.workspaces
+    if (workspaces.length === 0 && this.workspacePath) {
+      const ws = this.workspaceStore.createWorkspace(
+        this.workspacePath.split(/[\\/]/).pop() ?? "workspace",
+        this.workspacePath,
+      )
+      workspaces = [ws]
+    }
+    return { workspaces, bindings: snapshot.bindings, recovered: true }
+  }
+
+  /** M10-T03: 记录 session 映射（runtime 创建会话时调用） */
+  bindSession(sessionId: SessionId, nativeSessionId: string, runtimeId: string): void {
+    if (!this.workspaceStore) return
+    const ws = this.workspaceStore.listWorkspaces()[0]
+    if (!ws) return
+    this.workspaceStore.bindSession({
+      agentdeskSessionId: sessionId,
+      runtimeId,
+      nativeSessionId,
+      workspaceId: ws.id,
+    })
+  }
+
+  recoverySnapshot(): RecoveryView {
+    return this.restoreWorkspace()
+  }
+}
+
+export interface RecoveryView {
+  readonly workspaces: readonly { id: string; name: string; path: string; createdAt: string; lastOpenedAt: string }[]
+  readonly bindings: readonly SessionBinding[]
+  readonly recovered: boolean
 }

@@ -17,8 +17,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 const PORT = Number(process.env.AGENTDESK_PANEL_PORT ?? 8787)
 const OPENCODE_URL = process.env.AGENTDESK_OPENCODE_URL ?? "http://127.0.0.1:4096"
 const PI_URL = process.env.AGENTDESK_PI_URL ?? "http://127.0.0.1:30141"
+const STORAGE_FILE = process.env.AGENTDESK_STORAGE_FILE
+const WORKSPACE_PATH = process.env.AGENTDESK_WORKSPACE_PATH
 
-const panel = new AgentDeskPanel({ opencodeBaseUrl: OPENCODE_URL, piBaseUrl: PI_URL })
+const panel = new AgentDeskPanel({
+  opencodeBaseUrl: OPENCODE_URL,
+  piBaseUrl: PI_URL,
+  ...(STORAGE_FILE ? { storageFile: STORAGE_FILE } : {}),
+  ...(WORKSPACE_PATH ? { workspacePath: WORKSPACE_PATH } : {}),
+})
 await panel.start()
 
 const htmlPath = join(ROOT, "public", "index.html")
@@ -67,6 +74,10 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/install-guide") {
       const runtimeId = url.searchParams.get("runtimeId") ?? panel.activeRuntime()
       json(res, 200, panel.installationGuide(runtimeId))
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/workspaces") {
+      json(res, 200, panel.recoverySnapshot())
       return
     }
     if (req.method === "POST" && url.pathname === "/api/switch") {
