@@ -22,6 +22,7 @@
     "@agentdesk/router-core": "*",
     "@agentdesk/extension-sdk": "*",
     "third-party-demo-runtime": "*",
+    "document-agent-demo-runtime": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

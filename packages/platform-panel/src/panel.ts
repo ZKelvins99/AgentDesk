@@ -41,6 +41,7 @@ import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
 import { ThirdPartyDemoRuntime } from "third-party-demo-runtime"
+import { DocumentDemoRuntime } from "document-agent-demo-runtime"
 
 export interface AgentDeskPanelOptions {
   readonly opencodeBaseUrl?: string
@@ -121,7 +122,8 @@ export class AgentDeskPanel {
       cwd: options.opencodeDirectory ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace",
     })
     const thirdParty = new ThirdPartyDemoRuntime()
-    const runtimes: AgentRuntime[] = [opencode, pi, echo, thirdParty, ...(options.extraRuntimes ?? [])]
+    const documentAgent = new DocumentDemoRuntime(options.opencodeDirectory)
+    const runtimes: AgentRuntime[] = [opencode, pi, echo, thirdParty, documentAgent, ...(options.extraRuntimes ?? [])]
     this.platform = new AgentDeskPlatform({ runtimes })
     // M10: 本地 SQLite（崩溃恢复）
     if (options.storageFile) {
@@ -175,6 +177,16 @@ export class AgentDeskPanel {
     const map = new Map(runtimes.map((r) => [r.id, r]))
     this.lifecycle = new RuntimeLifecycleManager(map)
     this.broker = new AgentBroker(runtimeExecutor(map))
+    // M23-T03/T04: 注册 Document Agent（Work Profile → Document Agent）
+    this.agentRegistry.register({
+      id: "document-agent",
+      name: "Document Agent",
+      runtimeId: "document-demo",
+      description: "专业文档 Agent：DOCX/PDF/Spreadsheet/Slides",
+      requiredCapabilities: ["session.create", "session.stream", "artifact.emit"],
+      systemPrompt: "你是 AgentDesk 的文档 Agent，负责生成正式报告与文档。",
+      skills: ["business-report"],
+    })
     this.active = echo.id
   }
 

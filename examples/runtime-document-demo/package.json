@@ -1,0 +1,20 @@
+{
+  "name": "document-agent-demo-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "M23 专业文档 Agent 示例：Capability 声明 + Work Profile + Hybrid 调用。",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@agentdesk/runtime-sdk": "*",
+    "@agentdesk/runtime-protocol": "*",
+    "@agentdesk/tool-core": "*",
+    "@agentdesk/artifact-core": "*",
+    "@agentdesk/storage-core": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

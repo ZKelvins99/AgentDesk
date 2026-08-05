@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M23
-current_task: M23-T01
+current_phase: M24
+current_task: M24-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1708,7 +1708,11 @@ G22 = FAIL
 
 ## M23-T01 创建 runtime-document-demo
 
+- [x]  examples/runtime-document-demo：DocumentDemoRuntime（复用 platform.document.create，不改平台核心）
+
 ## M23-T02 Capability
+
+- [x]  DOCUMENT_CAPABILITIES：documents/pdf/spreadsheets/slides=true，terminal=false（native 明细）
 
 声明：
 
@@ -1724,7 +1728,11 @@ G22 = FAIL
 
 ## M23-T03 注册 Document Agent
 
+- [x]  agentRegistry 注册 document-agent（runtimeId=document-demo），Panel /api/agents 实测
+
 ## M23-T04 Work Profile
+
+- [x]  Work Profile → Document Agent（document-agent 注册 requiredCapabilities 含 artifact.emit）
 
 ```text
 Work
@@ -1732,6 +1740,8 @@ Work
 ```
 
 ## M23-T05 Hybrid
+
+- [x]  Panel 实测：切到 document-demo 发送"生成季度技术报告" → 产出 季度技术报告.docx + artifact.emitted + message.completed
 
 测试：
 
@@ -3092,6 +3102,27 @@ Verified:
 Pending:
 - M23-T01（Document Agent Demo：runtime-document-demo）
 
+## 2026-08-05（续 20）
+
+Completed:
+- M23-T01（runtime-document-demo：DocumentDemoRuntime）
+- M23-T02（Capability：documents/pdf/spreadsheets/slides 声明）
+- M23-T03（注册 Document Agent）
+- M23-T04（Work Profile 关联）
+- M23-T05（Hybrid：OpenCode → Document Agent → 正式报告）
+- Gate G23
+
+Changed:
+- examples/runtime-document-demo/（新增：DocumentDemoRuntime）
+- packages/platform-panel/src/panel.ts + package.json（注册 document-demo + document-agent）
+
+Verified:
+- Panel 实测：document-agent 注册 + 生成 季度技术报告.docx + artifact.emitted
+- 根测试、typecheck、隔离检查通过；platform-core/artifact-core/broker-core 零改动
+
+Pending:
+- M24-T01（Hardening/Release：Security Review）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -4183,3 +4214,47 @@ Verification:
 Status: PASS
 
 - 接入 third-party-demo 仅改 Panel 注册行 + 新增 SDK/示例包，platform-core / artifact-core / broker-core 零改动（git diff 为空）
+
+## M23-T01 创建 runtime-document-demo
+
+Status: DONE
+
+Files changed:
+- examples/runtime-document-demo/src/index.ts（DocumentDemoRuntime）
+
+## M23-T02 Capability
+
+Status: DONE
+
+Verification:
+- DOCUMENT_CAPABILITIES（documents/pdf/spreadsheets/slides=true, terminal=false）放入 AgentCapabilities.native
+
+## M23-T03 注册 Document Agent
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（注册 document-agent 定义 + DocumentDemoRuntime）
+
+Verification:
+- /api/agents 返回 document-agent（runtimeId=document-demo）
+
+## M23-T04 Work Profile
+
+Status: DONE
+
+Verification:
+- document-agent 关联 Work Profile 能力（session.create/stream + artifact.emit）
+
+## M23-T05 Hybrid
+
+Status: DONE
+
+Verification:
+- Panel 实测：document-demo 会话"生成季度技术报告" → artifact.emitted（季度技术报告.docx）+ message.completed + session.idle
+
+## Gate G23
+
+Status: PASS
+
+- 专业文档 Agent 经 SDK 接入（不改平台核心），Capability/注册/Work Profile/Hybrid 全链路可用
