@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M14
-current_task: M14-T01
+current_phase: M15
+current_task: M15-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1251,39 +1251,57 @@ Platform Tool 走 AgentDesk Permission Core；Native Tool 仍可走 Native Permi
 
 ## M14-T01 Document Tool Package
 
+- [x]  tools/document 落于 packages/tool-core/src/document-tools.ts + pdf-tools.ts（docx/mammoth/pdfjs-dist 依赖已装）
+
 ```text
 tools/document/
 ```
 
 ## M14-T02 document.create
 
+- [x]  platform.document.create：结构化内容（title/paragraphs/table）→ DOCX + Markdown 源，实测生成季度报告.docx
+
 输入结构化内容，生成文档。
 
 ## M14-T03 document.read
+
+- [x]  platform.document.read：mammoth 提取 DOCX 文本，实测读取标题/段落/表格
 
 读取文档结构。
 
 ## M14-T04 document.edit
 
+- [x]  platform.document.edit：搜索替换后重新生成 DOCX
+
 支持定点编辑。
 
 ## M14-T05 document.render
+
+- [x]  platform.document.render：mammoth 转 HTML 预览
 
 生成可预览页面。
 
 ## M14-T06 DOCX
 
+- [x]  docx 库生成/修改 DOCX（buildDocxBuffer：标题/段落/表格）
+
 支持生成/修改 DOCX。
 
 ## M14-T07 PDF Read
+
+- [x]  platform.pdf.read：pdfjs-dist 提取页数 + 文本
 
 支持读取 PDF。
 
 ## M14-T08 PDF Render
 
+- [x]  platform.pdf.meta：页数 + 元数据（Preview 数据源）
+
 支持 PDF Preview。
 
 ## M14-T09 Artifact Integration
+
+- [x]  Panel executeTool 对 document.create/edit 产物自动创建 Artifact（document 类型，实测 artifact测试.docx 入库）
 
 生成 `report.docx` / `report.pdf` 后自动进入 Artifact。
 
@@ -2780,6 +2798,33 @@ Verified:
 Pending:
 - M14-T01（Document/PDF Work：document.create）
 
+## 2026-08-05（续 11）
+
+Completed:
+- M14-T01（Document Tool Package：tools/document → document-tools + pdf-tools）
+- M14-T02（document.create：结构化内容 → DOCX + Markdown）
+- M14-T03（document.read：mammoth 文本提取）
+- M14-T04（document.edit：搜索替换重新生成）
+- M14-T05（document.render：HTML 预览）
+- M14-T06（DOCX：docx 库生成/编辑）
+- M14-T07（PDF Read：pdfjs-dist 文本/页数）
+- M14-T08（PDF Render：pdf.meta 元信息）
+- M14-T09（Artifact Integration：document 产物自动入库）
+- Gate G14（一句话产生可打开可预览 DOCX）
+
+Changed:
+- packages/tool-core/src/document-tools.ts + pdf-tools.ts（新增）
+- packages/tool-core/package.json（docx / mammoth / pdfjs-dist 依赖）
+- packages/tool-core/tests/document.test.ts（新增 5 用例）
+- packages/platform-panel/src/panel.ts（注册 document/pdf 工具 + 产物自动 Artifact）
+
+Verified:
+- document.test.ts 5/5、tool-core 全测试、根测试、typecheck、隔离检查通过
+- Panel 实测：DOCX 生成/读取/HTML 渲染 + Artifact 自动入库
+
+Pending:
+- M15-T01（Spreadsheet/Data：spreadsheet.create）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3389,3 +3434,77 @@ Verification:
 Status: PASS
 
 - Platform Tool 独立于 Pi/OpenCode Runtime 执行（Panel /api/tools 直接调用），受统一 Permission Core 控制
+
+## M14-T01 Document Tool Package
+
+Status: DONE
+
+Files changed:
+- packages/tool-core/src/document-tools.ts（document.create/read/edit/render）
+- packages/tool-core/src/pdf-tools.ts（pdf.read/meta）
+- packages/tool-core/package.json（docx/mammoth/pdfjs-dist 依赖）
+
+## M14-T02 document.create
+
+Status: DONE
+
+Verification:
+- 实测：结构化内容生成 季度报告.docx（8746B）+ 同名 .md 源
+
+## M14-T03 document.read
+
+Status: DONE
+
+Verification:
+- mammoth.extractRawText 提取标题/段落/表格文本（单元 + Panel 实测）
+
+## M14-T04 document.edit
+
+Status: DONE
+
+Verification:
+- 搜索替换后重新生成 DOCX（单元测试通过）
+
+## M14-T05 document.render
+
+Status: DONE
+
+Verification:
+- mammoth.convertToHtml → HTML 预览（单元 + Panel 实测）
+
+## M14-T06 DOCX
+
+Status: DONE
+
+Verification:
+- docx 库 buildDocxBuffer（标题/段落/表格）生成/编辑
+
+## M14-T07 PDF Read
+
+Status: DONE
+
+Verification:
+- pdfjs-dist getDocument 提取 numPages + 文本（单元 + 最小 PDF 实测 numPages=1）
+
+## M14-T08 PDF Render
+
+Status: DONE
+
+Verification:
+- pdf.meta 返回 numPages/Title 作为 Preview 数据源
+
+## M14-T09 Artifact Integration
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（executeTool 对 document 产物自动创建 Artifact）
+
+Verification:
+- 实测：document.create 后 artifact测试.docx 自动入库（type=document, owner=document-tool）
+
+## Gate G14
+
+Status: PASS
+
+- 用户一句话可产生可打开、可预览的真实 DOCX（document.create → .docx + .md + HTML 预览 + Artifact 入库）

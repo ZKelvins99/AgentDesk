@@ -10,6 +10,12 @@ import {
   fileListTool,
   fileStatTool,
   pythonTool,
+  documentCreateTool,
+  documentReadTool,
+  documentRenderTool,
+  documentEditTool,
+  pdfReadTool,
+  pdfMetaTool,
 } from "@agentdesk/tool-core"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
@@ -103,6 +109,12 @@ export class AgentDeskPanel {
     this.toolRegistry.register(fileListTool)
     this.toolRegistry.register(fileStatTool)
     this.toolRegistry.register(pythonTool)
+    this.toolRegistry.register(documentCreateTool)
+    this.toolRegistry.register(documentReadTool)
+    this.toolRegistry.register(documentRenderTool)
+    this.toolRegistry.register(documentEditTool)
+    this.toolRegistry.register(pdfReadTool)
+    this.toolRegistry.register(pdfMetaTool)
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -308,11 +320,27 @@ export class AgentDeskPanel {
   }
 
   /** M13: 执行平台工具（过 Permission Core） */
-  executeTool(id: string, input: Record<string, unknown>): Promise<{ ok: boolean; output?: unknown; error?: string; denied?: boolean }> {
-    return this.toolRegistry.execute(id, {
+  async executeTool(id: string, input: Record<string, unknown>): Promise<{ ok: boolean; output?: unknown; error?: string; denied?: boolean }> {
+    const result = await this.toolRegistry.execute(id, {
       workspacePath: this.workspacePath ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace",
       allowWrite: true,
     }, input)
+    // M14-T09: document 工具产物自动进入 Artifact
+    if (result.ok && this.artifactStore && (id === "platform.document.create" || id === "platform.document.edit")) {
+      const out = result.output as { path?: string; mime?: string; sizeBytes?: number } | undefined
+      if (out?.path) {
+        const type = out.mime?.includes("spreadsheet") ? "spreadsheet" : "document"
+        this.artifactStore.create({
+          type,
+          title: out.path.split(/[\\/]/).pop() ?? "document",
+          uri: pathToFileUrl(out.path),
+          ownerRuntimeId: "platform",
+          ownerAgentId: "document-tool",
+          metadata: { toolId: id, sizeBytes: out.sizeBytes },
+        })
+      }
+    }
+    return result
   }
 }
 
@@ -320,4 +348,9 @@ export interface RecoveryView {
   readonly workspaces: readonly { id: string; name: string; path: string; createdAt: string; lastOpenedAt: string }[]
   readonly bindings: readonly SessionBinding[]
   readonly recovered: boolean
+}
+
+function pathToFileUrl(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/")
+  return `file:///${normalized}`
 }
