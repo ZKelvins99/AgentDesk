@@ -1,8 +1,11 @@
 import { AgentDeskPlatform } from "@agentdesk/platform-core"
 import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
 import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
+import type { SkillDescriptor } from "@agentdesk/runtime-protocol"
+import { join } from "node:path"
 import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
 import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
+import { SkillRegistry, loadSkillsFromDir } from "@agentdesk/skill-core"
 import {
   ToolRegistry,
   fileReadTool,
@@ -93,6 +96,7 @@ export class AgentDeskPanel {
   private readonly artifactStore?: ArtifactStore
   private readonly workspacePath?: string
   private readonly toolRegistry: ToolRegistry
+  private readonly skillRegistry = new SkillRegistry()
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -139,6 +143,11 @@ export class AgentDeskPanel {
     this.toolRegistry.register(slidesUpdateSlideTool)
     this.toolRegistry.register(slidesDeleteSlideTool)
     this.toolRegistry.register(slidesRenderTool)
+    // M17: 平台 Skill 加载（.agentdesk/skills/）
+    const skillDir = join(this.workspacePath ?? "D:\\code_kj\\Agent工具开发\\AgentDesk\\test-workspace", ".agentdesk", "skills")
+    for (const skill of loadSkillsFromDir(skillDir)) {
+      this.skillRegistry.register(skill)
+    }
     // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
     this.platform.eventBus.subscribe((event) => {
       if (!("sessionId" in event) || !event.sessionId) return
@@ -341,6 +350,26 @@ export class AgentDeskPanel {
   /** M13: 列出平台工具 */
   listTools(): { id: string; description: string }[] {
     return this.toolRegistry.list().map((t) => ({ id: t.id, description: t.description }))
+  }
+
+  /** M17: 合并 Platform + Native Skills（UI 可区分 source/runtimeId） */
+  async listSkills(): Promise<SkillDescriptor[]> {
+    const native: Array<Omit<SkillDescriptor, "source">> = []
+    for (const runtime of this.platform.runtimeRegistry.list()) {
+      if (runtime.nativeSkills) {
+        const skills = await runtime.nativeSkills()
+        for (const s of skills as Array<{ name?: string; path?: string; [k: string]: unknown }>) {
+          native.push({
+            id: `${runtime.id}-${String(s.name ?? s.path ?? "skill")}`,
+            name: String(s.name ?? s.path ?? "skill"),
+            description: String(s.description ?? `Native skill from ${runtime.id}`),
+            runtimeId: runtime.id,
+            version: String(s.version ?? "native"),
+          })
+        }
+      }
+    }
+    return this.skillRegistry.describeAll(native)
   }
 
   /** M13: 执行平台工具（过 Permission Core） */

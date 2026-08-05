@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M17
-current_task: M17-T01
+current_phase: M18
+current_task: M18-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1393,6 +1393,8 @@ Spreadsheet
 
 ## M17-T01 Skill Manifest
 
+- [x]  packages/skill-core：SKILL.md frontmatter 解析（name/description/requiredCapabilities/preferredAgents/fallbackAgents/version）
+
 例如：
 
 ```yaml
@@ -1409,7 +1411,11 @@ fallbackAgents:
 
 ## M17-T02 Skill Registry
 
+- [x]  SkillRegistry：register/unregister/list/get + describeAll（Platform/Native 合并视图）
+
 ## M17-T03 Skill Loader
+
+- [x]  loadSkillsFromDir 扫描 .agentdesk/skills/（SKILL.md 目录 + 顶层 .md）
 
 目录：
 
@@ -1418,6 +1424,8 @@ fallbackAgents:
 ```
 
 ## M17-T04 Native Skill 区分
+
+- [x]  /api/skills 返回 SkillDescriptor（source=platform/native + runtimeId），实测 Platform business-report + Pi pi-echo 可区分
 
 UI 必须能区分：
 
@@ -2906,6 +2914,27 @@ Verified:
 Pending:
 - M17-T01（Platform Skill System：Skill Manifest）
 
+## 2026-08-05（续 14）
+
+Completed:
+- M17-T01（Skill Manifest：SKILL.md frontmatter 解析）
+- M17-T02（Skill Registry：register/unregister/list/describeAll）
+- M17-T03（Skill Loader：.agentdesk/skills 扫描）
+- M17-T04（Native Skill 区分：source/runtimeId 视图）
+- Gate G17（Platform / Pi / OpenCode Skill UI 可区分）
+
+Changed:
+- packages/skill-core/（新增：manifest/registry/loader + 5 测试）
+- packages/platform-panel/src/panel.ts + server.ts（/api/skills 合并 Platform + Native）
+- packages/platform-panel/package.json（依赖 @agentdesk/skill-core）
+
+Verified:
+- skill.test.ts 5/5、根测试、typecheck、隔离检查通过
+- Panel 实测：business-report（platform, v1.2.0）+ pi-echo（native, pi）可区分
+
+Pending:
+- M18-T01（Agent Registry：Agent 与 Runtime 概念分离）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3715,3 +3744,50 @@ Verification:
 Status: PASS
 
 - 用户一句话可生成可打开的 PPTX（slides.create → add/update/delete → render → Artifact）
+
+## M17-T01 Skill Manifest
+
+Status: DONE
+
+Files changed:
+- packages/skill-core/src/manifest.ts（parseSkillFrontmatter 极简 YAML 解析）
+
+Verification:
+- skill.test.ts：name/description/requiredCapabilities/preferredAgents/fallbackAgents/version 解析断言
+
+## M17-T02 Skill Registry
+
+Status: DONE
+
+Files changed:
+- packages/skill-core/src/registry.ts（SkillRegistry + PlatformSkill）
+
+Verification:
+- skill.test.ts：register/unregister/list/get/describeAll（Platform/Native 合并）
+
+## M17-T03 Skill Loader
+
+Status: DONE
+
+Files changed:
+- packages/skill-core/src/loader.ts（loadSkillsFromDir）
+
+Verification:
+- 扫描 .agentdesk/skills/：SKILL.md 子目录 + 顶层 .md（实测 business-report + quick-note 两个加载）
+
+## M17-T04 Native Skill 区分
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（listSkills：platform + nativeSkills 合并）
+- packages/platform-panel/src/server.ts（GET /api/skills）
+
+Verification:
+- 实测 /api/skills 返回 Platform business-report（v1.2.0）+ Pi native pi-echo，source/runtimeId 可区分
+
+## Gate G17
+
+Status: PASS
+
+- Skill 通过 .agentdesk/skills/ 装载，Platform / Pi Native / OpenCode Native 在 UI 可区分（source + runtimeId）
