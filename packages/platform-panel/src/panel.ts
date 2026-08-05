@@ -8,6 +8,7 @@ import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentde
 import { SkillRegistry, loadSkillsFromDir } from "@agentdesk/skill-core"
 import { AgentDefinitionRegistry, type AgentDefinition } from "@agentdesk/agent-core"
 import { AgentBroker, runtimeExecutor } from "@agentdesk/broker-core"
+import { ModeSwitch, TaskClassifier, TaskRouter, buildHybridWorkflow, type HybridMode } from "@agentdesk/router-core"
 import {
   ToolRegistry,
   fileReadTool,
@@ -101,6 +102,9 @@ export class AgentDeskPanel {
   private readonly skillRegistry = new SkillRegistry()
   private readonly agentRegistry = new AgentDefinitionRegistry()
   private readonly broker: AgentBroker
+  private readonly modeSwitch = new ModeSwitch()
+  private readonly taskClassifier = new TaskClassifier()
+  private readonly taskRouter = new TaskRouter()
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -393,6 +397,22 @@ export class AgentDeskPanel {
 
   brokerStatus(invocationId: string) {
     return this.broker.getStatus(invocationId)
+  }
+
+  /** M20: Hybrid Mode + Task Routing */
+  switchMode(mode: HybridMode): HybridMode {
+    return this.modeSwitch.switch(mode)
+  }
+
+  currentMode(): HybridMode {
+    return this.modeSwitch.current()
+  }
+
+  routeTask(text: string) {
+    const taskType = this.taskClassifier.classify(text)
+    const agent = this.taskRouter.route(taskType, this.agentRegistry.list())
+    const workflow = this.modeSwitch.isHybrid ? buildHybridWorkflow(taskType) : undefined
+    return { taskType, agentId: agent?.id, workflow }
   }
 
   /** M13: 执行平台工具（过 Permission Core） */

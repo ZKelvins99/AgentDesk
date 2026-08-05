@@ -159,6 +159,17 @@ const server = createServer(async (req, res) => {
       json(res, 200, panel.brokerStatus(invocationId) ?? { error: "not found" })
       return
     }
+    if (req.method === "POST" && url.pathname === "/api/mode") {
+      const body = await readBody(req)
+      const mode = panel.switchMode(String(body.mode ?? "MODE_NATIVE_OPENCODE") as never)
+      json(res, 200, { mode })
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/router") {
+      const text = url.searchParams.get("text") ?? ""
+      json(res, 200, panel.routeTask(text))
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {
       const body = await readBody(req)
       const result = await panel.executeTool(

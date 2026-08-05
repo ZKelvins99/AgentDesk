@@ -19,6 +19,7 @@
     "@agentdesk/skill-core": "*",
     "@agentdesk/agent-core": "*",
     "@agentdesk/broker-core": "*",
+    "@agentdesk/router-core": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

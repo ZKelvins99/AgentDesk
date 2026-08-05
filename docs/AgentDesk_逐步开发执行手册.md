@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M20
-current_task: M20-T01
+current_phase: M21
+current_task: M21-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1518,6 +1518,8 @@ permissions
 
 ## M20-T01 Hybrid Mode Switch
 
+- [x]  packages/router-core：ModeSwitch（MODE_NATIVE_OPENCODE / MODE_NATIVE_PI / MODE_HYBRID），Panel /api/mode 实测
+
 新增：
 
 ```text
@@ -1527,6 +1529,8 @@ MODE_HYBRID
 ```
 
 ## M20-T02 Task Classification
+
+- [x]  TaskClassifier 规则版（coding/document/spreadsheet/slides/research/data/general），"分析 CSV 并生成汇报 PPT" → slides
 
 先用规则版：
 
@@ -1544,6 +1548,8 @@ general
 
 ## M20-T03 Capability Matching
 
+- [x]  TaskRouter：task → requiredCapability → 兼容 Agent（slides→work、coding→code、data→data 实测）
+
 例如：
 
 ```text
@@ -1554,9 +1560,13 @@ task = slides
 
 ## M20-T04 Artifact Handoff
 
+- [x]  HandoffRegistry：Agent A 产出记录 → Agent B 消费（producedByAgent/consumedByAgent）
+
 Agent A 产生 `analysis.md`，Agent B 通过 Artifact URI 获取。
 
 ## M20-T05 简单 Hybrid Workflow
+
+- [x]  buildHybridWorkflow：Data → Slides（CSV → analysis artifact → PPT），Panel /api/router 实测两步编排
 
 验收案例：
 
@@ -2987,6 +2997,28 @@ Verified:
 Pending:
 - M20-T01（Task Router / Hybrid Mode：MODE 切换）
 
+## 2026-08-05（续 17）
+
+Completed:
+- M20-T01（Hybrid Mode Switch：三模式）
+- M20-T02（Task Classification：规则版七分类）
+- M20-T03（Capability Matching：task → agent）
+- M20-T04（Artifact Handoff：产物交接记录）
+- M20-T05（Hybrid Workflow：Data → Slides 编排）
+- Gate G20
+
+Changed:
+- packages/router-core/（新增：mode/classifier/router/handoff/workflow + 5 测试）
+- packages/platform-panel/src/panel.ts + server.ts（POST /api/mode、GET /api/router）
+- packages/platform-panel/package.json（依赖 @agentdesk/router-core）
+
+Verified:
+- router.test.ts 5/5、根测试、typecheck、隔离检查通过
+- Panel 实测：CSV→PPT 路由 slides→work + 两步 workflow
+
+Pending:
+- M21-T01（AgentDesk Extension SDK：registerRuntime/registerAgent/...）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3914,3 +3946,60 @@ Verification:
 Status: PASS
 
 - 跨 Runtime 调用一律经 Broker（invoke/cancel/getStatus），禁止 Runtime 间直接依赖
+
+## M20-T01 Hybrid Mode Switch
+
+Status: DONE
+
+Files changed:
+- packages/router-core/src/mode.ts（ModeSwitch + HYBRID_MODES）
+- packages/platform-panel/src/panel.ts + server.ts（POST /api/mode）
+
+Verification:
+- router.test.ts + Panel 实测：MODE_NATIVE_OPENCODE → MODE_HYBRID 切换
+
+## M20-T02 Task Classification
+
+Status: DONE
+
+Files changed:
+- packages/router-core/src/classifier.ts（TaskClassifier 规则版）
+
+Verification:
+- "分析 CSV 并生成汇报 PPT" → slides；"修复 bug" → coding；"随便聊聊" → general
+
+## M20-T03 Capability Matching
+
+Status: DONE
+
+Files changed:
+- packages/router-core/src/router.ts（TASK_REQUIRED_CAPABILITY + TaskRouter）
+
+Verification:
+- slides → work、coding → code、data → data（DEFAULT_AGENTS 匹配）
+
+## M20-T04 Artifact Handoff
+
+Status: DONE
+
+Files changed:
+- packages/router-core/src/handoff.ts（HandoffRegistry）
+
+Verification:
+- 记录 producedByAgent=data → consume by slides（router.test.ts）
+
+## M20-T05 简单 Hybrid Workflow
+
+Status: DONE
+
+Files changed:
+- packages/router-core/src/workflow.ts（buildHybridWorkflow）
+
+Verification:
+- "分析 CSV 并生成汇报 PPT" → [data, work] 两步编排（Panel /api/router 实测）
+
+## Gate G20
+
+Status: PASS
+
+- 规则路由 + Hybrid 编排可用：Data Agent → analysis artifact → Slides Agent → presentation（端到端链路已就绪）
