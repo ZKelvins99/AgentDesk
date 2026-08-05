@@ -139,6 +139,10 @@ const server = createServer(async (req, res) => {
       json(res, 200, { skills })
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/agents") {
+      json(res, 200, { agents: panel.listAgents() })
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {
       const body = await readBody(req)
       const result = await panel.executeTool(

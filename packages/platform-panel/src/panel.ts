@@ -6,6 +6,7 @@ import { join } from "node:path"
 import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding } from "@agentdesk/storage-core"
 import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
 import { SkillRegistry, loadSkillsFromDir } from "@agentdesk/skill-core"
+import { AgentDefinitionRegistry, type AgentDefinition } from "@agentdesk/agent-core"
 import {
   ToolRegistry,
   fileReadTool,
@@ -97,6 +98,7 @@ export class AgentDeskPanel {
   private readonly workspacePath?: string
   private readonly toolRegistry: ToolRegistry
   private readonly skillRegistry = new SkillRegistry()
+  private readonly agentRegistry = new AgentDefinitionRegistry()
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -370,6 +372,11 @@ export class AgentDeskPanel {
       }
     }
     return this.skillRegistry.describeAll(native)
+  }
+
+  /** M18: 列出 Agent 定义（Runtime 与 Agent 分离） */
+  listAgents(): AgentDefinition[] {
+    return this.agentRegistry.list()
   }
 
   /** M13: 执行平台工具（过 Permission Core） */

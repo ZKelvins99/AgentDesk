@@ -17,6 +17,7 @@
     "@agentdesk/artifact-core": "*",
     "@agentdesk/tool-core": "*",
     "@agentdesk/skill-core": "*",
+    "@agentdesk/agent-core": "*",
     "@agentdesk/registry-core": "*"
   },
   "scripts": {

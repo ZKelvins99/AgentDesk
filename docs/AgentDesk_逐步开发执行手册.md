@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M18
-current_task: M18-T01
+current_phase: M19
+current_task: M19-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1445,6 +1445,8 @@ OpenCode Native Skill
 
 ## M18-T01 Agent Definition
 
+- [x]  packages/agent-core：AgentDefinition（id/name/runtimeId/description/requiredCapabilities/systemPrompt/skills/nativeRef）
+
 ```ts
 interface AgentDefinition {
   id: string
@@ -1459,7 +1461,11 @@ interface AgentDefinition {
 
 ## M18-T02 Agent Registry
 
+- [x]  AgentDefinitionRegistry：register/unregister/get/list/listByRuntime（独立于 Runtime Registry）
+
 ## M18-T03 默认 Agent
+
+- [x]  预置六个：OpenCode Native / Pi Native / Code / Work / Research / Data（Panel /api/agents 实测）
 
 建立：
 
@@ -2935,6 +2941,26 @@ Verified:
 Pending:
 - M18-T01（Agent Registry：Agent 与 Runtime 概念分离）
 
+## 2026-08-05（续 15）
+
+Completed:
+- M18-T01（AgentDefinition：Runtime 与 Agent 分离）
+- M18-T02（Agent Registry：AgentDefinitionRegistry）
+- M18-T03（默认 Agent：OpenCode/Pi Native + Code/Work/Research/Data）
+- Gate G18（Agent 独立于 RuntimeRegistry 管理）
+
+Changed:
+- packages/agent-core/（新增：definition/default-agents/registry + 4 测试）
+- packages/platform-panel/src/panel.ts + server.ts（GET /api/agents）
+- packages/platform-panel/package.json（依赖 @agentdesk/agent-core）
+
+Verified:
+- agent.test.ts 4/4、根测试、typecheck、隔离检查通过
+- Panel 实测：六个默认 Agent 返回
+
+Pending:
+- M19-T01（Agent Broker：invoke/cancel/getStatus）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3791,3 +3817,40 @@ Verification:
 Status: PASS
 
 - Skill 通过 .agentdesk/skills/ 装载，Platform / Pi Native / OpenCode Native 在 UI 可区分（source + runtimeId）
+
+## M18-T01 Agent Definition
+
+Status: DONE
+
+Files changed:
+- packages/agent-core/src/definition.ts（AgentDefinition 接口）
+
+Verification:
+- agent.test.ts：结构断言
+
+## M18-T02 Agent Registry
+
+Status: DONE
+
+Files changed:
+- packages/agent-core/src/registry.ts（AgentDefinitionRegistry）
+
+Verification:
+- agent.test.ts：register/get/list/unregister/listByRuntime
+
+## M18-T03 默认 Agent
+
+Status: DONE
+
+Files changed:
+- packages/agent-core/src/default-agents.ts（六个默认 Agent）
+- packages/platform-panel/src/panel.ts + server.ts（GET /api/agents）
+
+Verification:
+- 实测 /api/agents 返回 opencode-native/pi-native/code/work/research/data（runtimeId 正确归属）
+
+## Gate G18
+
+Status: PASS
+
+- Runtime 与 Agent 概念分离：AgentDefinition 独立于 RuntimeRegistry，默认 Agent 由 Agent Registry 管理
