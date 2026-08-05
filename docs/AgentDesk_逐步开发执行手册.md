@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M09
-current_task: M09-T01
+current_phase: M10
+current_task: M10-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1014,9 +1014,13 @@ UNSUPPORTED
 
 ## M09-T01 Runtime Selector
 
+- [x]  Panel 支持 OpenCode / Pi / Echo 三运行时切换（M04 基础上验收）
+
 支持 OpenCode / Pi / Echo。
 
 ## M09-T02 Runtime Status
+
+- [x]  statusLabel 映射 Ready/Starting/Busy/Error/Not Installed，事件驱动 Busy（tool/message 进行中 → Busy，session.idle → Ready）
 
 显示：
 
@@ -1030,9 +1034,13 @@ Not Installed
 
 ## M09-T03 Runtime Settings
 
+- [x]  /api/settings 按 runtimeId 分开返回 Native Config（Pi：global/project；OpenCode：config 全量），不强行统一
+
 OpenCode 与 Pi 的 Native Settings 页面分开，不强行统一全部配置。
 
 ## M09-T04 Runtime Installation Check
+
+- [x]  /api/install-guide 返回 installed + guide（opencode/pi/echo 各自安装说明），未安装时展示 Install Guide
 
 例如：
 
@@ -2623,6 +2631,29 @@ Verified:
 Pending:
 - M09-T01（Desktop Runtime UX：Runtime Selector OpenCode/Pi/Echo 桌面化）
 
+## 2026-08-05（续 6）
+
+Completed:
+- M09-T01（Runtime Selector：OpenCode/Pi/Echo 三运行时切换验收）
+- M09-T02（Runtime Status：statusLabel Ready/Starting/Busy/Error/Not Installed + 事件驱动 Busy）
+- M09-T03（Runtime Settings：/api/settings 按 runtime 分开返回 Native Config）
+- M09-T04（Runtime Installation Check：/api/install-guide + Install Guide UI）
+
+Changed:
+- packages/platform-panel/src/panel.ts（statusLabel、busySessions、nativeSettings、installationGuide）
+- packages/platform-panel/src/server.ts（/api/settings、/api/install-guide）
+- packages/platform-panel/public/index.html（badge、Settings 面板、Installation Check 面板）
+- packages/platform-panel/tests/panel.test.ts（M09 用例 3 个，panel 测试 7/7）
+- packages/runtime-opencode/src/open-code-runtime.ts（dispose 关闭全局 SSE 连接，修复句柄挂起）
+
+Verified:
+- 三运行时 statusLabel=Ready；Echo 会话 busy→ready 事件驱动断言
+- Pi/OpenCode Native Settings 分开展示；install-guide 三运行时返回 installed+guide
+- 根契约测试 36/36、panel 测试 7/7、typecheck、隔离检查通过
+
+Pending:
+- M10-T01（Workspace/Storage：SQLite 本地数据库）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -2971,3 +3002,54 @@ Files changed:
 
 Verification:
 - 实测列出 ui-ask.ts / ui-input.ts / ui-multi.ts，均 FULL（supportedMethods: confirm/select/input/notify/status）
+
+## M09-T01 Runtime Selector
+
+Status: DONE
+
+Verification:
+- Panel 三运行时 OpenCode / Pi / Echo 切换可用（/api/switch 实测 200）
+
+## M09-T02 Runtime Status
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（statusLabel 映射 + busySessions 事件驱动）
+- packages/platform-panel/public/index.html（badge 渲染 Ready/Busy/Starting/Error/Not Installed）
+
+Verification:
+- 实测三运行时 statusLabel=Ready；Echo 会话进行中 → Busy → idle 后回 Ready（panel.test.ts 断言）
+- 修复 OpenCodeRuntime.dispose 未关闭全局 SSE 连接导致的句柄挂起
+
+## M09-T03 Runtime Settings
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（nativeSettings()）
+- packages/platform-panel/src/server.ts（GET /api/settings?runtimeId=）
+- packages/platform-panel/public/index.html（Settings 面板，按 runtime 选择加载）
+
+Verification:
+- Pi：global.settings.defaultProvider=公司 + global.models.providers
+- OpenCode：config 全量键（model/provider/permission/tools 等），两者分开展示
+
+## M09-T04 Runtime Installation Check
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/panel.ts（installationGuide()）
+- packages/platform-panel/src/server.ts（GET /api/install-guide?runtimeId=）
+- packages/platform-panel/public/index.html（Installation Check 面板）
+
+Verification:
+- opencode / pi / echo 均返回 installed + guide；未安装场景展示 Install Guide（panel.test.ts 断言）
+
+## Gate G09（隐含）
+
+Status: PASS
+
+- Runtime Selector / Status / Settings / Install Check 四个 UX 端点全部实测通过
+- 根契约测试 36/36、panel 测试 7/7、typecheck、隔离检查通过

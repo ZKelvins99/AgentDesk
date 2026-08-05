@@ -2,22 +2,38 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>AgentDesk Panel (M04)</title>
+  <title>AgentDesk Panel</title>
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, sans-serif; background: #16181d; color: #e6e6e6; margin: 0; padding: 20px; }
     h1 { font-size: 18px; margin: 0 0 12px; }
+    h2 { font-size: 14px; margin: 0 0 8px; color: #c4c8d0; }
     .runtimes { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
     .runtime { border: 1px solid #333; border-radius: 8px; padding: 10px 14px; cursor: pointer; min-width: 160px; }
     .runtime.active { border-color: #4ade80; background: #1c2a1e; }
     .runtime .name { font-weight: 600; }
     .runtime .state { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    .runtime .status { font-size: 11px; margin-top: 2px; }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+    .badge.ready { background: #14331c; color: #4ade80; }
+    .badge.busy { background: #33290f; color: #fbbf24; }
+    .badge.starting { background: #1e2a4a; color: #93c5fd; }
+    .badge.error { background: #3b1215; color: #f87171; }
+    .badge.notinstalled { background: #3b1d12; color: #fb923c; }
     .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
     .dot.ok { background: #4ade80; }
     .dot.bad { background: #f87171; }
+    .row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .panels { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .panel { flex: 1; min-width: 300px; background: #1a1c22; border: 1px solid #26282f; border-radius: 8px; padding: 12px; }
+    pre.settings { background: #101216; border: 1px solid #26282f; border-radius: 6px; padding: 8px; font-size: 11px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+    .install { background: #33291a; border: 1px solid #55401f; border-radius: 6px; padding: 8px; font-size: 12px; color: #fcd34d; }
     .row { display: flex; gap: 8px; margin-bottom: 16px; }
     input { flex: 1; background: #1f2128; border: 1px solid #333; color: #e6e6e6; border-radius: 6px; padding: 8px 10px; }
     button { background: #2563eb; border: 0; color: #fff; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+    button.ghost { background: #2a2d36; }
+    .settings-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .settings-head select { background: #1f2128; color: #e6e6e6; border: 1px solid #333; border-radius: 6px; padding: 4px 8px; }
     .log { background: #101216; border: 1px solid #26282f; border-radius: 8px; padding: 12px; height: 50vh; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; }
     .log .msg { color: #a5b4fc; }
     .log .tool { color: #fbbf24; }
@@ -26,8 +42,22 @@
   </style>
 </head>
 <body>
-  <h1>AgentDesk Panel — Runtime Selector (M04-T05/T06)</h1>
+  <h1>AgentDesk Panel — Runtime UX (M09)</h1>
   <div id="runtimes" class="runtimes"></div>
+  <div class="panels">
+    <div class="panel">
+      <h2>Native Settings（按 Runtime 分开）</h2>
+      <div class="settings-head">
+        <select id="settingsRuntime"></select>
+        <button id="loadSettings" class="ghost">加载</button>
+      </div>
+      <pre id="settings" class="settings">（选择 Runtime 后加载）</pre>
+    </div>
+    <div class="panel">
+      <h2>Installation Check</h2>
+      <div id="install"></div>
+    </div>
+  </div>
   <div class="row">
     <input id="message" placeholder="输入消息（例如 hello）后发送…" />
     <button id="send">发送</button>
@@ -44,10 +74,50 @@
         const el = document.createElement("div")
         el.className = "runtime" + (r.active ? " active" : "")
         const dot = r.ok ? "ok" : "bad"
+        const label = r.statusLabel ?? r.state
+        const badgeClass = { Ready: "ready", Busy: "busy", Starting: "starting", Error: "error", "Not Installed": "notinstalled" }[label] ?? "starting"
         el.innerHTML = `<div class="name"><span class="dot ${dot}"></span>${r.displayName}</div>` +
-          `<div class="state">${r.state}${r.detail ? " · " + r.detail : ""}</div>`
+          `<div class="state"><span class="badge ${badgeClass}">${label}</span>${r.detail ? " · " + r.detail : ""}</div>`
         el.onclick = () => switchRuntime(r.id)
         $("runtimes").appendChild(el)
+      }
+      // settings runtime selector
+      const sel = $("settingsRuntime")
+      const prev = sel.value
+      sel.innerHTML = ""
+      for (const r of runtimes) {
+        const opt = document.createElement("option")
+        opt.value = r.id
+        opt.textContent = r.displayName
+        sel.appendChild(opt)
+      }
+      if (prev) sel.value = prev
+      renderInstall()
+    }
+
+    async function renderInstall() {
+      const sel = $("settingsRuntime")
+      const id = sel.value ?? state.active
+      try {
+        const res = await fetch(`/api/install-guide?runtimeId=${encodeURIComponent(id)}`)
+        const data = await res.json()
+        $("install").innerHTML = data.installed
+          ? `<div class="install">✅ ${data.guide ?? "已安装"}</div>`
+          : `<div class="install">⚠️ ${id} Runtime Not Installed<br/>${data.guide ?? ""}</div>`
+      } catch {
+        $("install").textContent = "（无法检查安装状态）"
+      }
+    }
+
+    async function loadSettings() {
+      const id = $("settingsRuntime").value ?? state.active
+      $("settings").textContent = "加载中…"
+      try {
+        const res = await fetch(`/api/settings?runtimeId=${encodeURIComponent(id)}`)
+        const data = await res.json()
+        $("settings").textContent = JSON.stringify(data.settings, null, 2)
+      } catch (e) {
+        $("settings").textContent = "加载失败：" + e.message
       }
     }
 
@@ -122,6 +192,8 @@
 
     $("send").onclick = send
     $("message").addEventListener("keydown", (e) => { if (e.key === "Enter") send() })
+    $("loadSettings").onclick = loadSettings
+    $("settingsRuntime").addEventListener("change", renderInstall)
 
     const events = new EventSource("/api/events")
     events.onmessage = (ev) => {

@@ -43,6 +43,7 @@ export class OpenCodeRuntime implements AgentRuntime {
   private readonly upstreamCommit: string | undefined
   private client: OpencodeClient | undefined
   private readonly listeners = new Set<(event: AgentEvent) => void>()
+  private eventStreamAbort: AbortController | undefined
   private disposed = false
 
   constructor(options: OpenCodeRuntimeOptions) {
@@ -106,6 +107,9 @@ export class OpenCodeRuntime implements AgentRuntime {
 
   async dispose(): Promise<void> {
     this.disposed = true
+    // 关闭全局 SSE 事件流连接，避免测试/退出时句柄挂起
+    this.eventStreamAbort?.abort()
+    this.eventStreamAbort = undefined
     this.listeners.clear()
     this.client = undefined
   }
@@ -228,6 +232,7 @@ export class OpenCodeRuntime implements AgentRuntime {
   /** 订阅 OpenCode 全局事件流（GET /global/event，SDK client.event() 同源），映射为 AgentEvent */
   async attachGlobalEventStream(): Promise<Unsubscribe> {
     const controller = new AbortController()
+    this.eventStreamAbort = controller
     const res = await fetch(`${this.baseUrl}/global/event`, { signal: controller.signal })
     if (!res.ok) throw new Error(`opencode /global/event failed: HTTP ${res.status}`)
 

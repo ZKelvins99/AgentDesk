@@ -58,6 +58,17 @@ const server = createServer(async (req, res) => {
       json(res, 200, { runtimes: panel.list(), active: panel.activeRuntime() })
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/settings") {
+      const runtimeId = url.searchParams.get("runtimeId") ?? undefined
+      const settings = await panel.nativeSettings(runtimeId)
+      json(res, 200, { runtimeId: runtimeId ?? panel.activeRuntime(), settings })
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/install-guide") {
+      const runtimeId = url.searchParams.get("runtimeId") ?? panel.activeRuntime()
+      json(res, 200, panel.installationGuide(runtimeId))
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/switch") {
       const body = await readBody(req)
       const id = String(body.runtimeId ?? "")

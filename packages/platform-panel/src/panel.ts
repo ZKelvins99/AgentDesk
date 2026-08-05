@@ -1,6 +1,6 @@
 import { AgentDeskPlatform } from "@agentdesk/platform-core"
 import { RuntimeLifecycleManager } from "@agentdesk/registry-core"
-import type { AgentEvent, AgentRuntime, RuntimeId } from "@agentdesk/runtime-protocol"
+import type { AgentEvent, AgentRuntime, RuntimeId, SessionId } from "@agentdesk/runtime-protocol"
 import { EchoRuntime } from "@agentdesk/runtime-echo"
 import { OpenCodeRuntime } from "@agentdesk/runtime-opencode"
 import { PiWebRuntime } from "@agentdesk/runtime-pi"
@@ -20,9 +20,28 @@ export interface RuntimeView {
   readonly version: string
   readonly description?: string
   readonly state: string
+  /** M09-T02: 用户可读状态标签（Ready/Starting/Busy/Error/Not Installed） */
+  readonly statusLabel: string
   readonly ok: boolean
   readonly detail?: string
   readonly active: boolean
+}
+
+/** M09-T02: lifecycle state → 用户可读状态标签 */
+function toStatusLabel(state: string, busy: boolean): string {
+  if (state === "ready" || state === "busy") {
+    return busy ? "Busy" : "Ready"
+  }
+  switch (state) {
+    case "initializing":
+      return "Starting"
+    case "error":
+      return "Error"
+    case "disposed":
+      return "Not Installed"
+    default:
+      return "Starting"
+  }
 }
 
 /**
@@ -35,6 +54,7 @@ export class AgentDeskPanel {
   readonly lifecycle: RuntimeLifecycleManager
 
   private active: RuntimeId
+  private readonly busySessions = new Set<SessionId>()
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -48,6 +68,15 @@ export class AgentDeskPanel {
     })
     const runtimes: AgentRuntime[] = [opencode, pi, echo, ...(options.extraRuntimes ?? [])]
     this.platform = new AgentDeskPlatform({ runtimes })
+    // M09-T02: 事件驱动 Busy 状态（工具/消息进行中 → busy；session.idle → 回 ready）
+    this.platform.eventBus.subscribe((event) => {
+      if (!("sessionId" in event) || !event.sessionId) return
+      if (event.type === "tool.started" || event.type === "message.started") {
+        this.busySessions.add(event.sessionId)
+      } else if (event.type === "session.idle") {
+        this.busySessions.delete(event.sessionId)
+      }
+    })
     const map = new Map(runtimes.map((r) => [r.id, r]))
     this.lifecycle = new RuntimeLifecycleManager(map)
     this.active = echo.id
@@ -83,12 +112,14 @@ export class AgentDeskPanel {
     )
     return this.platform.runtimeRegistry.list().map((runtime) => {
       const info = snapshot.get(runtime.id)
+      const busy = this.busySessions.size > 0
       return {
         id: runtime.id,
         displayName: runtime.manifest.displayName,
         version: runtime.manifest.version,
         description: runtime.manifest.description,
         state: info?.state ?? "uninitialized",
+        statusLabel: toStatusLabel(info?.state ?? "uninitialized", busy),
         ok: info?.ok ?? false,
         detail: info?.detail,
         active: runtime.id === this.active,
@@ -151,6 +182,30 @@ export class AgentDeskPanel {
     if (!runtime) throw new Error(`Unknown runtime: ${target}`)
     if (!runtime.respondUi) return false
     return runtime.respondUi({ sessionId, requestId, ...body })
+  }
+
+  /** M09-T03: 读取指定 Runtime 的 Native Settings（OpenCode/Pi 各自原生配置，不统一） */
+  async nativeSettings(runtimeId?: RuntimeId): Promise<unknown> {
+    const target = runtimeId ?? this.active
+    const runtime = this.platform.runtimeRegistry.get(target)
+    if (!runtime) throw new Error(`Unknown runtime: ${target}`)
+    if (!runtime.nativeConfig) return { unsupported: true }
+    return runtime.nativeConfig()
+  }
+
+  /** M09-T04: Runtime 安装指南（未安装时展示） */
+  installationGuide(runtimeId: RuntimeId): { installed: boolean; guide?: string } {
+    const snapshot = new Map(
+      this.lifecycle.healthSnapshot(this.runtimeMap()).map((s) => [s.runtimeId, s]),
+    )
+    const info = snapshot.get(runtimeId)
+    const installed = info?.ok === true
+    const guides: Record<RuntimeId, string> = {
+      opencode: "安装：cd vendor/opencode && bun install && bun run src/index.ts serve --port 4096",
+      pi: "安装：cd vendor/pi-web && npm install && npm run dev（端口 30141）",
+      echo: "内置 Echo Runtime，无需安装",
+    }
+    return { installed, guide: guides[runtimeId] ?? `Runtime ${runtimeId} 未安装` }
   }
 
   subscribe(listener: (event: AgentEvent) => void): () => void {
