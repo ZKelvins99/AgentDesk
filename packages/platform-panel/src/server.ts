@@ -143,6 +143,22 @@ const server = createServer(async (req, res) => {
       json(res, 200, { agents: panel.listAgents() })
       return
     }
+    if (req.method === "POST" && url.pathname === "/api/broker/invoke") {
+      const body = await readBody(req)
+      const record = await panel.brokerInvoke(
+        String(body.agentId ?? ""),
+        String(body.message ?? ""),
+        body.parentSession ? String(body.parentSession) : undefined,
+        body.parentAgent ? String(body.parentAgent) : undefined,
+      )
+      json(res, 200, record)
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/api/broker/status") {
+      const invocationId = url.searchParams.get("invocationId") ?? ""
+      json(res, 200, panel.brokerStatus(invocationId) ?? { error: "not found" })
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/tools/execute") {
       const body = await readBody(req)
       const result = await panel.executeTool(

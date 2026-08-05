@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M19
-current_task: M19-T01
+current_phase: M20
+current_task: M20-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1484,6 +1484,8 @@ Data
 
 ## M19-T01 Broker API
 
+- [x]  packages/broker-core：AgentBroker（invoke/cancel/getStatus/list），Panel /api/broker/invoke + /status 实测
+
 ```ts
 invoke(agentId, request)
 cancel(invocationId)
@@ -1491,6 +1493,8 @@ getStatus(invocationId)
 ```
 
 ## M19-T02 Invocation Context
+
+- [x]  InvocationRecord 记录 parentSession/parentAgent/childAgent/artifacts/permissions + 状态机（pending/running/completed/cancelled/failed）
 
 记录：
 
@@ -1503,6 +1507,8 @@ permissions
 ```
 
 ## M19-T03 禁止直接依赖
+
+- [x]  runtimeExecutor 统一经 Broker 跨 Runtime 执行（Map<runtimeId, AgentRuntime>）；隔离检查确认 runtime-pi 不 import runtime-opencode
 
 `runtime-pi` 不能 import `runtime-opencode`。跨 Runtime 必须走 Broker。
 
@@ -2961,6 +2967,26 @@ Verified:
 Pending:
 - M19-T01（Agent Broker：invoke/cancel/getStatus）
 
+## 2026-08-05（续 16）
+
+Completed:
+- M19-T01（Broker API：invoke/cancel/getStatus）
+- M19-T02（Invocation Context：parent/child/artifacts/permissions + 状态机）
+- M19-T03（禁止直接依赖：跨 Runtime 统一走 Broker）
+- Gate G19
+
+Changed:
+- packages/broker-core/（新增：broker + runtimeExecutor + 5 测试）
+- packages/platform-panel/src/panel.ts + server.ts（/api/broker/invoke + /api/broker/status）
+- packages/platform-panel/package.json（依赖 @agentdesk/broker-core）
+
+Verified:
+- broker.test.ts 5/5、根测试、typecheck、隔离检查通过
+- Panel 实测：invoke echo → completed + sessionId
+
+Pending:
+- M20-T01（Task Router / Hybrid Mode：MODE 切换）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3854,3 +3880,37 @@ Verification:
 Status: PASS
 
 - Runtime 与 Agent 概念分离：AgentDefinition 独立于 RuntimeRegistry，默认 Agent 由 Agent Registry 管理
+
+## M19-T01 Broker API
+
+Status: DONE
+
+Files changed:
+- packages/broker-core/src/broker.ts（AgentBroker：invoke/cancel/getStatus/list + runtimeExecutor）
+- packages/platform-panel/src/panel.ts + server.ts（/api/broker/invoke + /api/broker/status）
+
+Verification:
+- broker.test.ts 5/5：invoke→completed、cancel、failed、跨 Runtime executor
+- Panel 实测：invoke echo → running → completed（sessionId 返回）
+
+## M19-T02 Invocation Context
+
+Status: DONE
+
+Verification:
+- InvocationRecord 记录 parentSession/parentAgent/childAgent/artifacts/permissions + 状态机
+- broker.test.ts：parent/child/artifacts/permissions 断言
+
+## M19-T03 禁止直接依赖
+
+Status: DONE
+
+Verification:
+- runtimeExecutor 统一经 Broker 跨 Runtime 执行（不再直接 import）
+- check-platform-isolation 通过：runtime-pi 不依赖 runtime-opencode
+
+## Gate G19
+
+Status: PASS
+
+- 跨 Runtime 调用一律经 Broker（invoke/cancel/getStatus），禁止 Runtime 间直接依赖

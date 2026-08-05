@@ -7,6 +7,7 @@ import { AgentDeskDatabase, WorkspaceStore, CrashRecovery, type SessionBinding }
 import { ArtifactStore, type Artifact, type CreateArtifactInput } from "@agentdesk/artifact-core"
 import { SkillRegistry, loadSkillsFromDir } from "@agentdesk/skill-core"
 import { AgentDefinitionRegistry, type AgentDefinition } from "@agentdesk/agent-core"
+import { AgentBroker, runtimeExecutor } from "@agentdesk/broker-core"
 import {
   ToolRegistry,
   fileReadTool,
@@ -99,6 +100,7 @@ export class AgentDeskPanel {
   private readonly toolRegistry: ToolRegistry
   private readonly skillRegistry = new SkillRegistry()
   private readonly agentRegistry = new AgentDefinitionRegistry()
+  private readonly broker: AgentBroker
 
   constructor(options: AgentDeskPanelOptions = {}) {
     const echo = new EchoRuntime({ latencyMs: 15 })
@@ -161,6 +163,7 @@ export class AgentDeskPanel {
     })
     const map = new Map(runtimes.map((r) => [r.id, r]))
     this.lifecycle = new RuntimeLifecycleManager(map)
+    this.broker = new AgentBroker(runtimeExecutor(map))
     this.active = echo.id
   }
 
@@ -377,6 +380,19 @@ export class AgentDeskPanel {
   /** M18: 列出 Agent 定义（Runtime 与 Agent 分离） */
   listAgents(): AgentDefinition[] {
     return this.agentRegistry.list()
+  }
+
+  /** M19: Broker 调用入口 */
+  brokerInvoke(agentId: string, message: string, parentSession?: string, parentAgent?: string) {
+    return this.broker.invoke(agentId, {
+      message,
+      ...(parentSession ? { parentSession } : {}),
+      ...(parentAgent ? { parentAgent } : {}),
+    })
+  }
+
+  brokerStatus(invocationId: string) {
+    return this.broker.getStatus(invocationId)
   }
 
   /** M13: 执行平台工具（过 Permission Core） */
