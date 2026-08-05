@@ -280,6 +280,11 @@ export class AgentDeskPanel {
   listArtifacts(): Artifact[] {
     return this.artifactStore?.list() ?? []
   }
+
+  /** M12: 按 id 取单个 Artifact（最新版本） */
+  getArtifact(id: string): Artifact | undefined {
+    return this.artifactStore?.getLatest(id)
+  }
 }
 
 export interface RecoveryView {

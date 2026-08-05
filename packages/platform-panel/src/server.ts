@@ -8,6 +8,7 @@
  *   GET  /api/events     -> SSE stream of AgentEvents
  */
 import { createServer } from "node:http"
+import { execFile } from "node:child_process"
 import { readFileSync, existsSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -98,6 +99,37 @@ const server = createServer(async (req, res) => {
       json(res, 200, { ok: true, artifact })
       return
     }
+    if (req.method === "GET" && url.pathname === "/api/artifact-content") {
+      const id = url.searchParams.get("id") ?? ""
+      const artifact = panel.getArtifact(id)
+      if (!artifact) {
+        json(res, 404, { error: "artifact not found" })
+        return
+      }
+      const content = readArtifactContent(artifact.uri)
+      json(res, 200, { id, uri: artifact.uri, ...content })
+      return
+    }
+    if (req.method === "POST" && url.pathname === "/api/artifact-open") {
+      const id = url.searchParams.get("id") ?? ""
+      const artifact = panel.getArtifact(id)
+      if (!artifact) {
+        json(res, 404, { error: "artifact not found" })
+        return
+      }
+      let filePath = artifact.uri
+      if (filePath.startsWith("file://")) filePath = fileURLToPath(filePath)
+      if (!existsSync(filePath)) {
+        json(res, 404, { error: "artifact file not found", uri: artifact.uri })
+        return
+      }
+      // M12-T05: 用系统默认程序打开（Windows start / macOS open / Linux xdg-open）
+      execFile(process.platform === "win32" ? "cmd" : process.platform === "darwin" ? "open" : "xdg-open",
+        process.platform === "win32" ? ["/c", "start", "", filePath] : [filePath],
+        { windowsHide: true })
+      json(res, 200, { ok: true, uri: artifact.uri })
+      return
+    }
     if (req.method === "POST" && url.pathname === "/api/switch") {
       const body = await readBody(req)
       const id = String(body.runtimeId ?? "")
@@ -169,3 +201,53 @@ process.on("SIGINT", async () => {
   server.close()
   process.exit(0)
 })
+
+/** M12: 读取 Artifact 内容用于预览（file:// URI → 文件；文本转字符串，图片转 base64 data-url） */
+function readArtifactContent(uri: string): { kind: "text" | "image" | "unsupported"; text?: string; dataUrl?: string; mime?: string; sizeBytes?: number } {
+  try {
+    let filePath = uri
+    if (uri.startsWith("file://")) {
+      filePath = fileURLToPath(uri)
+    } else if (/^https?:\/\//.test(uri)) {
+      return { kind: "unsupported" }
+    }
+    if (!existsSync(filePath)) return { kind: "unsupported" }
+    const mime = mimeFromPath(filePath)
+    const sizeBytes = readFileSync(filePath).length
+    if (mime.startsWith("image/")) {
+      const base64 = readFileSync(filePath).toString("base64")
+      return { kind: "image", dataUrl: `data:${mime};base64,${base64}`, mime, sizeBytes }
+    }
+    const text = readFileSync(filePath, "utf8")
+    return { kind: "text", text, mime, sizeBytes }
+  } catch {
+    return { kind: "unsupported" }
+  }
+}
+
+function mimeFromPath(filePath: string): string {
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? ""
+  switch (ext) {
+    case "png": return "image/png"
+    case "jpg":
+    case "jpeg": return "image/jpeg"
+    case "webp": return "image/webp"
+    case "json": return "application/json"
+    case "md": return "text/markdown"
+    case "html":
+    case "htm": return "text/html"
+    case "txt": return "text/plain"
+    case "ts":
+    case "tsx":
+    case "js":
+    case "jsx":
+    case "css":
+    case "py":
+    case "go":
+    case "rs":
+    case "java":
+    case "c":
+    case "cpp": return "text/plain"
+    default: return "application/octet-stream"
+  }
+}

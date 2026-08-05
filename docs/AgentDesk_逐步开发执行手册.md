@@ -153,8 +153,8 @@ runtime.capabilities
 
 ```yaml
 project: AgentDesk
-current_phase: M12
-current_task: M12-T01
+current_phase: M13
+current_task: M13-T01
 status: IN_PROGRESS
 last_verified_commit: 1882c33
 blocker: null
@@ -1170,21 +1170,31 @@ html
 
 ## M12-T01 Artifact List
 
+- [x]  Panel 右侧 Artifact 面板：/api/artifacts 列表渲染（type/title/version），8s 轮询刷新
+
 展示当前 Session 产物。
 
 ## M12-T02 Text Preview
+
+- [x]  /api/artifact-content 读取 .md/.txt/.json 等文本内容，pre 预览
 
 支持 `.md` / `.txt` / `.json`。
 
 ## M12-T03 Code Preview
 
+- [x]  code 类型 artifact 以 <pre> 渲染（实测 demo.ts 内容显示）
+
 支持 syntax highlight。
 
 ## M12-T04 Image Preview
 
+- [x]  image 类型 artifact 转 base64 data-url，<img> 预览（实测 PNG）
+
 支持 PNG/JPEG/WebP。
 
 ## M12-T05 Open File
+
+- [x]  POST /api/artifact-open 用系统默认程序打开（Windows start），实测 note.md 打开成功
 
 允许在系统中打开 Artifact。
 
@@ -2717,6 +2727,27 @@ Verified:
 Pending:
 - M12-T01（Artifact UI：右侧产物面板 + Preview）
 
+## 2026-08-05（续 9）
+
+Completed:
+- M12-T01（Artifact List：右侧面板 + 轮询列表）
+- M12-T02（Text Preview：.md/.txt/.json 内容预览）
+- M12-T03（Code Preview：code 类型 pre 渲染）
+- M12-T04（Image Preview：base64 data-url 图片预览）
+- M12-T05（Open File：系统默认程序打开）
+
+Changed:
+- packages/platform-panel/public/index.html（Artifact 面板 + 列表/预览/打开按钮）
+- packages/platform-panel/src/panel.ts（getArtifact）
+- packages/platform-panel/src/server.ts（/api/artifact-content、/api/artifact-open、mimeFromPath）
+
+Verified:
+- 实测 text/code/image 三类预览 + note.md 系统打开
+- 根测试、typecheck、隔离检查通过
+
+Pending:
+- M13-T01（Platform Tool System：Tool Protocol）
+
 ## M05-T01 新建 runtime-opencode
 
 Status: DONE
@@ -3220,3 +3251,53 @@ Verification:
 Status: PASS
 
 - 任意 Runtime 可通过平台协议（Panel POST /api/artifacts 或 ArtifactStore API）创建 Artifact，无需依赖 UI
+
+## M12-T01 Artifact List
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/public/index.html（右侧 Artifact 面板 + 列表渲染 + 轮询）
+
+Verification:
+- 实测 /api/artifacts 列表渲染 7 个 artifact（type/title/version）
+
+## M12-T02 Text Preview
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/server.ts（/api/artifact-content：file:// URI 解析 + mime 判断）
+
+Verification:
+- 实测 note.md 文本内容返回并预览
+
+## M12-T03 Code Preview
+
+Status: DONE
+
+Verification:
+- 实测 demo.ts（code 类型）内容以 pre 渲染
+
+## M12-T04 Image Preview
+
+Status: DONE
+
+Verification:
+- 实测 dot.png 转 base64 data-url（118 字符）并 <img> 预览
+
+## M12-T05 Open File
+
+Status: DONE
+
+Files changed:
+- packages/platform-panel/src/server.ts（POST /api/artifact-open：Windows start / macOS open / Linux xdg-open）
+
+Verification:
+- 实测 note.md 用系统默认程序打开成功（ok:true）
+
+## Gate G12
+
+Status: PASS
+
+- Artifact 预览按类型分支（text/code/image），UI 无大型 switch-case，类型由 server 端 mime 判断

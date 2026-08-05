@@ -39,6 +39,19 @@
     .log .tool { color: #fbbf24; }
     .log .perm { color: #f472b6; }
     .log .err { color: #f87171; }
+    .main { display: flex; gap: 12px; }
+    .main .log { flex: 1; }
+    .artifact-panel { width: 360px; display: flex; flex-direction: column; gap: 8px; }
+    .artifact-list { max-height: 30vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .artifact-item { background: #1f2128; border: 1px solid #26282f; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+    .artifact-item:hover { border-color: #3b82f6; }
+    .artifact-item .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .artifact-item .v { color: #9ca3af; flex-shrink: 0; }
+    .artifact-preview { flex: 1; min-height: 260px; background: #101216; border: 1px solid #26282f; border-radius: 8px; padding: 10px; overflow: auto; font-size: 12px; }
+    .artifact-preview pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: ui-monospace, monospace; }
+    .artifact-preview img { max-width: 100%; border-radius: 6px; }
+    .artifact-preview .hint { color: #6b7280; }
+    .artifact-preview .actions { display: flex; gap: 8px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -62,7 +75,14 @@
     <input id="message" placeholder="输入消息（例如 hello）后发送…" />
     <button id="send">发送</button>
   </div>
-  <div id="log" class="log"></div>
+  <div class="main">
+    <div id="log" class="log"></div>
+    <div class="artifact-panel">
+      <h2>Artifacts（M12）</h2>
+      <div id="artifactList" class="artifact-list"></div>
+      <div id="artifactPreview" class="artifact-preview"><span class="hint">选择左侧 Artifact 预览</span></div>
+    </div>
+  </div>
 
   <script>
     const state = { active: null, sessions: new Map() }
@@ -194,6 +214,53 @@
     $("message").addEventListener("keydown", (e) => { if (e.key === "Enter") send() })
     $("loadSettings").onclick = loadSettings
     $("settingsRuntime").addEventListener("change", renderInstall)
+    // ---- M12: Artifact UI ----
+    async function refreshArtifacts() {
+      try {
+        const res = await fetch("/api/artifacts")
+        const data = await res.json()
+        renderArtifactList(data.artifacts ?? [])
+      } catch { /* transient */ }
+    }
+    function renderArtifactList(artifacts) {
+      const box = $("artifactList")
+      box.innerHTML = ""
+      for (const a of artifacts) {
+        const el = document.createElement("div")
+        el.className = "artifact-item"
+        el.innerHTML = `<span class="t">${escapeHtml(a.type)} · ${escapeHtml(a.title)}</span><span class="v">v${a.version}</span>`
+        el.onclick = () => showArtifact(a)
+        box.appendChild(el)
+      }
+    }
+    async function showArtifact(a) {
+      const preview = $("artifactPreview")
+      preview.innerHTML = `<div class="actions"><button class="ghost" id="openFile">打开文件</button></div><span class="hint">加载中…</span>`
+      document.getElementById("openFile").onclick = () => openArtifact(a)
+      try {
+        const res = await fetch(`/api/artifact-content?id=${encodeURIComponent(a.id)}`)
+        const data = await res.json()
+        if (data.kind === "image" && data.dataUrl) {
+          preview.innerHTML = `<div class="actions"><button class="ghost" id="openFile">打开文件</button></div><img src="${data.dataUrl}" alt="${escapeHtml(a.title)}" />`
+        } else if (data.kind === "text" && data.text !== undefined) {
+          const lang = a.type === "code" ? "code" : "text"
+          preview.innerHTML = `<div class="actions"><button class="ghost" id="openFile">打开文件</button></div><pre class="${lang}">${escapeHtml(data.text)}</pre>`
+        } else {
+          preview.innerHTML = `<div class="actions"><button class="ghost" id="openFile">打开文件</button></div><span class="hint">不支持预览（${escapeHtml(a.uri)}）</span>`
+        }
+        document.getElementById("openFile").onclick = () => openArtifact(a)
+      } catch {
+        preview.innerHTML = `<span class="hint">预览失败</span>`
+      }
+    }
+    async function openArtifact(a) {
+      await fetch(`/api/artifact-open?id=${encodeURIComponent(a.id)}`, { method: "POST" }).catch(() => {})
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+    }
+    refreshArtifacts()
+    setInterval(refreshArtifacts, 8000)
 
     const events = new EventSource("/api/events")
     events.onmessage = (ev) => {
