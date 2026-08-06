@@ -1,0 +1,13 @@
+node_modules/
+.turbo/
+**/out/
+**/dist/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# pi standalone 二进制由 pnpm kernel:fetch 下载（保留 MANIFEST.json）
+apps/desktop/resources/bin/*
+!apps/desktop/resources/bin/MANIFEST.json
