@@ -1,3 +1,4 @@
+import { FileTreePanel } from '../../components/FileTreePanel';
 import { RightPanel } from '../../components/RightPanel';
 import { t } from '../../i18n';
 import { useSessionStore } from '../../stores/session-store';
@@ -13,6 +14,7 @@ export function SessionView(): React.JSX.Element {
     s.activeSessionId ? s.sessions[s.activeSessionId] : undefined,
   );
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
+  const fileTreeOpen = useUiStore((s) => s.fileTreeOpen);
 
   if (!activeId || !session) {
     return (
@@ -24,6 +26,7 @@ export function SessionView(): React.JSX.Element {
 
   return (
     <div className="session-view">
+      {fileTreeOpen ? <FileTreePanel root={session.workspacePath} /> : null}
       <div className="session-main">
         <SessionHeader
           sessionId={session.id}

@@ -25,6 +25,8 @@ export const IPC_CHANNELS = {
   'workspace:trust': 'workspace:trust',
   'workspace:pick-directory': 'workspace:pick-directory',
   'workspace:pick-file': 'workspace:pick-file',
+  'workspace:tree': 'workspace:tree',
+  'workspace:search': 'workspace:search',
   'provider:list': 'provider:list',
   'provider:save': 'provider:save',
   'provider:delete': 'provider:delete',

@@ -6,6 +6,7 @@ export type Theme = 'dark' | 'light' | 'system';
 interface UiStore {
   theme: Theme;
   sidebarCollapsed: boolean;
+  fileTreeOpen: boolean;
   rightPanelOpen: boolean;
   modelPickerOpen: boolean;
   providerSettingsOpen: boolean;
@@ -17,6 +18,7 @@ interface UiStore {
   auditOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
+  toggleFileTree: () => void;
   toggleRightPanel: () => void;
   openModelPicker: () => void;
   closeModelPicker: () => void;
@@ -49,6 +51,7 @@ function initialTheme(): Theme {
 export const useUiStore = create<UiStore>()((set) => ({
   theme: initialTheme(),
   sidebarCollapsed: false,
+  fileTreeOpen: false,
   rightPanelOpen: false,
   modelPickerOpen: false,
   providerSettingsOpen: false,
@@ -67,6 +70,7 @@ export const useUiStore = create<UiStore>()((set) => ({
     set({ theme });
   },
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  toggleFileTree: () => set((s) => ({ fileTreeOpen: !s.fileTreeOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
   openModelPicker: () => set({ modelPickerOpen: true }),
   closeModelPicker: () => set({ modelPickerOpen: false }),

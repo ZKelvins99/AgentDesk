@@ -178,6 +178,12 @@ const api = {
     pickDirectory: () => safeInvoke(IPC_CHANNELS['workspace:pick-directory'], undefined),
     pickFile: () => safeInvoke(IPC_CHANNELS['workspace:pick-file'], undefined),
   },
+  fileSystem: {
+    listDir: (req: InvokeMap['workspace:tree']['request']) =>
+      safeInvoke(IPC_CHANNELS['workspace:tree'], req),
+    search: (req: InvokeMap['workspace:search']['request']) =>
+      safeInvoke(IPC_CHANNELS['workspace:search'], req),
+  },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
   onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>

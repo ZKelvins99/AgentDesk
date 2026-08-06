@@ -59,6 +59,8 @@ import {
   type workspaceAddRequestSchema,
   type workspaceOpenRequestSchema,
   type workspaceRemoveRequestSchema,
+  type workspaceSearchRequestSchema,
+  type workspaceTreeRequestSchema,
   type workspaceTrustRequestSchema,
 } from '@agentdesk/ipc';
 import { AgentDeskError } from '@agentdesk/shared';
@@ -80,6 +82,7 @@ import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
 import type { WorkspaceManager } from './storage';
+import type { FileTreeService } from './workspace/file-tree';
 
 /** 边界数据必须过 zod 校验后才进入 handler（README 16.1）。 */
 function parseRequest(channel: InvokeChannel, raw: unknown): unknown {
@@ -139,6 +142,8 @@ export interface IpcHandlerDeps {
   profiles: ProfileManager;
   /** M7：Extension 兼容性标注（README 8.5.2，静态扫描 + 运行时捕获）。 */
   extensions: ExtensionCompatService;
+  /** M8：文件树（懒加载 + .gitignore + rg 搜索，README 8.9）。 */
+  fileTree: FileTreeService;
   /** 内核二进制路径（设置页 2 健康状态展示）。 */
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
@@ -625,6 +630,27 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['extensions:list'], async (_event, raw: unknown) => {
     const req = parseRequest('extensions:list', raw) as z.infer<typeof extensionsListRequestSchema>;
     return deps.extensions.list(req.workspacePath);
+  });
+
+  // ---- 文件树（README 8.9 / M8 第一步）----
+
+  ipcMain.handle(IPC_CHANNELS['workspace:tree'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:tree', raw) as z.infer<typeof workspaceTreeRequestSchema>;
+    return deps.fileTree.listDir({
+      path: req.path,
+      ...(req.root !== undefined ? { root: req.root } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:search'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:search', raw) as z.infer<
+      typeof workspaceSearchRequestSchema
+    >;
+    return deps.fileTree.search({
+      root: req.root,
+      query: req.query,
+      ...(req.maxResults !== undefined ? { maxResults: req.maxResults } : {}),
+    });
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

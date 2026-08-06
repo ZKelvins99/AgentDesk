@@ -1444,9 +1444,9 @@ AgentDesk  ›  重构 Pi Bridge  ✎        [42.1k/200k ▓▓▓░░]   打�
 |---|---|---|
 | `workspace:add` / `remove` / `list` | invoke | 项目管理 |
 | `workspace:trust` | invoke | `{ workspaceId, decision: 'once'\|'always'\|'alwaysParent'\|'never' }` |
-| `workspace:tree` | invoke | 懒加载目录（`{ path, depth }`） |
+| `workspace:tree` | invoke | 懒加载目录（`{ path, root? }`，一层 + .gitignore） |
 | `workspace:readFile` | invoke | 返回内容 + 语言推断（有大小上限） |
-| `workspace:search` | invoke | ripgrep 封装，流式返回前 N 条 |
+| `workspace:search` | invoke | 文件名搜索（rg --files 尊重 .gitignore，rg 缺失时 Node 回退） |
 | `workspace:revealInOS` / `openExternal` | invoke | 只允许 workspace 内路径与 `http(s)` |
 | `workspace:applyRevert` | invoke | 回滚某次 edit（反向 patch） |
 

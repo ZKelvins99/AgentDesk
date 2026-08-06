@@ -20,6 +20,7 @@ import { DEFAULT_PROFILE_ID, ProfileManager } from '../profile/profile-manager';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
+import { FileTreeService } from '../workspace/file-tree';
 import { SessionManager } from './session-manager';
 
 /**
@@ -43,6 +44,7 @@ export interface SessionRuntimeHandle {
   config: ConfigStore;
   profiles: ProfileManager;
   extensions: ExtensionCompatService;
+  fileTree: FileTreeService;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -102,6 +104,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const profileAgentDir = profileManager.currentAgentDir();
   const agentDir = mockSetup?.agentDir ?? profileAgentDir;
   const extensionCompat = new ExtensionCompatService(agentDir);
+  const fileTree = new FileTreeService(agentDir);
 
   const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
 
@@ -233,6 +236,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     config: configStore,
     profiles: profileManager,
     extensions: extensionCompat,
+    fileTree,
     uplink,
     kernel: { binary },
     dispose: async () => {

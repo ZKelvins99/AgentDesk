@@ -8,6 +8,7 @@ import type {
   ConfigValidationIssue,
   ExtensionRuntimeNote,
   ExtensionView,
+  FileTreeEntry,
   KernelStatus,
   McpCallLogEntry,
   McpServerView,
@@ -127,6 +128,14 @@ declare global {
         }): Promise<void>;
         pickDirectory(): Promise<{ path: string | null }>;
         pickFile(): Promise<{ path: string | null }>;
+      };
+      fileSystem: {
+        listDir(req: { path: string; root?: string }): Promise<{ entries: FileTreeEntry[] }>;
+        search(req: {
+          root: string;
+          query: string;
+          maxResults?: number;
+        }): Promise<{ matches: Array<{ path: string }> }>;
       };
       mcp: {
         list(req?: { workspacePath?: string }): Promise<{ servers: McpServerView[] }>;

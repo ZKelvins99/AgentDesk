@@ -28,6 +28,8 @@ export function SessionHeader({
   messageCount: number;
 }): React.JSX.Element {
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
+  const fileTreeOpen = useUiStore((s) => s.fileTreeOpen);
+  const toggleFileTree = useUiStore((s) => s.toggleFileTree);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const openAudit = useUiStore((s) => s.openAudit);
   const workspaceName = workspaceNameOf(workspacePath);
@@ -76,7 +78,8 @@ export function SessionHeader({
         <button
           type="button"
           className="header-btn"
-          disabled
+          data-active={fileTreeOpen}
+          onClick={toggleFileTree}
           title={t('session.toggleFiles')}
           aria-label={t('session.toggleFiles')}
         >

@@ -32,6 +32,7 @@ if (!gotTheLock) {
       config: runtime.config,
       profiles: runtime.profiles,
       extensions: runtime.extensions,
+      fileTree: runtime.fileTree,
       kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
     });

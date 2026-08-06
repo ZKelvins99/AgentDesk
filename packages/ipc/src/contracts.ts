@@ -917,6 +917,35 @@ export const extensionsListResponseSchema = z.object({
   runtimeNotes: z.array(extensionRuntimeNoteSchema),
 });
 
+/** 文件树（README 8.9 / M8）：懒加载目录 + rg 搜索。 */
+export const fileTreeEntrySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  kind: z.enum(['file', 'dir']),
+  size: z.number().int().nullable(),
+  hidden: z.boolean(),
+});
+export type FileTreeEntry = z.infer<typeof fileTreeEntrySchema>;
+
+export const workspaceTreeRequestSchema = z.object({
+  path: z.string().min(1),
+  /** .gitignore 解析的树根（workspacePath）；缺省用被列目录自身。 */
+  root: z.string().optional(),
+});
+export const workspaceTreeResponseSchema = z.object({
+  entries: z.array(fileTreeEntrySchema),
+});
+
+export const workspaceSearchRequestSchema = z.object({
+  root: z.string().min(1),
+  query: z.string(),
+  maxResults: z.number().int().positive().max(1000).optional(),
+});
+export const workspaceSearchResponseSchema = z.object({
+  matches: z.array(z.object({ path: z.string() })),
+});
+export type FileSearchMatch = z.infer<typeof workspaceSearchResponseSchema>['matches'][number];
+
 /** 资源生效清单（README 8.2.3 / 14.3 event:resources，来源 resources_discover）。 */
 export const resourceSnapshotSchema = z.object({
   skills: z.array(z.string()),
@@ -1006,6 +1035,14 @@ export interface InvokeMap {
   'workspace:pick-file': {
     request: undefined;
     response: z.infer<typeof workspacePickFileResponseSchema>;
+  };
+  'workspace:tree': {
+    request: z.infer<typeof workspaceTreeRequestSchema>;
+    response: z.infer<typeof workspaceTreeResponseSchema>;
+  };
+  'workspace:search': {
+    request: z.infer<typeof workspaceSearchRequestSchema>;
+    response: z.infer<typeof workspaceSearchResponseSchema>;
   };
   'provider:list': {
     request: undefined;
@@ -1248,6 +1285,8 @@ export const invokeRequestSchemas = {
   'workspace:trust': workspaceTrustRequestSchema,
   'workspace:pick-directory': z.undefined(),
   'workspace:pick-file': z.undefined(),
+  'workspace:tree': workspaceTreeRequestSchema,
+  'workspace:search': workspaceSearchRequestSchema,
   'provider:list': z.undefined(),
   'provider:save': providerSaveRequestSchema,
   'provider:delete': providerDeleteRequestSchema,
