@@ -1,5 +1,12 @@
 /// <reference types="vite/client" />
-import type { AgentDeskEvent, SessionState } from '@agentdesk/ipc';
+import type {
+  AgentDeskEvent,
+  AuthProviderStatus,
+  ProviderPreset,
+  ProviderView,
+  SecretsStatusResponse,
+  SessionState,
+} from '@agentdesk/ipc';
 import type { SessionSummary, WorkspaceRecord } from './types';
 
 declare global {
@@ -32,6 +39,25 @@ declare global {
         }): Promise<{ accepted: boolean; mode: 'normal' | 'steer' | 'followUp' }>;
         abort(req: { sessionId: string }): Promise<void>;
         setModel(req: { sessionId: string; model: string }): Promise<void>;
+        getModels(req: { sessionId: string }): Promise<{
+          models: Array<{
+            id: string;
+            name: string | null;
+            provider: string | null;
+            api: string | null;
+            reasoning: boolean;
+            input: string[];
+            contextWindow: number | null;
+            maxTokens: number | null;
+            cost: {
+              input?: number;
+              output?: number;
+              cacheRead?: number;
+              cacheWrite?: number;
+            } | null;
+          }>;
+        }>;
+        setThinkingLevel(req: { sessionId: string; level: string }): Promise<void>;
         list(req?: {
           search?: string;
           archived?: boolean;
@@ -45,6 +71,32 @@ declare global {
           sessionId: string;
           format: 'md' | 'json';
         }): Promise<{ path: string; format: 'md' | 'json' }>;
+      };
+      provider: {
+        list(): Promise<{ providers: ProviderView[] }>;
+        save(req: { config: unknown; apiKey?: string }): Promise<{ name: string }>;
+        delete(req: { name: string }): Promise<void>;
+        presets(): Promise<{ presets: ProviderPreset[] }>;
+        discoverModels(req: {
+          baseUrl: string;
+          api?: string;
+          apiKey?: string;
+          headers?: Record<string, string>;
+        }): Promise<{ models: Array<{ id: string; name: string | null }> }>;
+        test(req: { name: string; model?: string }): Promise<{
+          ok: boolean;
+          status: number | null;
+          latencyMs: number | null;
+          snippet: string | null;
+          error: string | null;
+        }>;
+      };
+      secrets: {
+        status(): Promise<SecretsStatusResponse>;
+      };
+      auth: {
+        status(): Promise<{ providers: AuthProviderStatus[] }>;
+        launchLogin(req?: { provider?: string }): Promise<{ launched: boolean; terminal: string }>;
       };
       workspace: {
         add(req: { path: string }): Promise<{ workspace: WorkspaceRecord; needsTrust: boolean }>;

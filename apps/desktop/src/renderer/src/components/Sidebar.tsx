@@ -21,6 +21,8 @@ export function Sidebar(): React.JSX.Element {
   const addWorkspace = useWorkspaceStore((s) => s.addWorkspace);
   const removeWorkspace = useWorkspaceStore((s) => s.removeWorkspace);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
+  const openModelPicker = useUiStore((s) => s.openModelPicker);
+  const openProviderSettings = useUiStore((s) => s.openProviderSettings);
 
   const recent = summaries.slice(0, 8);
   const activeWorkspacePath = activeId ? (sessions[activeId]?.workspacePath ?? '') : '';
@@ -122,12 +124,26 @@ export function Sidebar(): React.JSX.Element {
       </div>
 
       <div className="sidebar-footer">
-        <span className="footer-model" title="model">
+        <button
+          type="button"
+          className="footer-model"
+          title={t('model.picker.title')}
+          onClick={openModelPicker}
+        >
           {activeId && sessions[activeId]
             ? (sessions[activeId]?.model ?? t('composer.model'))
             : t('composer.model')}
-        </span>
+        </button>
         <span className="footer-help">? {t('sidebar.help')}</span>
+        <button
+          type="button"
+          className="icon-btn footer-settings"
+          title={t('provider.settings')}
+          aria-label={t('provider.settings')}
+          onClick={openProviderSettings}
+        >
+          ⚙
+        </button>
       </div>
     </aside>
   );

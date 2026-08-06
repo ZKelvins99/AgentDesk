@@ -42,6 +42,7 @@ export interface SessionUiState {
   seq: number;
   appliedSeq: number;
   model: string | null;
+  thinkingLevel: string | null;
   status: 'idle' | 'streaming' | 'degraded' | 'error';
   pendingCount: number;
   queueMode: 'steer' | 'followUp' | null;
@@ -59,6 +60,7 @@ export function createSessionUiState(id: string, workspacePath: string): Session
     seq: 0,
     appliedSeq: 0,
     model: null,
+    thinkingLevel: null,
     status: 'idle',
     pendingCount: 0,
     queueMode: null,

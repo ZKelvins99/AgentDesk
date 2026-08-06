@@ -29,6 +29,8 @@ interface SessionStore {
   loadSessions: () => Promise<void>;
   restore: () => Promise<void>;
   setActive: (sessionId: string) => void;
+  setSessionModel: (sessionId: string, model: string) => void;
+  setSessionThinking: (sessionId: string, thinkingLevel: string) => void;
   renameSession: (sessionId: string, title: string) => Promise<void>;
   archiveSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -110,6 +112,24 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
+
+  setSessionModel: (sessionId, model) =>
+    set((s) => {
+      const cur = s.sessions[sessionId];
+      if (!cur) return s;
+      const sessions = { ...s.sessions };
+      sessions[sessionId] = { ...cur, model };
+      return { sessions };
+    }),
+
+  setSessionThinking: (sessionId, thinkingLevel) =>
+    set((s) => {
+      const cur = s.sessions[sessionId];
+      if (!cur) return s;
+      const sessions = { ...s.sessions };
+      sessions[sessionId] = { ...cur, thinkingLevel };
+      return { sessions };
+    }),
 
   renameSession: async (sessionId, title) => {
     await window.agentdesk.session.rename({ sessionId, title });

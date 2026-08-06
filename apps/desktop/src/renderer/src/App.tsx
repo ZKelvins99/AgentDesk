@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { ModelPicker } from './components/ModelPicker';
+import { ProviderSettings } from './components/ProviderSettings';
 import { Sidebar } from './components/Sidebar';
 import { TitleBar } from './components/TitleBar';
 import { TrustDialog } from './components/TrustDialog';
@@ -30,6 +32,8 @@ export default function App(): React.JSX.Element {
         <SessionView />
       </div>
       <TrustDialog />
+      <ModelPicker />
+      <ProviderSettings />
     </div>
   );
 }

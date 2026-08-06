@@ -6,9 +6,15 @@ interface UiStore {
   theme: Theme;
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
+  modelPickerOpen: boolean;
+  providerSettingsOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
+  openModelPicker: () => void;
+  closeModelPicker: () => void;
+  openProviderSettings: () => void;
+  closeProviderSettings: () => void;
 }
 
 function initialTheme(): Theme {
@@ -25,6 +31,8 @@ export const useUiStore = create<UiStore>()((set) => ({
   theme: initialTheme(),
   sidebarCollapsed: false,
   rightPanelOpen: false,
+  modelPickerOpen: false,
+  providerSettingsOpen: false,
   setTheme: (theme) => {
     try {
       localStorage.setItem('agentdesk-theme', theme);
@@ -35,6 +43,10 @@ export const useUiStore = create<UiStore>()((set) => ({
   },
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+  openModelPicker: () => set({ modelPickerOpen: true }),
+  closeModelPicker: () => set({ modelPickerOpen: false }),
+  openProviderSettings: () => set({ providerSettingsOpen: true }),
+  closeProviderSettings: () => set({ providerSettingsOpen: false }),
 }));
 
 /** 解析 theme → data-theme（system 跟随 matchMedia），README 9.1 主题切换。 */
