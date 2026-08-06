@@ -10,6 +10,10 @@ import {
   type InvokeChannel,
   IPC_CHANNELS,
   invokeRequestSchemas,
+  type mcpDeleteRequestSchema,
+  type mcpImportRequestSchema,
+  type mcpListRequestSchema,
+  type mcpSaveRequestSchema,
   type providerDeleteRequestSchema,
   type providerDiscoverModelsRequestSchema,
   type providerSaveRequestSchema,
@@ -36,6 +40,7 @@ import { AgentDeskError } from '@agentdesk/shared';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse } from './approval';
+import type { McpConfigStore } from './mcp/mcp-config';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { WorkspaceManager } from './storage';
@@ -60,6 +65,7 @@ export interface IpcHandlerDeps {
   workspaces: WorkspaceManager;
   providers: ProviderManager;
   approvals: ApprovalEngine;
+  mcp: McpConfigStore;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -278,6 +284,34 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       typeof approvalRuleDeleteRequestSchema
     >;
     deps.approvals.store.deleteRule(req.id);
+  });
+
+  // ---- MCP Host（README 8.3）Server CRUD ---
+
+  ipcMain.handle(IPC_CHANNELS['mcp:list'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:list', raw) as z.infer<typeof mcpListRequestSchema>;
+    return { servers: deps.mcp.list(req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:save'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:save', raw) as z.infer<typeof mcpSaveRequestSchema>;
+    const { workspacePath, ...saveReq } = req;
+    return {
+      server: deps.mcp.save({
+        ...saveReq,
+        ...(workspacePath !== undefined ? { workspacePath } : {}),
+      }),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:delete'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:delete', raw) as z.infer<typeof mcpDeleteRequestSchema>;
+    return { deleted: deps.mcp.remove(req.name, req.scope, req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:import'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:import', raw) as z.infer<typeof mcpImportRequestSchema>;
+    return deps.mcp.importClaude(req.json, req.scope, req.workspacePath);
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

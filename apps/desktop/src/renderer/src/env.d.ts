@@ -5,6 +5,7 @@ import type {
   ApprovalRequestView,
   ApprovalRule,
   AuthProviderStatus,
+  McpServerView,
   ProviderPreset,
   ProviderView,
   SecretsStatusResponse,
@@ -113,6 +114,28 @@ declare global {
           decision: 'once' | 'always' | 'alwaysParent' | 'never';
         }): Promise<void>;
         pickDirectory(): Promise<{ path: string | null }>;
+      };
+      mcp: {
+        list(req?: { workspacePath?: string }): Promise<{ servers: McpServerView[] }>;
+        save(req: {
+          name: string;
+          scope: 'global' | 'workspace';
+          config: unknown;
+          workspacePath?: string;
+        }): Promise<{ server: McpServerView }>;
+        delete(req: {
+          name: string;
+          scope: 'global' | 'workspace';
+          workspacePath?: string;
+        }): Promise<{ deleted: boolean }>;
+        importServers(req: {
+          json: string;
+          scope: 'global' | 'workspace';
+          workspacePath?: string;
+        }): Promise<{
+          imported: McpServerView[];
+          skipped: Array<{ name: string; reason: string }>;
+        }>;
       };
       approval: {
         respond(req: {

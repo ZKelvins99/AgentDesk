@@ -84,6 +84,14 @@ const api = {
     launchLogin: (req?: { provider?: string }) =>
       safeInvoke(IPC_CHANNELS['auth:launch-login'], req ?? {}),
   },
+  mcp: {
+    list: (req?: { workspacePath?: string }) => safeInvoke(IPC_CHANNELS['mcp:list'], req ?? {}),
+    save: (req: InvokeMap['mcp:save']['request']) => safeInvoke(IPC_CHANNELS['mcp:save'], req),
+    delete: (req: InvokeMap['mcp:delete']['request']) =>
+      safeInvoke(IPC_CHANNELS['mcp:delete'], req),
+    importServers: (req: InvokeMap['mcp:import']['request']) =>
+      safeInvoke(IPC_CHANNELS['mcp:import'], req),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

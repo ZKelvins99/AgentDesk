@@ -9,6 +9,7 @@ import {
 } from '@agentdesk/mock-provider';
 import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
+import { McpConfigStore } from '../mcp/mcp-config';
 import { PiBridge, SidecarPool } from '../pi';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
@@ -27,6 +28,7 @@ export interface SessionRuntimeHandle {
   workspaces: WorkspaceManager;
   providers: ProviderManager;
   approvals: ApprovalEngine;
+  mcp: McpConfigStore;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
 }
@@ -149,6 +151,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     workspaces,
     providers,
     approvals,
+    mcp: new McpConfigStore(),
     kernel: { binary },
     dispose: async () => {
       await sessionManager.shutdownAll(5_000);

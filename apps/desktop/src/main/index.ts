@@ -24,6 +24,7 @@ if (!gotTheLock) {
       workspaces: runtime.workspaces,
       providers: runtime.providers,
       approvals: runtime.approvals,
+      mcp: runtime.mcp,
     });
     createMainWindow();
 

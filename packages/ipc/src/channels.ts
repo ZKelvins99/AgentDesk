@@ -43,6 +43,10 @@ export const IPC_CHANNELS = {
   'approval:rules-list': 'approval:rules-list',
   'approval:rules-save': 'approval:rules-save',
   'approval:rules-delete': 'approval:rules-delete',
+  'mcp:list': 'mcp:list',
+  'mcp:save': 'mcp:save',
+  'mcp:delete': 'mcp:delete',
+  'mcp:import': 'mcp:import',
 } as const;
 
 /** 请求/响应通道（invoke） */

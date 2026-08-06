@@ -417,6 +417,84 @@ export const approvalRuleSaveRequestSchema = z.object({ rule: approvalRuleInputS
 export const approvalRuleSaveResponseSchema = z.object({ id: z.string() });
 export const approvalRuleDeleteRequestSchema = z.object({ id: z.string().min(1) });
 
+/** MCP Host（README 8.3.1）：配置格式与 Server CRUD 契约 */
+export const mcpScopeSchema = z.enum(['global', 'workspace']);
+export type McpScope = z.infer<typeof mcpScopeSchema>;
+
+export const mcpToolFilterSchema = z.object({
+  allow: z.array(z.string()).optional(),
+  deny: z.array(z.string()).optional(),
+});
+export type McpToolFilter = z.infer<typeof mcpToolFilterSchema>;
+
+export const mcpReconnectSchema = z.object({
+  maxRetries: z.number().int().min(0).max(20).optional(),
+  baseDelayMs: z.number().int().min(100).max(60_000).optional(),
+});
+export type McpReconnect = z.infer<typeof mcpReconnectSchema>;
+
+export const mcpServerConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    transport: z.enum(['stdio', 'sse', 'http']),
+    command: z.string().optional(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    cwd: z.string().optional(),
+    url: z.string().optional(),
+    headers: z.record(z.string(), z.string()).optional(),
+    timeoutMs: z.number().int().min(100).max(600_000).optional(),
+    startupTimeoutMs: z.number().int().min(100).max(120_000).optional(),
+    toolFilter: mcpToolFilterSchema.optional(),
+    autoApprove: z.array(z.string()).optional(),
+    reconnect: mcpReconnectSchema.optional(),
+  })
+  .passthrough()
+  .superRefine((cfg, ctx) => {
+    if (cfg.transport === 'stdio' && !cfg.command) {
+      ctx.addIssue({ code: 'custom', message: 'stdio 输送需要 command' });
+    }
+    if (cfg.transport !== 'stdio' && !cfg.url) {
+      ctx.addIssue({ code: 'custom', message: `${cfg.transport} 输送需要 url` });
+    }
+  });
+export type McpServerConfig = z.infer<typeof mcpServerConfigSchema>;
+
+export const mcpServerViewSchema = z.object({
+  name: z.string().min(1).max(64),
+  scope: mcpScopeSchema,
+  config: mcpServerConfigSchema,
+});
+export type McpServerView = z.infer<typeof mcpServerViewSchema>;
+
+export const mcpListRequestSchema = z.object({ workspacePath: z.string().optional() });
+export const mcpListResponseSchema = z.object({ servers: z.array(mcpServerViewSchema) });
+
+export const mcpSaveRequestSchema = z.object({
+  name: z.string().min(1).max(64),
+  scope: mcpScopeSchema,
+  config: mcpServerConfigSchema,
+  workspacePath: z.string().optional(),
+});
+export const mcpSaveResponseSchema = z.object({ server: mcpServerViewSchema });
+
+export const mcpDeleteRequestSchema = z.object({
+  name: z.string().min(1).max(64),
+  scope: mcpScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const mcpDeleteResponseSchema = z.object({ deleted: z.boolean() });
+
+export const mcpImportRequestSchema = z.object({
+  json: z.string().min(1),
+  scope: mcpScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const mcpImportResponseSchema = z.object({
+  imported: z.array(mcpServerViewSchema),
+  skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -563,6 +641,22 @@ export interface InvokeMap {
     request: z.infer<typeof approvalRuleDeleteRequestSchema>;
     response: undefined;
   };
+  'mcp:list': {
+    request: z.infer<typeof mcpListRequestSchema>;
+    response: z.infer<typeof mcpListResponseSchema>;
+  };
+  'mcp:save': {
+    request: z.infer<typeof mcpSaveRequestSchema>;
+    response: z.infer<typeof mcpSaveResponseSchema>;
+  };
+  'mcp:delete': {
+    request: z.infer<typeof mcpDeleteRequestSchema>;
+    response: z.infer<typeof mcpDeleteResponseSchema>;
+  };
+  'mcp:import': {
+    request: z.infer<typeof mcpImportRequestSchema>;
+    response: z.infer<typeof mcpImportResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -613,6 +707,10 @@ export const invokeRequestSchemas = {
   'approval:rules-list': approvalRulesListRequestSchema,
   'approval:rules-save': approvalRuleSaveRequestSchema,
   'approval:rules-delete': approvalRuleDeleteRequestSchema,
+  'mcp:list': mcpListRequestSchema,
+  'mcp:save': mcpSaveRequestSchema,
+  'mcp:delete': mcpDeleteRequestSchema,
+  'mcp:import': mcpImportRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];
