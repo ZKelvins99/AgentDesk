@@ -142,12 +142,14 @@ export class SdkMcpClient implements McpClientLike {
     this.serverInfo = null;
     if (!transport) return;
     const pid = 'pid' in transport && typeof transport.pid === 'number' ? transport.pid : null;
+    // stdio：趁根进程还活着先软杀整树、再强制补杀（taskkill /T 只认存活根进程），
+    // 之后才关闭协议流，避免 SDK 杀掉直接子进程后漏掉孙进程（README 8.3.2）。
+    if (pid !== null && pid > 0) {
+      await killProcessTree(pid, false, 2_000);
+      await killProcessTree(pid, true, 3_000);
+    }
     await this.client.close().catch(() => {});
     await transport.close().catch(() => {});
-    // stdio：SDK 只杀直接子进程，这里补一次整树清理（Windows Job Object 语义，README 8.3.2）
-    if (pid !== null && pid > 0) {
-      await killProcessTree(pid, false, 3_000);
-    }
   }
 
   async listTools(): Promise<{ tools: McpToolInfo[] }> {
