@@ -2299,6 +2299,27 @@ button:disabled {
   font-size: 12px;
   word-break: break-all;
 }
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin: 14px 0 8px;
+}
+.settings-profile-name {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--fg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.settings-error {
+  font-size: 12px;
+  color: var(--danger, #e74c3c);
+}
 .chip-ok {
   color: #27ae60;
   border-color: color-mix(in srgb, #27ae60 45%, var(--border-subtle));

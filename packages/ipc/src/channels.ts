@@ -72,6 +72,10 @@ export const IPC_CHANNELS = {
   'settings:read': 'settings:read',
   'settings:save': 'settings:save',
   'settings:kernel-status': 'settings:kernel-status',
+  'profile:list': 'profile:list',
+  'profile:create': 'profile:create',
+  'profile:switch': 'profile:switch',
+  'profile:delete': 'profile:delete',
 } as const;
 
 /** 请求/响应通道（invoke） */

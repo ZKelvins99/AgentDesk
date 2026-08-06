@@ -139,6 +139,15 @@ const api = {
       safeInvoke(IPC_CHANNELS['settings:save'], req),
     kernelStatus: () => safeInvoke(IPC_CHANNELS['settings:kernel-status'], undefined),
   },
+  profile: {
+    list: () => safeInvoke(IPC_CHANNELS['profile:list'], undefined),
+    create: (req: InvokeMap['profile:create']['request']) =>
+      safeInvoke(IPC_CHANNELS['profile:create'], req),
+    switch: (req: InvokeMap['profile:switch']['request']) =>
+      safeInvoke(IPC_CHANNELS['profile:switch'], req),
+    delete: (req: InvokeMap['profile:delete']['request']) =>
+      safeInvoke(IPC_CHANNELS['profile:delete'], req),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

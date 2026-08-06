@@ -25,6 +25,9 @@ import {
   type packagesSetFilterRequestSchema,
   type packagesUninstallRequestSchema,
   type packagesUpdateRequestSchema,
+  type profileCreateRequestSchema,
+  type profileDeleteRequestSchema,
+  type profileSwitchRequestSchema,
   type providerDeleteRequestSchema,
   type providerDiscoverModelsRequestSchema,
   type providerSaveRequestSchema,
@@ -70,6 +73,7 @@ import type {
   PackageResourceFilter,
 } from './packages/package-manager';
 import type { PackageSecurityInspector } from './packages/package-security';
+import type { ProfileManager } from './profile/profile-manager';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
@@ -129,6 +133,8 @@ export interface IpcHandlerDeps {
   packageSecurity: PackageSecurityInspector;
   /** M7：设置页 ConfigStore（README 9.7 / 16.2）。 */
   config: ConfigStore;
+  /** M7：Profile（Agent Dir 隔离，README 8.8.3）。 */
+  profiles: ProfileManager;
   /** 内核二进制路径（设置页 2 健康状态展示）。 */
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
@@ -585,6 +591,30 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['settings:kernel-status'], async () =>
     deps.config.kernelStatus(deps.kernelBinary),
   );
+
+  // ---- Profile（Agent Dir 隔离，README 8.8.3，M7 第八步）----
+
+  ipcMain.handle(IPC_CHANNELS['profile:list'], async () => {
+    const profiles = deps.profiles.list();
+    return { profiles, activeId: deps.profiles.activeId() };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['profile:create'], async (_event, raw: unknown) => {
+    const req = parseRequest('profile:create', raw) as z.infer<typeof profileCreateRequestSchema>;
+    return { profile: deps.profiles.create(req.name) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['profile:switch'], async (_event, raw: unknown) => {
+    const req = parseRequest('profile:switch', raw) as z.infer<typeof profileSwitchRequestSchema>;
+    const agentDir = deps.profiles.switch(req.id);
+    return { activeId: req.id, agentDir, requiresRestart: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['profile:delete'], async (_event, raw: unknown) => {
+    const req = parseRequest('profile:delete', raw) as z.infer<typeof profileDeleteRequestSchema>;
+    deps.profiles.delete(req.id);
+    return { deleted: req.id };
+  });
 
   // ---- Provider / Model / 密钥（README 8.6）----
 

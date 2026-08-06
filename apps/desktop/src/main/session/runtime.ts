@@ -15,6 +15,7 @@ import { McpConnectionManager } from '../mcp/mcp-manager';
 import { PackageManager } from '../packages/package-manager';
 import { PackageSecurityInspector } from '../packages/package-security';
 import { PiBridge, SidecarPool } from '../pi';
+import { DEFAULT_PROFILE_ID, ProfileManager } from '../profile/profile-manager';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
@@ -39,6 +40,7 @@ export interface SessionRuntimeHandle {
   packages: PackageManager;
   packageSecurity: PackageSecurityInspector;
   config: ConfigStore;
+  profiles: ProfileManager;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -86,16 +88,19 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   store.resetOnceTrust();
   const workspaces = new WorkspaceManager({ store });
   const secrets = new SecretsStore(path.join(homedir(), '.agentdesk'), electronSecretEncryptor);
-  const providers = new ProviderManager({
-    modelsDir: process.env.PI_CODING_AGENT_DIR ?? path.join(homedir(), '.pi', 'agent'),
-    secrets,
-    binary,
-  });
 
   let mockSetup: MockSetup | null = null;
   if (process.env.AGENTDESK_MOCK_PROVIDER === '1') {
     mockSetup = await setupMockProvider();
   }
+
+  // Profile（README 8.8.3）：默认档共享 ~/.pi/agent，隔离档 ~/.agentdesk/profiles/<id>/agent；
+  // mock E2E 优先使用 mock 临时 agentDir，避免污染真实配置。
+  const profileManager = new ProfileManager();
+  const profileAgentDir = profileManager.currentAgentDir();
+  const agentDir = mockSetup?.agentDir ?? profileAgentDir;
+
+  const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
 
   const workspacePath = process.env.AGENTDESK_WORKSPACE ?? mockSetup?.workspace ?? process.cwd();
   const defaultProvider = process.env.AGENTDESK_PROVIDER ?? (mockSetup ? 'mock' : undefined);
@@ -108,10 +113,13 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const bridge = new PiBridge({ binary: binary ?? '', pool });
 
   const mcpStore = new McpConfigStore();
-  const skillManager = new SkillManager();
-  const packageManager = new PackageManager(binary ? { binary } : {});
+  const skillManager = new SkillManager({ agentDir });
+  const packageManager = new PackageManager({
+    ...(binary ? { binary } : {}),
+    agentDir,
+  });
   const packageSecurity = new PackageSecurityInspector();
-  const configStore = new ConfigStore();
+  const configStore = new ConfigStore({ agentDir });
   let sessionManager: SessionManager;
   const approvalStore = new ApprovalStore(db);
   const approvals = new ApprovalEngine({
@@ -156,7 +164,11 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     resolveTrust: (p: string) => workspaces.resolveTrustForSpawn(p),
     resolveProviderEnv: (provider: string | null) =>
       provider ? providers.envForProvider(provider) : {},
-    ...(mockSetup?.agentDir ? { agentDir: mockSetup.agentDir } : {}),
+    ...(mockSetup?.agentDir
+      ? { agentDir: mockSetup.agentDir }
+      : profileManager.activeId() !== DEFAULT_PROFILE_ID
+        ? { agentDir: profileAgentDir }
+        : {}),
     ...(existsSync(bridgeExt) ? { extensionPath: bridgeExt } : {}),
     approvalEngine: approvals,
     uplink,
@@ -186,6 +198,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     packages: packageManager,
     packageSecurity,
     config: configStore,
+    profiles: profileManager,
     uplink,
     kernel: { binary },
     dispose: async () => {

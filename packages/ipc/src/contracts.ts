@@ -845,6 +845,39 @@ export const settingsKernelStatusResponseSchema = z.object({
 });
 export type KernelStatus = z.infer<typeof settingsKernelStatusResponseSchema>;
 
+/** Profile（README 8.8.3 / 4.15）：Agent Dir 隔离。 */
+export const profileViewSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  agentDir: z.string(),
+  isDefault: z.boolean(),
+  active: z.boolean(),
+  exists: z.boolean(),
+});
+export type ProfileView = z.infer<typeof profileViewSchema>;
+
+export const profileListResponseSchema = z.object({
+  profiles: z.array(profileViewSchema),
+  activeId: z.string(),
+});
+export const profileCreateRequestSchema = z.object({
+  name: z.string().trim().min(1).max(64),
+});
+export const profileCreateResponseSchema = z.object({ profile: profileViewSchema });
+export const profileSwitchRequestSchema = z.object({
+  id: z.string().min(1).max(64),
+});
+export const profileSwitchResponseSchema = z.object({
+  activeId: z.string(),
+  agentDir: z.string(),
+  /** README 8.8.3：切换需重启所有 sidecar，重启应用后按新激活档装配。 */
+  requiresRestart: z.boolean(),
+});
+export const profileDeleteRequestSchema = z.object({
+  id: z.string().min(1).max(64),
+});
+export const profileDeleteResponseSchema = z.object({ deleted: z.string() });
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1107,6 +1140,22 @@ export interface InvokeMap {
     request: undefined;
     response: z.infer<typeof settingsKernelStatusResponseSchema>;
   };
+  'profile:list': {
+    request: undefined;
+    response: z.infer<typeof profileListResponseSchema>;
+  };
+  'profile:create': {
+    request: z.infer<typeof profileCreateRequestSchema>;
+    response: z.infer<typeof profileCreateResponseSchema>;
+  };
+  'profile:switch': {
+    request: z.infer<typeof profileSwitchRequestSchema>;
+    response: z.infer<typeof profileSwitchResponseSchema>;
+  };
+  'profile:delete': {
+    request: z.infer<typeof profileDeleteRequestSchema>;
+    response: z.infer<typeof profileDeleteResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -1186,6 +1235,10 @@ export const invokeRequestSchemas = {
   'settings:read': settingsReadRequestSchema,
   'settings:save': settingsSaveRequestSchema,
   'settings:kernel-status': z.undefined(),
+  'profile:list': z.undefined(),
+  'profile:create': profileCreateRequestSchema,
+  'profile:switch': profileSwitchRequestSchema,
+  'profile:delete': profileDeleteRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

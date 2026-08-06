@@ -1,4 +1,4 @@
-import type { ConfigValidationIssue, KernelStatus } from '@agentdesk/ipc';
+import type { ConfigValidationIssue, KernelStatus, ProfileView } from '@agentdesk/ipc';
 import { json } from '@codemirror/lang-json';
 import { oneDark } from '@codemirror/theme-one-dark';
 import CodeMirror from '@uiw/react-codemirror';
@@ -522,12 +522,86 @@ function GeneralPage(): React.JSX.Element {
 
 function KernelPage(): React.JSX.Element {
   const [status, setStatus] = useState<KernelStatus | null>(null);
+  const [profiles, setProfiles] = useState<ProfileView[]>([]);
+  const [newName, setNewName] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState('');
+
+  const loadProfiles = useCallback(async (): Promise<void> => {
+    try {
+      const res = await window.agentdesk.profile.list();
+      setProfiles(res.profiles);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
   useEffect(() => {
     void window.agentdesk.settings
       .kernelStatus()
       .then(setStatus)
       .catch(() => setStatus(null));
-  }, []);
+    void loadProfiles();
+  }, [loadProfiles]);
+
+  const createProfile = async (): Promise<void> => {
+    setError('');
+    setMessage('');
+    setBusyId('create');
+    try {
+      const res = await window.agentdesk.profile.create({ name: newName });
+      setNewName('');
+      setMessage(
+        `已创建隔离 Profile「${res.profile.name}」（Agent Dir：${res.profile.agentDir}）。`,
+      );
+      await loadProfiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const switchProfile = async (id: string): Promise<void> => {
+    setError('');
+    setMessage('');
+    setBusyId(id);
+    try {
+      const res = await window.agentdesk.profile.switch({ id });
+      setMessage(
+        `已切换到 Profile「${id}」。切换需重启所有 sidecar：请重启应用，重启后自动按新 Profile 装配（Agent Dir：${res.agentDir}）。`,
+      );
+      await loadProfiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const deleteProfile = async (view: ProfileView): Promise<void> => {
+    setError('');
+    setMessage('');
+    if (
+      !window.confirm(
+        `删除 Profile「${view.name}」？其 Agent Dir（${view.agentDir}）将被删除且不可恢复。`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(view.id);
+    try {
+      await window.agentdesk.profile.delete({ id: view.id });
+      setMessage(`已删除 Profile「${view.name}」。`);
+      await loadProfiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId('');
+    }
+  };
+
   return (
     <div className="settings-page">
       {!status ? (
@@ -540,18 +614,82 @@ function KernelPage(): React.JSX.Element {
           </div>
           <div>版本：{status.version ?? '未知'}</div>
           <div>
-            Agent Dir：<code>{status.agentDir}</code>
+            当前 Agent Dir：<code>{status.agentDir}</code>
           </div>
           <div>
-            pi 托管二进制目录（~/.pi/agent/bin）：<code>{status.binDir}</code>{' '}
+            pi 托管二进制目录：<code>{status.binDir}</code>{' '}
             {status.binDirExists ? <span className="chip chip-ok">存在</span> : null}
-          </div>
-          <div className="settings-note">
-            Profile（Agent Dir 隔离）在后续步骤提供；内核来源/--offline/PI_SKIP_VERSION_CHECK
-            由启动配置决定。
           </div>
         </div>
       )}
+
+      <div className="settings-section-title">Profile（Agent Dir 隔离）</div>
+      {profiles.length === 0 ? (
+        <div className="settings-empty">加载 Profile 中…</div>
+      ) : (
+        <div className="settings-fields">
+          {profiles.map((view) => (
+            <div key={view.id} className="settings-field">
+              <span>
+                {view.name}
+                {view.active ? <span className="chip chip-ok">当前激活</span> : null}
+                {!view.exists && !view.isDefault ? (
+                  <span className="chip chip-warn">目录缺失</span>
+                ) : null}
+              </span>
+              <span className="settings-raw-path">{view.agentDir}</span>
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={view.active || busyId !== ''}
+                  onClick={() => void switchProfile(view.id)}
+                >
+                  {busyId === view.id ? '切换中…' : '切换'}
+                </button>
+                {!view.isDefault ? (
+                  <button
+                    type="button"
+                    className="btn danger-btn"
+                    disabled={view.active || busyId !== ''}
+                    onClick={() => void deleteProfile(view)}
+                  >
+                    {busyId === view.id ? '删除中…' : '删除'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="settings-actions">
+        <input
+          className="settings-profile-name"
+          value={newName}
+          placeholder="新 Profile 名称（如 demo / 测试）"
+          spellCheck={false}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void createProfile();
+          }}
+        />
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={busyId !== '' || newName.trim() === ''}
+          onClick={() => void createProfile()}
+        >
+          {busyId === 'create' ? '创建中…' : '新建隔离 Profile'}
+        </button>
+      </div>
+
+      {error ? <div className="settings-error">{error}</div> : null}
+      {message ? <div className="settings-note">{message}</div> : null}
+      <div className="settings-note">
+        默认 Profile 直接使用 ~/.pi/agent（与终端 pi 完全共享）；隔离 Profile 使用
+        ~/.agentdesk/profiles/&lt;id&gt;/agent。切换需重启所有 sidecar——重启应用后生效。
+      </div>
     </div>
   );
 }

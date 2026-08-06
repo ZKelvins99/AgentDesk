@@ -13,6 +13,7 @@ import type {
   McpToolView,
   PackageSecurityInspection,
   PackageView,
+  ProfileView,
   ProviderPreset,
   ProviderView,
   SecretsStatusResponse,
@@ -282,6 +283,14 @@ declare global {
           saved: boolean;
         }>;
         kernelStatus(): Promise<KernelStatus>;
+      };
+      profile: {
+        list(): Promise<{ profiles: ProfileView[]; activeId: string }>;
+        create(req: { name: string }): Promise<{ profile: ProfileView }>;
+        switch(req: {
+          id: string;
+        }): Promise<{ activeId: string; agentDir: string; requiresRestart: boolean }>;
+        delete(req: { id: string }): Promise<{ deleted: string }>;
       };
       approval: {
         respond(req: {
