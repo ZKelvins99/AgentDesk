@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { OnboardingStatus } from '@agentdesk/ipc';
 import { ApprovalModal } from './components/ApprovalModal';
 import { AuditPanel } from './components/AuditPanel';
 import { CommandPalette } from './components/CommandPalette';
@@ -6,6 +7,7 @@ import { ContextUsageDrawer } from './components/ContextUsageDrawer';
 import { GlobalSearch } from './components/GlobalSearch';
 import { McpSettings } from './components/McpSettings';
 import { ModelPicker } from './components/ModelPicker';
+import { OnboardingWizard } from './components/OnboardingWizard';
 import { PackageSettings } from './components/PackageSettings';
 import { ProviderSettings } from './components/ProviderSettings';
 import { SessionTreeOverlay } from './components/SessionTreeOverlay';
@@ -14,6 +16,7 @@ import { Sidebar } from './components/Sidebar';
 import { SkillSettings } from './components/SkillSettings';
 import { TitleBar } from './components/TitleBar';
 import { TrustDialog } from './components/TrustDialog';
+import { UpdateBanner } from './components/UpdateBanner';
 import { SessionView } from './features/session/SessionView';
 import { useApprovalEvents } from './hooks/use-approval-events';
 import { useKeyboard } from './hooks/use-keyboard';
@@ -29,6 +32,23 @@ export default function App(): React.JSX.Element {
   useApprovalEvents();
   useKeyboard();
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+
+  // M9：首次启动引导页（README 9.11 / 15）
+  const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void window.agentdesk.onboarding
+      .status()
+      .then((st) => {
+        if (!cancelled) setOnboarding(st);
+      })
+      .catch(() => {
+        if (!cancelled) setOnboarding({ completed: true, kernelVersion: null, providerCount: 0 });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 全局浮层状态
   const globalSearchOpen = useUiStore((s) => s.globalSearchOpen);
@@ -47,6 +67,12 @@ export default function App(): React.JSX.Element {
     void useWorkspaceStore.getState().loadWorkspaces();
   }, []);
 
+  const needsOnboarding = onboarding !== null && !onboarding.completed;
+
+  if (needsOnboarding && onboarding) {
+    return <OnboardingWizard status={onboarding} onComplete={() => setOnboarding(null)} />;
+  }
+
   return (
     <div className="app">
       <TitleBar />
@@ -54,6 +80,7 @@ export default function App(): React.JSX.Element {
         <Sidebar />
         <SessionView />
       </div>
+      <UpdateBanner />
       <TrustDialog />
       <ModelPicker />
       <ProviderSettings />

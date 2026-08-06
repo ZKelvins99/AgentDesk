@@ -1,0 +1,106 @@
+name: build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck · lint · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  packaging:
+    name: Package ${{ matrix.platform }} (${{ matrix.arch }})
+    needs: checks
+    if: startsWith(github.ref, 'refs/tags/')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win32-x64
+            arch: x64
+            script: dist:win
+          - os: macos-14
+            platform: darwin-arm64
+            arch: arm64
+            script: dist:mac
+          - os: macos-13
+            platform: darwin-x64
+            arch: x64
+            script: dist:mac
+          - os: ubuntu-22.04
+            platform: linux-x64
+            arch: x64
+            script: dist:linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Fetch pi kernel for ${{ matrix.platform }}
+        # 从官方 Release 拉取并校验该平台二进制，写进 resources/bin/<platform>/
+        run: pnpm kernel:fetch --platform ${{ matrix.platform }}
+        env:
+          PI_DOWNLOAD_MIRROR: ${{ secrets.PI_DOWNLOAD_MIRROR }}
+      - run: pnpm install --frozen-lockfile
+      - name: Build + package
+        run: pnpm --filter @agentdesk/desktop ${{ matrix.script }}
+        # macOS 公证：CI 注入 Apple 凭证后通过 -c.mac.notarize 开启
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: List artifacts
+        shell: bash
+        run: ls -la apps/desktop/release
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentdesk-${{ matrix.platform }}
+          path: apps/desktop/release/**/*
+
+  release:
+    name: Publish GitHub Release
+    needs: packaging
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish release ${{ github.ref_name }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true

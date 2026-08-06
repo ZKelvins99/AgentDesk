@@ -5,6 +5,17 @@
 export const IPC_CHANNELS = {
   'app:ping': 'app:ping',
   'app:get-version': 'app:get-version',
+  'app:onboarding-status': 'app:onboarding-status',
+  'app:onboarding-complete': 'app:onboarding-complete',
+  'app:update-status': 'app:update-status',
+  'app:update-check': 'app:update-check',
+  'app:update-install': 'app:update-install',
+  'app:open-logs': 'app:open-logs',
+  'app:diagnostic-info': 'app:diagnostic-info',
+  'app:diagnostic-export': 'app:diagnostic-export',
+  'kernel:status': 'kernel:status',
+  'kernel:update': 'kernel:update',
+  'kernel:rollback': 'kernel:rollback',
   'window:minimize': 'window:minimize',
   'window:maximize': 'window:maximize',
   'window:close': 'window:close',
@@ -105,6 +116,10 @@ export const EVENT_CHANNELS = {
   'event:resources': 'event:resources',
   // M8: 终端输出流（README 9.6）
   'event:pty': 'event:pty',
+  // M9: 自动更新（README 12.3）
+  'event:update': 'event:update',
+  // M9: 内核版本（README 12.3 / 16.5）
+  'event:kernel': 'event:kernel',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

@@ -14,6 +14,7 @@ import {
   type InvokeChannel,
   IPC_CHANNELS,
   invokeRequestSchemas,
+  type kernelUpdateRequestSchema,
   type mcpDeleteRequestSchema,
   type mcpExportRequestSchema,
   type mcpImportRequestSchema,
@@ -23,6 +24,7 @@ import {
   type mcpSnapshotsRequestSchema,
   type mcpTestRequestSchema,
   type mcpToolsRequestSchema,
+  type onboardingCompleteRequestSchema,
   type packagesInspectRequestSchema,
   type packagesInstallRequestSchema,
   type packagesListRequestSchema,
@@ -75,12 +77,13 @@ import {
   type workspaceTrustRequestSchema,
 } from '@agentdesk/ipc';
 import { AgentDeskError } from '@agentdesk/shared';
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { ConfigStore } from './config/config-store';
 import type { DiffEngine } from './diff/diff-engine';
 import type { ExtensionCompatService } from './extensions/extension-compat';
+import type { KernelManager } from './kernel/kernel-manager';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
 import type {
@@ -92,9 +95,13 @@ import type { PackageSecurityInspector } from './packages/package-security';
 import type { ProfileManager } from './profile/profile-manager';
 import type { ProviderManager } from './providers';
 import type { PtyService } from './pty/pty-service';
+import type { OnboardingStore } from './onboarding/onboarding-store';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
 import type { WorkspaceManager } from './storage';
+import type { DiagnosticService } from './telemetry/diagnostic';
+import type { MetricsStore } from './telemetry/metrics-store';
+import type { UpdateManager } from './updater/updater';
 import type { FileTreeService } from './workspace/file-tree';
 
 /** 边界数据必须过 zod 校验后才进入 handler（README 16.1）。 */
@@ -165,6 +172,16 @@ export interface IpcHandlerDeps {
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
+  /** M9：首次启动引导页状态。 */
+  onboarding: OnboardingStore;
+  /** M9：内核独立升级。 */
+  kernelManager: KernelManager;
+  /** M9：自动更新。 */
+  updater: UpdateManager;
+  /** M9：诊断报告。 */
+  diagnostic: DiagnosticService;
+  /** M9：指标。 */
+  metrics: MetricsStore;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -807,4 +824,78 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     >;
     return deps.sessionManager.getContextUsage(sessionId);
   });
+
+  // ── M9: 首次启动引导页（README 9.11 / 15） ──────────────────────────
+  ipcMain.handle(IPC_CHANNELS['app:onboarding-status'], async () => {
+    const state = deps.onboarding.state();
+    const kernel = deps.kernelManager.resolveActive();
+    return {
+      completed: state.completed,
+      kernelVersion: kernel.version,
+      providerCount: deps.providers.list().length,
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['app:onboarding-complete'], async (_event, raw: unknown) => {
+    const req = parseRequest('app:onboarding-complete', raw) as z.infer<
+      typeof onboardingCompleteRequestSchema
+    >;
+    if (req.provider && req.apiKey) {
+      deps.providers.save({ name: req.provider, authMethod: 'api-key' }, req.apiKey);
+    }
+    if (req.kernel) {
+      await deps.kernelManager.update(req.kernel);
+      deps.metrics.record('kernel.updated');
+    }
+    deps.onboarding.complete();
+  });
+
+  // ── M9: 自动更新（README 12.3） ──────────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS['app:update-status'], () => deps.updater.statusSnapshot());
+
+  ipcMain.handle(IPC_CHANNELS['app:update-check'], () => deps.updater.check());
+
+  ipcMain.handle(IPC_CHANNELS['app:update-install'], async () => {
+    const status = deps.updater.statusSnapshot();
+    if (status.state === 'downloaded') deps.updater.install();
+  });
+
+  ipcMain.handle(IPC_CHANNELS['app:open-logs'], () => {
+    shell.openPath(deps.diagnostic.logDir());
+  });
+
+  // ── M9: 日志 / 诊断报告（README 13.3） ──────────────────────────────
+  ipcMain.handle(IPC_CHANNELS['app:diagnostic-info'], () => deps.diagnostic.info());
+
+  ipcMain.handle(IPC_CHANNELS['app:diagnostic-export'], async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const defaultName = `agentdesk-diagnostic-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
+    const options: Electron.SaveDialogOptions = {
+      title: '导出诊断报告',
+      defaultPath: defaultName,
+      filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }],
+    };
+    const result = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) {
+      return { path: null, cancelled: true };
+    }
+    const path = await deps.diagnostic.exportTo(result.filePath);
+    return { path, cancelled: false };
+  });
+
+  // ── M9: 内核独立升级（README 12.3 / 16.5） ──────────────────────────
+  ipcMain.handle(IPC_CHANNELS['kernel:status'], () => deps.kernelManager.status());
+
+  ipcMain.handle(IPC_CHANNELS['kernel:update'], async (_event, raw: unknown) => {
+    const req = parseRequest('kernel:update', raw) as z.infer<typeof kernelUpdateRequestSchema>;
+    const status = await deps.kernelManager.update(
+      req.version !== undefined ? req.version : undefined,
+    );
+    deps.metrics.record('kernel.updated');
+    return status;
+  });
+
+  ipcMain.handle(IPC_CHANNELS['kernel:rollback'], () => deps.kernelManager.rollback());
 }

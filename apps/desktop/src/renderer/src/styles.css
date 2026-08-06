@@ -2619,3 +2619,136 @@ button:disabled {
 .diff-line-ctx {
   color: var(--fg-secondary);
 }
+
+/* ���� M9: �״���������ҳ��README 9.11 / 15�� ���������������������������������������������� */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-app);
+}
+.onboarding-card {
+  width: min(560px, calc(100vw - 48px));
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  padding: 32px;
+}
+.onboarding-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+.onboarding-subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--fg-secondary);
+}
+.onboarding-steps {
+  margin: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.onboarding-step {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  color: var(--fg-muted);
+}
+.onboarding-step.active {
+  border-color: var(--accent);
+  color: var(--fg-primary);
+}
+.onboarding-step h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.onboarding-step p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.onboarding-step p.muted {
+  color: var(--fg-muted);
+}
+.onboarding-field {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--fg-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+}
+.onboarding-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.btn-primary {
+  padding: 8px 18px;
+  font-size: 13px;
+  border: none;
+  border-radius: var(--radius-chip);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+}
+.btn-secondary {
+  padding: 8px 18px;
+  font-size: 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--bg-surface);
+  color: var(--fg-primary);
+}
+.btn-link {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.btn-link:disabled {
+  opacity: 0.6;
+}
+
+/* ���� M9: ���º����README 12.3�� �������������������������������������������������������������������� */
+.update-banner {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-card);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.update-text {
+  flex: 1;
+  color: var(--fg-primary);
+}
+.update-install {
+  flex: none;
+}

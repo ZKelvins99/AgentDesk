@@ -142,4 +142,24 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX idx_file_audit_at ON file_audit (at DESC)`,
     ],
   },
+  {
+    id: '0003_metrics',
+    sql: [
+      `CREATE TABLE metrics (
+        name TEXT NOT NULL,
+        value REAL NOT NULL,
+        at INTEGER NOT NULL
+      )`,
+      `CREATE INDEX idx_metrics_name_at ON metrics (name, at DESC)`,
+      `CREATE TABLE logs_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file TEXT NOT NULL,
+        day TEXT NOT NULL,
+        bytes INTEGER NOT NULL,
+        rows INTEGER NOT NULL,
+        createdAt INTEGER NOT NULL
+      )`,
+      `CREATE UNIQUE INDEX idx_logs_index_file_day ON logs_index (file, day)`,
+    ],
+  },
 ];

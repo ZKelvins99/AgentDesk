@@ -6,15 +6,18 @@ import type {
   ApprovalRule,
   AuthProviderStatus,
   ConfigValidationIssue,
+  DiagnosticInfo,
   DiffHunk,
   ExtensionRuntimeNote,
   ExtensionView,
   FileTreeEntry,
   KernelStatus,
+  KernelUpgradeStatus,
   McpCallLogEntry,
   McpServerView,
   McpSnapshot,
   McpToolView,
+  OnboardingStatus,
   PackageSecurityInspection,
   PackageView,
   ProfileView,
@@ -24,6 +27,7 @@ import type {
   SecretsStatusResponse,
   SessionState,
   SkillView,
+  UpdateStatus,
 } from '@agentdesk/ipc';
 import type { ApprovalMode } from '@agentdesk/shared';
 import type { SessionSummary, WorkspaceRecord } from './types';
@@ -396,6 +400,35 @@ declare global {
         breakdown: { input: number; output: number; cacheRead: number; cacheWrite: number };
       }>;
       onPtyEvent(cb: (payload: { ptyId: string; data: string }) => void): () => void;
+      // M9: 首次启动引导页
+      onboarding: {
+        status(): Promise<OnboardingStatus>;
+        complete(req: {
+          provider?: string;
+          apiKey?: string;
+          kernel?: string;
+        }): Promise<void>;
+      };
+      // M9: 自动更新
+      update: {
+        status(): Promise<UpdateStatus>;
+        check(): Promise<UpdateStatus>;
+        install(): Promise<void>;
+        onUpdateEvent(cb: (payload: UpdateStatus) => void): () => void;
+      };
+      // M9: 日志 / 诊断报告
+      diagnostic: {
+        info(): Promise<DiagnosticInfo>;
+        export(): Promise<{ path: string | null; cancelled: boolean }>;
+        openLogs(): Promise<void>;
+      };
+      // M9: 内核独立升级
+      kernel: {
+        status(): Promise<KernelUpgradeStatus>;
+        update(req: { version?: string }): Promise<KernelUpgradeStatus>;
+        rollback(): Promise<KernelUpgradeStatus>;
+        onKernelEvent(cb: (payload: KernelUpgradeStatus) => void): () => void;
+      };
     };
   }
 }

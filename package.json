@@ -14,11 +14,16 @@
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "test": "turbo run test",
-    "kernel:fetch": "node scripts/fetch-pi-binary.mjs"
+    "kernel:fetch": "node scripts/fetch-pi-binary.mjs",
+    "verify:pi-facts": "node scripts/verify-pi-facts.mjs",
+    "verify:i18n": "node scripts/check-i18n.mjs",
+    "dist": "turbo run dist --filter=@agentdesk/desktop"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.7",
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^24.13.3",
+    "electron-builder": "^26.15.3",
     "turbo": "^2.10.8",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

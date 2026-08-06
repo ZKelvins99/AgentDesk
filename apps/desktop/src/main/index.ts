@@ -37,8 +37,15 @@ if (!gotTheLock) {
       pty: runtime.pty,
       kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
+      onboarding: runtime.onboarding,
+      kernelManager: runtime.kernelManager,
+      updater: runtime.updater,
+      diagnostic: runtime.diagnostic,
+      metrics: runtime.metrics,
     });
     createMainWindow();
+    // M9：启动 30s 后检查更新，之后每 6h（README 12.3）
+    runtime.updater.init();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

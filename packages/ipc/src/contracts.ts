@@ -14,6 +14,81 @@ export const getVersionResponseSchema = z.object({
   version: z.string(),
 });
 
+// ── M9：首次启动引导页（README 9.11 / 15） ─────────────────────────────
+
+export const onboardingStatusSchema = z.object({
+  completed: z.boolean(),
+  kernelVersion: z.string().nullable(),
+  providerCount: z.number().int().nonnegative(),
+});
+export type OnboardingStatus = z.infer<typeof onboardingStatusSchema>;
+
+/** 引导页「完成」：可选写入一个 provider 密钥并把所选内核切为激活。 */
+export const onboardingCompleteRequestSchema = z.object({
+  provider: z.string().optional(),
+  apiKey: z.string().optional(),
+  kernel: z.string().optional(),
+});
+
+// ── M9：自动更新（README 12.3） ──────────────────────────────────────
+
+export const updateStatusSchema = z.object({
+  state: z.enum([
+    'idle',
+    'checking',
+    'available',
+    'downloading',
+    'downloaded',
+    'error',
+    'not-supported',
+  ]),
+  version: z.string().optional(),
+  currentVersion: z.string().optional(),
+  progress: z.number().min(0).max(1).optional(),
+  /** 已下载但会话运行中，等待重启安装（README 12.3 有会话时绝不自动重启）。 */
+  pendingRestart: z.boolean().optional(),
+  message: z.string().optional(),
+});
+export type UpdateStatus = z.infer<typeof updateStatusSchema>;
+
+// ── M9：内核独立升级（README 12.3 / 16.5） ───────────────────────────
+
+export const kernelStatusSchema = z.object({
+  activeVersion: z.string().nullable(),
+  bundledVersion: z.string().nullable(),
+  installed: z.array(z.string()),
+  activePath: z.string().nullable(),
+  latestKnown: z.string().nullable(),
+  canUpdate: z.boolean(),
+});
+export type KernelUpgradeStatus = z.infer<typeof kernelStatusSchema>;
+
+export const kernelUpdateRequestSchema = z.object({
+  /** 缺省=最新 release；也可显式指定版本（如 "0.83.0"）。 */
+  version: z.string().optional(),
+});
+
+// ── M9：日志 / 诊断报告（README 13） ────────────────────────────────
+
+export const diagnosticInfoSchema = z.object({
+  appVersion: z.string(),
+  electronVersion: z.string(),
+  nodeVersion: z.string(),
+  chromeVersion: z.string(),
+  os: z.string(),
+  platform: z.string(),
+  kernelVersion: z.string().nullable(),
+  bash: z.string().nullable(),
+  logDir: z.string(),
+  metrics: z.record(z.string(), z.unknown()),
+});
+export type DiagnosticInfo = z.infer<typeof diagnosticInfoSchema>;
+
+export const diagnosticExportResponseSchema = z.object({
+  path: z.string().nullable(),
+  cancelled: z.boolean(),
+});
+
 /** 会话（README 10.2） */
 export const sessionCreateRequestSchema = z.object({
   workspacePath: z.string().optional(),
@@ -1116,6 +1191,29 @@ export interface InvokeMap {
     request: undefined;
     response: z.infer<typeof getVersionResponseSchema>;
   };
+  'app:onboarding-status': {
+    request: undefined;
+    response: z.infer<typeof onboardingStatusSchema>;
+  };
+  'app:onboarding-complete': {
+    request: z.infer<typeof onboardingCompleteRequestSchema>;
+    response: undefined;
+  };
+  'app:update-status': { request: undefined; response: z.infer<typeof updateStatusSchema> };
+  'app:update-check': { request: undefined; response: z.infer<typeof updateStatusSchema> };
+  'app:update-install': { request: undefined; response: undefined };
+  'app:open-logs': { request: undefined; response: undefined };
+  'app:diagnostic-info': { request: undefined; response: z.infer<typeof diagnosticInfoSchema> };
+  'app:diagnostic-export': {
+    request: undefined;
+    response: z.infer<typeof diagnosticExportResponseSchema>;
+  };
+  'kernel:status': { request: undefined; response: z.infer<typeof kernelStatusSchema> };
+  'kernel:update': {
+    request: z.infer<typeof kernelUpdateRequestSchema>;
+    response: z.infer<typeof kernelStatusSchema>;
+  };
+  'kernel:rollback': { request: undefined; response: z.infer<typeof kernelStatusSchema> };
   'window:minimize': { request: undefined; response: undefined };
   'window:maximize': { request: undefined; response: undefined };
   'window:close': { request: undefined; response: undefined };
@@ -1453,12 +1551,27 @@ export interface EventMap {
   'event:resources': z.infer<typeof resourcesEventSchema>;
   // M8: 终端输出
   'event:pty': z.infer<typeof ptyEventSchema>;
+  // M9: 自动更新状态推送
+  'event:update': z.infer<typeof updateStatusSchema>;
+  // M9: 内核版本状态推送
+  'event:kernel': z.infer<typeof kernelStatusSchema>;
 }
 
 /** 运行时请求校验表：main 侧 handler 执行前必须过 zod（README 16.1）。 */
 export const invokeRequestSchemas = {
   'app:ping': pingRequestSchema,
   'app:get-version': z.undefined(),
+  'app:onboarding-status': z.undefined(),
+  'app:onboarding-complete': onboardingCompleteRequestSchema,
+  'app:update-status': z.undefined(),
+  'app:update-check': z.undefined(),
+  'app:update-install': z.undefined(),
+  'app:open-logs': z.undefined(),
+  'app:diagnostic-info': z.undefined(),
+  'app:diagnostic-export': z.undefined(),
+  'kernel:status': z.undefined(),
+  'kernel:update': kernelUpdateRequestSchema,
+  'kernel:rollback': z.undefined(),
   'window:minimize': z.undefined(),
   'window:maximize': z.undefined(),
   'window:close': z.undefined(),

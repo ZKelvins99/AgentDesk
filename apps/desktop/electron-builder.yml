@@ -1,0 +1,82 @@
+# electron-builder 三平台打包（M9，README 12.1 / 12.2）
+# 签名/公证由 CI 注入环境变量完成：
+#   Windows: CSC_LINK / CSC_KEY_PASSWORD（EV 证书，pkcs12）
+#   macOS:   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID + -c.mac.notarize=true
+# 本地打包不需要任何证书（--publish never 不会把产物推出去）。
+
+appId: com.agentdesk.app
+productName: AgentDesk
+copyright: Copyright © 2026 AgentDesk
+electronLanguages: [zh-CN, en]
+
+directories:
+  output: release/${version}
+  buildResources: build
+
+# 只打 electron-vite 产物与资源；pi 二进制 / Bridge Extension 需从 asar 解包出来直接执行
+files:
+  - out/**/*
+  - resources/**
+  - package.json
+
+asarUnpack:
+  - resources/bin/**
+  - resources/pi-ext/**
+  - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/node-pty/**"
+
+# electron-updater 自动更新 feed（README 12.3）：
+# GitHub Releases + stable/beta 通道；app-update.yml 由 electron-builder 生成。
+publish:
+  provider: github
+  owner: agentdesk
+  repo: agentdesk
+  channel: stable
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  executableName: AgentDesk
+  requestedExecutionLevel: asInvoker
+  # CI 环境提供 CSC_LINK/CSC_KEY_PASSWORD 即自动签名；本地留空为不签名
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  shortcutName: AgentDesk
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # CI 传 -c.mac.notarize=true 并注入 APPLE_* 凭证后自动公证
+
+dmg:
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+  category: Development
+  maintainer: AgentDesk <dev@agentdesk.local>
+  executableName: agentdesk
+
+appImage:
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+
+deb:
+  artifactName: ${productName}_${version}_${arch}.${ext}
+
+# 元数据：electron-updater 需在 app.asar 同层保留 latest.yml（默认行为，无需额外配置）
+npmRebuild: true

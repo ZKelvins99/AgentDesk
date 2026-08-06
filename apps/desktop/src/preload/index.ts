@@ -212,6 +212,35 @@ const api = {
   // M8: 上下文用量
   contextUsage: (req: InvokeMap['session:context-usage']['request']) =>
     safeInvoke(IPC_CHANNELS['session:context-usage'], req),
+  // M9: 首次启动引导页
+  onboarding: {
+    status: () => safeInvoke(IPC_CHANNELS['app:onboarding-status'], undefined),
+    complete: (req: InvokeMap['app:onboarding-complete']['request']) =>
+      safeInvoke(IPC_CHANNELS['app:onboarding-complete'], req),
+  },
+  // M9: 自动更新
+  update: {
+    status: () => safeInvoke(IPC_CHANNELS['app:update-status'], undefined),
+    check: () => safeInvoke(IPC_CHANNELS['app:update-check'], undefined),
+    install: () => safeInvoke(IPC_CHANNELS['app:update-install'], undefined),
+    onUpdateEvent: (cb: (payload: EventMap['event:update']) => void) =>
+      safeOn(EVENT_CHANNELS['event:update'], cb),
+  },
+  // M9: 日志 / 诊断报告
+  diagnostic: {
+    info: () => safeInvoke(IPC_CHANNELS['app:diagnostic-info'], undefined),
+    export: () => safeInvoke(IPC_CHANNELS['app:diagnostic-export'], undefined),
+    openLogs: () => safeInvoke(IPC_CHANNELS['app:open-logs'], undefined),
+  },
+  // M9: 内核独立升级
+  kernel: {
+    status: () => safeInvoke(IPC_CHANNELS['kernel:status'], undefined),
+    update: (req: InvokeMap['kernel:update']['request']) =>
+      safeInvoke(IPC_CHANNELS['kernel:update'], req),
+    rollback: () => safeInvoke(IPC_CHANNELS['kernel:rollback'], undefined),
+    onKernelEvent: (cb: (payload: EventMap['event:kernel']) => void) =>
+      safeOn(EVENT_CHANNELS['event:kernel'], cb),
+  },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
   onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>

@@ -12,8 +12,11 @@ import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { ConfigStore } from '../config/config-store';
 import { DiffEngine } from '../diff/diff-engine';
 import { ExtensionCompatService } from '../extensions/extension-compat';
+import { KernelManager } from '../kernel/kernel-manager';
+import { initMainLogger } from '../logging/logger';
 import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
+import { OnboardingStore } from '../onboarding/onboarding-store';
 import { PackageManager } from '../packages/package-manager';
 import { PackageSecurityInspector } from '../packages/package-security';
 import { PiBridge, SidecarPool } from '../pi';
@@ -23,6 +26,9 @@ import { PtyService } from '../pty/pty-service';
 import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
 import { FileAuditStore } from '../storage/file-audit-store';
+import { DiagnosticService } from '../telemetry/diagnostic';
+import { MetricsStore } from '../telemetry/metrics-store';
+import { UpdateManager } from '../updater/updater';
 import { FileTreeService } from '../workspace/file-tree';
 import { SessionManager } from './session-manager';
 
@@ -52,6 +58,16 @@ export interface SessionRuntimeHandle {
   pty: PtyService;
   uplink: UplinkServer;
   kernel: { binary: string | null };
+  /** M9：首次启动引导页。 */
+  onboarding: OnboardingStore;
+  /** M9：内核独立升级。 */
+  kernelManager: KernelManager;
+  /** M9：自动更新。 */
+  updater: UpdateManager;
+  /** M9：诊断报告。 */
+  diagnostic: DiagnosticService;
+  /** M9：指标。 */
+  metrics: MetricsStore;
   dispose: () => Promise<void>;
 }
 
@@ -91,12 +107,33 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const sessionDir = path.join(userData, 'sessions');
   mkdirSync(sessionDir, { recursive: true });
 
+  await initMainLogger();
+
   const db = openDatabase(path.join(userData, 'agentdesk.db'));
   const store = new SessionStore(db, path.join(userData, 'exports'));
   // 「本次信任」不跨重启：启动时重置为未知，下次打开重新询问（README 8.9）
   store.resetOnceTrust();
   const workspaces = new WorkspaceManager({ store });
   const secrets = new SecretsStore(path.join(homedir(), '.agentdesk'), electronSecretEncryptor);
+
+  // M9：内核独立升级（README 12.3）——激活内核优先于内置内核。
+  const resourcesBin = path.join(app.getAppPath(), 'resources', 'bin');
+  const kernelManager = new KernelManager({
+    bundledDir: resourcesBin,
+    bundledManifest: path.join(resourcesBin, 'MANIFEST.json'),
+  });
+  const activeKernel = kernelManager.resolveActive();
+  const activeBinary = activeKernel.path ?? binary;
+
+  const onboarding = new OnboardingStore(path.join(homedir(), '.agentdesk'));
+  const metrics = new MetricsStore(db);
+
+  // M9：自动更新。会话运行时存在 → 绝不自动重启（README 12.3）。
+  const emitUpdate = (status: import('@agentdesk/ipc').UpdateStatus) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('event:update', status);
+    }
+  };
 
   let mockSetup: MockSetup | null = null;
   if (process.env.AGENTDESK_MOCK_PROVIDER === '1') {
@@ -113,7 +150,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const diff = new DiffEngine(new FileAuditStore(db));
   const ptyService = new PtyService();
 
-  const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
+  const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary: activeBinary });
 
   const workspacePath = process.env.AGENTDESK_WORKSPACE ?? mockSetup?.workspace ?? process.cwd();
   const defaultProvider = process.env.AGENTDESK_PROVIDER ?? (mockSetup ? 'mock' : undefined);
@@ -123,12 +160,12 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const offline = mockSetup !== null || process.env.AGENTDESK_OFFLINE === '1';
 
   const pool = new SidecarPool({ idleTimeoutMs: 15 * 60 * 1000 });
-  const bridge = new PiBridge({ binary: binary ?? '', pool });
+  const bridge = new PiBridge({ binary: activeBinary ?? '', pool });
 
   const mcpStore = new McpConfigStore();
   const skillManager = new SkillManager({ agentDir });
   const packageManager = new PackageManager({
-    ...(binary ? { binary } : {}),
+    ...(activeBinary ? { binary: activeBinary } : {}),
     agentDir,
   });
   const packageSecurity = new PackageSecurityInspector();
@@ -230,6 +267,14 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     },
   });
 
+  // M9：自动更新（README 12.3）：下载后不强制重启，有会话运行绝不自动重启。
+  const updater = new UpdateManager({
+    emit: emitUpdate,
+    hasActiveSessions: () => sessionManager.size > 0,
+    autoDownload: true,
+  });
+  const diagnostic = new DiagnosticService({ kernelManager, metrics });
+
   return {
     sessionManager,
     workspaces,
@@ -247,8 +292,14 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     diff,
     pty: ptyService,
     uplink,
-    kernel: { binary },
+    kernel: { binary: activeBinary },
+    onboarding,
+    kernelManager,
+    updater,
+    diagnostic,
+    metrics,
     dispose: async () => {
+      updater.dispose();
       ptyService.killAll();
       await sessionManager.shutdownAll(5_000);
       await mcpHost.disposeAll();
