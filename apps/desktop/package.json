@@ -16,6 +16,8 @@
     "@agentdesk/pi-protocol": "workspace:*",
     "@agentdesk/shared": "workspace:*",
     "@agentdesk/ui": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@sinclair/typebox": "^0.34.52",
     "@tanstack/react-virtual": "^3.14.9",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
