@@ -24,6 +24,12 @@ import {
   removeSkillExclusion,
   writePiSettings,
 } from './pi-settings';
+import {
+  collectCandidates,
+  type InstallSource,
+  importCandidates,
+  materializeSource,
+} from './skill-installer';
 import { type SkillTemplate, skillSkeleton } from './skill-templates';
 
 export type SkillSource = 'global' | 'project';
@@ -223,6 +229,48 @@ export class SkillManager {
   } {
     const r = parseSkillFrontmatter(markdown, dirName);
     return { errors: r.errors, warnings: r.warnings, infos: r.infos };
+  }
+
+  install(input: { source: InstallSource; scope?: 'global' | 'project'; workspacePath?: string }): {
+    installed: SkillView[];
+    skipped: Array<{ name: string; reason: string }>;
+  } {
+    const scope = input.scope ?? 'global';
+    const settingsDir =
+      scope === 'global' ? this.agentDir : path.join(input.workspacePath ?? '', '.pi');
+    const targetSkillsDir = path.join(settingsDir, 'skills');
+    const { root, cleanup } = materializeSource(input.source);
+    try {
+      const candidates = collectCandidates(root);
+      if (candidates.length === 0) {
+        throw new Error('未在来源中发现 SKILL.md 技能');
+      }
+      const outcome = importCandidates(candidates, targetSkillsDir);
+      const installedSet = new Set(outcome.installed);
+      const views = this.list(input.workspacePath).filter(
+        (v) => installedSet.has(v.dir) || installedSet.has(v.path),
+      );
+      return { installed: views, skipped: outcome.skipped };
+    } finally {
+      cleanup();
+    }
+  }
+
+  recommended(): Array<{ id: string; name: string; url: string; description: string }> {
+    return [
+      {
+        id: 'anthropics-skills',
+        name: 'anthropics/skills',
+        url: 'https://github.com/anthropics/skills',
+        description: 'Anthropic 官方 Agent Skills 集合',
+      },
+      {
+        id: 'badlogic-pi-skills',
+        name: 'badlogic/pi-skills',
+        url: 'https://github.com/badlogic/pi-skills',
+        description: 'pi 生态技能集合',
+      },
+    ];
   }
 
   setEnabled(id: string, enabled: boolean, workspacePath?: string): SkillView {

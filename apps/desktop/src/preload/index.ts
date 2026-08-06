@@ -111,6 +111,9 @@ const api = {
       safeInvoke(IPC_CHANNELS['skills:update'], req),
     validate: (req: InvokeMap['skills:validate']['request']) =>
       safeInvoke(IPC_CHANNELS['skills:validate'], req),
+    install: (req: InvokeMap['skills:install']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:install'], req),
+    recommended: () => safeInvoke(IPC_CHANNELS['skills:recommended'], undefined),
   },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
@@ -136,6 +139,7 @@ const api = {
     trust: (req: { workspaceId: string; decision: 'once' | 'always' | 'alwaysParent' | 'never' }) =>
       safeInvoke(IPC_CHANNELS['workspace:trust'], req),
     pickDirectory: () => safeInvoke(IPC_CHANNELS['workspace:pick-directory'], undefined),
+    pickFile: () => safeInvoke(IPC_CHANNELS['workspace:pick-file'], undefined),
   },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),

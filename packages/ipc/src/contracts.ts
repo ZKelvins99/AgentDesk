@@ -318,6 +318,10 @@ export const workspacePickDirectoryResponseSchema = z.object({
   path: z.string().nullable(),
 });
 
+export const workspacePickFileResponseSchema = z.object({
+  path: z.string().nullable(),
+});
+
 /** 事件推送负载：{ sessionId, seq, ev }（README 10.2 event:session） */
 export const sessionEventSchema = z.object({
   sessionId: z.string(),
@@ -630,6 +634,34 @@ export const skillsValidateResponseSchema = z.object({
   infos: z.array(z.string()),
 });
 
+export const skillInstallSourceSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('dir'), path: z.string().min(1) }),
+  z.object({ type: z.literal('zip'), path: z.string().min(1) }),
+  z.object({ type: z.literal('git'), url: z.string().min(1), ref: z.string().optional() }),
+]);
+export type SkillInstallSource = z.infer<typeof skillInstallSourceSchema>;
+
+export const skillsInstallRequestSchema = z.object({
+  source: skillInstallSourceSchema,
+  scope: z.enum(['global', 'project']).optional(),
+  workspacePath: z.string().optional(),
+});
+export const skillsInstallResponseSchema = z.object({
+  installed: z.array(skillViewSchema),
+  skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
+});
+
+export const skillsRecommendedResponseSchema = z.object({
+  sources: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      url: z.string(),
+      description: z.string(),
+    }),
+  ),
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -699,6 +731,10 @@ export interface InvokeMap {
   'workspace:pick-directory': {
     request: undefined;
     response: z.infer<typeof workspacePickDirectoryResponseSchema>;
+  };
+  'workspace:pick-file': {
+    request: undefined;
+    response: z.infer<typeof workspacePickFileResponseSchema>;
   };
   'provider:list': {
     request: undefined;
@@ -836,6 +872,14 @@ export interface InvokeMap {
     request: z.infer<typeof skillsValidateRequestSchema>;
     response: z.infer<typeof skillsValidateResponseSchema>;
   };
+  'skills:install': {
+    request: z.infer<typeof skillsInstallRequestSchema>;
+    response: z.infer<typeof skillsInstallResponseSchema>;
+  };
+  'skills:recommended': {
+    request: undefined;
+    response: z.infer<typeof skillsRecommendedResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -867,6 +911,7 @@ export const invokeRequestSchemas = {
   'workspace:open': workspaceOpenRequestSchema,
   'workspace:trust': workspaceTrustRequestSchema,
   'workspace:pick-directory': z.undefined(),
+  'workspace:pick-file': z.undefined(),
   'provider:list': z.undefined(),
   'provider:save': providerSaveRequestSchema,
   'provider:delete': providerDeleteRequestSchema,
@@ -901,6 +946,8 @@ export const invokeRequestSchemas = {
   'skills:create': skillsCreateRequestSchema,
   'skills:update': skillsUpdateRequestSchema,
   'skills:validate': skillsValidateRequestSchema,
+  'skills:install': skillsInstallRequestSchema,
+  'skills:recommended': z.undefined(),
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

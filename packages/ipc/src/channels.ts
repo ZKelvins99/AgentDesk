@@ -24,6 +24,7 @@ export const IPC_CHANNELS = {
   'workspace:open': 'workspace:open',
   'workspace:trust': 'workspace:trust',
   'workspace:pick-directory': 'workspace:pick-directory',
+  'workspace:pick-file': 'workspace:pick-file',
   'provider:list': 'provider:list',
   'provider:save': 'provider:save',
   'provider:delete': 'provider:delete',
@@ -58,6 +59,8 @@ export const IPC_CHANNELS = {
   'skills:create': 'skills:create',
   'skills:update': 'skills:update',
   'skills:validate': 'skills:validate',
+  'skills:install': 'skills:install',
+  'skills:recommended': 'skills:recommended',
 } as const;
 
 /** 请求/响应通道（invoke） */

@@ -1951,3 +1951,46 @@ button:disabled {
   overflow: hidden;
   font-size: 12px;
 }
+.skill-install {
+  width: min(640px, calc(100vw - 48px));
+  display: grid;
+  gap: 12px;
+}
+.skill-install-source {
+  display: grid;
+  gap: 6px;
+}
+.skill-install-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.skill-install-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--fg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  box-sizing: border-box;
+}
+.skill-install-ref {
+  flex: 0 0 110px;
+}
+.skill-recommended {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.skill-install-ok {
+  color: #27ae60;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, #27ae60 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #27ae60 10%, transparent);
+}

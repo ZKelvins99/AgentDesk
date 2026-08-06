@@ -52,6 +52,17 @@ export function SkillSettings(): React.JSX.Element | null {
   }>({ errors: [], warnings: [], infos: [] });
   const [editorError, setEditorError] = useState('');
   const [editorSaving, setEditorSaving] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installScope, setInstallScope] = useState<'global' | 'project'>('global');
+  const [gitUrl, setGitUrl] = useState('');
+  const [gitRef, setGitRef] = useState('');
+  const [zipPath, setZipPath] = useState('');
+  const [dirPath, setDirPath] = useState('');
+  const [recommended, setRecommended] = useState<
+    Array<{ id: string; name: string; url: string; description: string }>
+  >([]);
+  const [installResult, setInstallResult] = useState('');
+  const [installing, setInstalling] = useState(false);
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const workspacePath = activeId ? (sessions[activeId]?.workspacePath ?? '') : '';
@@ -209,6 +220,62 @@ export function SkillSettings(): React.JSX.Element | null {
     }
   };
 
+  const openInstall = async (): Promise<void> => {
+    setInstallOpen(true);
+    setInstallResult('');
+    setGitUrl('');
+    setGitRef('');
+    setZipPath('');
+    setDirPath('');
+    try {
+      const r = await window.agentdesk.skills.recommended();
+      setRecommended(r.sources);
+    } catch {
+      setRecommended([]);
+    }
+  };
+
+  const pickZip = async (): Promise<void> => {
+    const r = await window.agentdesk.workspace.pickFile();
+    if (r.path) setZipPath(r.path);
+  };
+
+  const pickDir = async (): Promise<void> => {
+    const r = await window.agentdesk.workspace.pickDirectory();
+    if (r.path) setDirPath(r.path);
+  };
+
+  const doInstall = async (
+    source:
+      | { type: 'git'; url: string; ref?: string }
+      | { type: 'zip'; path: string }
+      | { type: 'dir'; path: string },
+  ): Promise<void> => {
+    setInstalling(true);
+    setInstallResult('');
+    try {
+      const r = await window.agentdesk.skills.install({
+        source,
+        scope: installScope,
+        ...(installScope === 'project' && workspacePath ? { workspacePath } : {}),
+      });
+      setInstallResult(
+        `安装 ${r.installed.length} 个${
+          r.skipped.length > 0
+            ? `，跳过 ${r.skipped.length} 个（${r.skipped
+                .map((s) => `${s.name}: ${s.reason}`)
+                .join('；')}）`
+            : ''
+        }`,
+      );
+      await load();
+    } catch (err) {
+      setInstallResult(`安装失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setInstalling(false);
+    }
+  };
+
   const groups: Array<{ label: string; items: SkillView[] }> = [
     {
       label: '全局（~/.pi/agent/skills 与 ~/.agents/skills）',
@@ -229,6 +296,9 @@ export function SkillSettings(): React.JSX.Element | null {
           <h2 className="model-picker-title">Skill 管理</h2>
           <button type="button" className="link-btn" onClick={() => void load()}>
             刷新
+          </button>
+          <button type="button" className="btn" onClick={() => void openInstall()}>
+            + 安装
           </button>
           <button type="button" className="btn" onClick={startWizard}>
             + 新建
@@ -445,6 +515,148 @@ export function SkillSettings(): React.JSX.Element | null {
                 取消
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {installOpen ? (
+        <div className="modal-overlay">
+          <div className="modal-card skill-install">
+            <div className="provider-settings-header">
+              <h3 className="model-picker-title">安装 Skill</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setInstallOpen(false)}
+                aria-label="close"
+              >
+                ×
+              </button>
+            </div>
+            <label className="mcp-field">
+              <span>作用域</span>
+              <select
+                value={installScope}
+                onChange={(e) => setInstallScope(e.target.value as 'global' | 'project')}
+              >
+                <option value="global">全局（~/.pi/agent/skills）</option>
+                <option value="project" disabled={!workspacePath}>
+                  项目（.pi/skills）
+                </option>
+              </select>
+            </label>
+
+            <div className="skill-install-source">
+              <div className="skill-group-label">Git 仓库</div>
+              <div className="skill-install-row">
+                <input
+                  className="skill-install-input"
+                  placeholder="https://github.com/user/skills-repo"
+                  value={gitUrl}
+                  onChange={(e) => setGitUrl(e.target.value)}
+                  spellCheck={false}
+                />
+                <input
+                  className="skill-install-input skill-install-ref"
+                  placeholder="ref（可选）"
+                  value={gitRef}
+                  onChange={(e) => setGitRef(e.target.value)}
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() =>
+                    void doInstall({
+                      type: 'git',
+                      url: gitUrl.trim(),
+                      ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
+                    })
+                  }
+                  disabled={installing || !gitUrl.trim()}
+                >
+                  安装
+                </button>
+              </div>
+            </div>
+
+            <div className="skill-install-source">
+              <div className="skill-group-label">本地 zip</div>
+              <div className="skill-install-row">
+                <input
+                  className="skill-install-input"
+                  placeholder="未选择文件"
+                  value={zipPath}
+                  readOnly
+                />
+                <button type="button" className="btn" onClick={() => void pickZip()}>
+                  选择 zip
+                </button>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => void doInstall({ type: 'zip', path: zipPath })}
+                  disabled={installing || !zipPath}
+                >
+                  安装
+                </button>
+              </div>
+            </div>
+
+            <div className="skill-install-source">
+              <div className="skill-group-label">本地目录</div>
+              <div className="skill-install-row">
+                <input
+                  className="skill-install-input"
+                  placeholder="未选择目录"
+                  value={dirPath}
+                  readOnly
+                />
+                <button type="button" className="btn" onClick={() => void pickDir()}>
+                  选择目录
+                </button>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => void doInstall({ type: 'dir', path: dirPath })}
+                  disabled={installing || !dirPath}
+                >
+                  安装
+                </button>
+              </div>
+            </div>
+
+            {recommended.length > 0 ? (
+              <div className="skill-install-source">
+                <div className="skill-group-label">推荐源（一键安装）</div>
+                {recommended.map((src) => (
+                  <div className="skill-install-row" key={src.id}>
+                    <div className="skill-recommended">
+                      <div className="skill-name">{src.name}</div>
+                      <div className="skill-desc">{src.description}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => void doInstall({ type: 'git', url: src.url })}
+                      disabled={installing}
+                    >
+                      安装
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {installResult ? (
+              <div
+                className={
+                  installResult.startsWith('安装失败') ? 'skill-error' : 'skill-install-ok'
+                }
+              >
+                {installResult}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

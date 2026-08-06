@@ -37,6 +37,7 @@ import {
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
   type skillsCreateRequestSchema,
+  type skillsInstallRequestSchema,
   type skillsListRequestSchema,
   type skillsReadRequestSchema,
   type skillsSetEnabledRequestSchema,
@@ -416,6 +417,27 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     return deps.skills.validate(req.content, req.dirName);
   });
 
+  ipcMain.handle(IPC_CHANNELS['skills:install'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:install', raw) as z.infer<typeof skillsInstallRequestSchema>;
+    const source =
+      req.source.type === 'git'
+        ? {
+            type: 'git' as const,
+            url: req.source.url,
+            ...(req.source.ref !== undefined ? { ref: req.source.ref } : {}),
+          }
+        : req.source;
+    return deps.skills.install({
+      source,
+      ...(req.scope !== undefined ? { scope: req.scope } : {}),
+      ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:recommended'], async () => ({
+    sources: deps.skills.recommended(),
+  }));
+
   // ---- Provider / Model / 密钥（README 8.6）----
 
   ipcMain.handle(IPC_CHANNELS['provider:list'], async () => ({
@@ -465,6 +487,17 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     const pick: Electron.OpenDialogOptions = {
       title: '选择工作区目录',
       properties: ['openDirectory', 'createDirectory'],
+    };
+    const result = win ? await dialog.showOpenDialog(win, pick) : await dialog.showOpenDialog(pick);
+    if (result.canceled || result.filePaths.length === 0) return { path: null };
+    return { path: result.filePaths[0] };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:pick-file'], async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const pick: Electron.OpenDialogOptions = {
+      title: '选择文件',
+      properties: ['openFile'],
     };
     const result = win ? await dialog.showOpenDialog(win, pick) : await dialog.showOpenDialog(pick);
     if (result.canceled || result.filePaths.length === 0) return { path: null };

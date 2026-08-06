@@ -118,6 +118,7 @@ declare global {
           decision: 'once' | 'always' | 'alwaysParent' | 'never';
         }): Promise<void>;
         pickDirectory(): Promise<{ path: string | null }>;
+        pickFile(): Promise<{ path: string | null }>;
       };
       mcp: {
         list(req?: { workspacePath?: string }): Promise<{ servers: McpServerView[] }>;
@@ -178,6 +179,20 @@ declare global {
           errors: string[];
           warnings: string[];
           infos: string[];
+        }>;
+        install(req: {
+          source:
+            | { type: 'dir'; path: string }
+            | { type: 'zip'; path: string }
+            | { type: 'git'; url: string; ref?: string };
+          scope?: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{
+          installed: SkillView[];
+          skipped: Array<{ name: string; reason: string }>;
+        }>;
+        recommended(): Promise<{
+          sources: Array<{ id: string; name: string; url: string; description: string }>;
         }>;
       };
       approval: {
