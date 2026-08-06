@@ -23,6 +23,11 @@ export interface PiBridgeOptions {
 export class PiBridge {
   constructor(private readonly options: PiBridgeOptions) {}
 
+  /** sidecar 进程池（供 SessionManager 监听重启/耗尽事件）。 */
+  get pool(): SidecarPool {
+    return this.options.pool;
+  }
+
   createSessionSidecar(
     sessionId: string,
     opts: Omit<PiSidecarOptions, 'binary' | 'sessionId' | 'onExit'>,

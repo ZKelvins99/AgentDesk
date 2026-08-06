@@ -12,20 +12,26 @@
   },
   "dependencies": {
     "@agentdesk/ipc": "workspace:*",
+    "@agentdesk/mock-provider": "workspace:*",
     "@agentdesk/pi-protocol": "workspace:*",
     "@agentdesk/shared": "workspace:*",
+    "@agentdesk/ui": "workspace:*",
+    "@tanstack/react-virtual": "^3.14.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@agentdesk/tsconfig": "workspace:*",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^43.3.0",
     "electron-vite": "^5.0.0",
+    "jsdom": "^27.4.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.10"

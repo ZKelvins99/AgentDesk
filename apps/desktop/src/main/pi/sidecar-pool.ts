@@ -79,6 +79,7 @@ export class SidecarPool extends EventEmitter {
     });
     this.sidecars.set(sessionId, sidecar);
     this.touch(sessionId);
+    this.emit('sidecar-created', { sessionId, sidecar });
     return sidecar;
   }
 
@@ -139,6 +140,7 @@ export class SidecarPool extends EventEmitter {
         if (sidecar.status === 'ready') this.restartAttempts.delete(sessionId);
       });
       this.sidecars.set(sessionId, sidecar);
+      this.emit('sidecar-created', { sessionId, sidecar });
       sidecar.start();
     }, backoff);
   }

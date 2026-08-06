@@ -1,21 +1,26 @@
 import { once } from 'node:events';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  type MockProvider,
+  mockModelsJson,
+  startMockProvider,
+  textScenario,
+} from '@agentdesk/mock-provider';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AgentDeskEvent } from './agentdesk-events';
 import { killProcessTree, PiSidecar, type SidecarExitInfo } from './sidecar';
 
 /**
  * 内核集成测试（G1）：
- * 真实 pi 二进制 + 本地 mock OpenAI 兼容端点，验证
+ * 真实 pi 二进制 + 本地 mock OpenAI 兼容端点（@agentdesk/mock-provider），验证
  * spawn → 发一句 → msg.delta 流 → agent.settled → 优雅退出；杀进程可检测。
  */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BINARY =
-  process.env['PI_BINARY'] ??
+  process.env.PI_BINARY ??
   path.resolve(
     HERE,
     '../../../resources/bin',
@@ -25,97 +30,6 @@ const BINARY =
 
 const skipIntegration = !existsSync(BINARY);
 
-interface MockServer {
-  server: Server;
-  port: number;
-  close: () => Promise<void>;
-}
-
-function startMockOpenAiServer(): Promise<MockServer> {
-  return new Promise((resolve, reject) => {
-    const server = createServer((req, res) => {
-      if (req.method !== 'POST' || !req.url?.endsWith('/chat/completions')) {
-        res.writeHead(404);
-        res.end();
-        return;
-      }
-      let body = '';
-      req.on('data', (c: Buffer) => {
-        body += c.toString('utf8');
-      });
-      req.on('end', () => {
-        let stream = true;
-        try {
-          stream = (JSON.parse(body) as { stream?: boolean }).stream !== false;
-        } catch {
-          // 保持默认流式
-        }
-        if (!stream) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
-              id: 'chatcmpl-mock',
-              object: 'chat.completion',
-              model: 'mock-model',
-              choices: [
-                {
-                  index: 0,
-                  message: { role: 'assistant', content: 'Mock provider response' },
-                  finish_reason: 'stop',
-                },
-              ],
-              usage: { prompt_tokens: 4, completion_tokens: 3, total_tokens: 7 },
-            }),
-          );
-          return;
-        }
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        });
-        const chunks = ['Mock ', 'provider ', 'response'];
-        let i = 0;
-        const timer = setInterval(() => {
-          if (i < chunks.length) {
-            res.write(
-              sseChunk({
-                choices: [{ index: 0, delta: { content: chunks[i] }, finish_reason: null }],
-              }),
-            );
-            i += 1;
-          } else {
-            clearInterval(timer);
-            res.write(sseChunk({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] }));
-            res.write('data: [DONE]\n\n');
-            res.end();
-          }
-        }, 10);
-      });
-    });
-    server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const addr = server.address();
-      if (addr && typeof addr === 'object') {
-        resolve({
-          server,
-          port: addr.port,
-          close: () =>
-            new Promise<void>((r) => {
-              server.close(() => r());
-            }),
-        });
-      } else {
-        reject(new Error('无法获取 mock 端口'));
-      }
-    });
-  });
-}
-
-function sseChunk(payload: unknown): string {
-  return `data: ${JSON.stringify({ id: 'chatcmpl-mock', object: 'chat.completion.chunk', model: 'mock-model', ...(payload as object) })}\n\n`;
-}
-
 interface TestEnv {
   workspaceDir: string;
   sessionDir: string;
@@ -123,7 +37,7 @@ interface TestEnv {
   cleanup: () => void;
 }
 
-function makeEnv(port: number): TestEnv {
+function makeEnv(baseUrl: string): TestEnv {
   const root = mkdtempSync(path.join(tmpdir(), 'agentdesk-it-'));
   const workspaceDir = path.join(root, 'workspace');
   const sessionDir = path.join(root, 'sessions');
@@ -131,34 +45,7 @@ function makeEnv(port: number): TestEnv {
   for (const dir of [workspaceDir, sessionDir, agentDir]) {
     mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(
-    path.join(agentDir, 'models.json'),
-    JSON.stringify(
-      {
-        providers: {
-          mock: {
-            baseUrl: `http://127.0.0.1:${port}/v1`,
-            api: 'openai-completions',
-            apiKey: 'mock-key',
-            compat: { supportsDeveloperRole: false, supportsReasoningEffort: false },
-            models: [
-              {
-                id: 'mock-model',
-                name: 'Mock Model',
-                reasoning: false,
-                input: ['text'],
-                contextWindow: 8192,
-                maxTokens: 1024,
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              },
-            ],
-          },
-        },
-      },
-      null,
-      2,
-    ),
-  );
+  writeFileSync(path.join(agentDir, 'models.json'), mockModelsJson(baseUrl));
   return {
     workspaceDir,
     sessionDir,
@@ -166,6 +53,7 @@ function makeEnv(port: number): TestEnv {
     cleanup: () => rmSync(root, { recursive: true, force: true }),
   };
 }
+
 async function waitFor(
   predicate: () => boolean,
   timeoutMs: number,
@@ -194,12 +82,14 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
 }
 
 describe.skipIf(skipIntegration)('Pi Bridge 集成（真实内核 + mock provider）', () => {
-  let mock: MockServer;
+  let mock: MockProvider;
   let env: TestEnv;
   const sidecars: PiSidecar[] = [];
 
   beforeAll(async () => {
-    mock = await startMockOpenAiServer();
+    mock = await startMockProvider({
+      scenario: textScenario(['Mock ', 'provider ', 'response'], 10),
+    });
   });
 
   afterAll(async () => {
@@ -208,7 +98,7 @@ describe.skipIf(skipIntegration)('Pi Bridge 集成（真实内核 + mock provide
   });
 
   it('spawn → 发一句 → msg.delta → agent.settled → 优雅退出', { timeout: 90_000 }, async () => {
-    env = makeEnv(mock.port);
+    env = makeEnv(mock.baseUrl);
     const sidecar = new PiSidecar({
       binary: BINARY,
       cwd: env.workspaceDir,
@@ -257,7 +147,7 @@ describe.skipIf(skipIntegration)('Pi Bridge 集成（真实内核 + mock provide
   });
 
   it('杀进程能被检测到并上报（exit 事件）', { timeout: 60_000 }, async () => {
-    env = makeEnv(mock.port);
+    env = makeEnv(mock.baseUrl);
     const sidecar = new PiSidecar({
       binary: BINARY,
       cwd: env.workspaceDir,

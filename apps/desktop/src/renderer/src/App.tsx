@@ -1,41 +1,35 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { TitleBar } from './components/TitleBar';
+import { SessionView } from './features/session/SessionView';
+import { useKeyboard } from './hooks/use-keyboard';
+import { useSessionEvents } from './hooks/use-session-events';
+import { useTheme } from './hooks/use-theme';
+import { useSessionStore } from './stores/session-store';
+import { useUiStore } from './stores/ui-store';
 
 export default function App(): React.JSX.Element {
-  const [version, setVersion] = useState('…');
-  const [pong, setPong] = useState<string | null>(null);
+  useTheme();
+  useSessionEvents();
+  useKeyboard();
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const activeId = useSessionStore((s) => s.activeSessionId);
+  const isCreating = useSessionStore((s) => s.isCreating);
 
+  // 首次进入自动新开一个会话（M3 起改为恢复最近会话）
   useEffect(() => {
-    void window.agentdesk.getVersion().then((v) => setVersion(v.version));
-  }, []);
-
-  const handlePing = useCallback(() => {
-    void window.agentdesk.ping(`t${Date.now()}`).then((r) => setPong(r.pong));
-  }, []);
+    if (!activeId && !isCreating) {
+      void useSessionStore.getState().createSession();
+    }
+  }, [activeId, isCreating]);
 
   return (
     <div className="app">
-      <header className="titlebar">
-        <span className="titlebar-title">AgentDesk</span>
-        <div className="titlebar-actions">
-          <button type="button" onClick={() => void window.agentdesk.window.minimize()}>
-            最小化
-          </button>
-          <button type="button" onClick={() => void window.agentdesk.window.maximize()}>
-            最大化
-          </button>
-          <button type="button" onClick={() => void window.agentdesk.window.close()}>
-            关闭
-          </button>
-        </div>
-      </header>
-      <main className="content">
-        <h1>AgentDesk</h1>
-        <p>Electron v{version} · M0 地基骨架</p>
-        <button type="button" onClick={handlePing}>
-          IPC 连通性测试
-        </button>
-        {pong ? <p className="pong">收到：{pong}</p> : null}
-      </main>
+      <TitleBar />
+      <div className="app-body" data-sidebar-collapsed={sidebarCollapsed}>
+        <Sidebar />
+        <SessionView />
+      </div>
     </div>
   );
 }
