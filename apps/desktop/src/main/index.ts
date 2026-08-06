@@ -29,6 +29,8 @@ if (!gotTheLock) {
       skills: runtime.skills,
       packages: runtime.packages,
       packageSecurity: runtime.packageSecurity,
+      config: runtime.config,
+      kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
     });
     createMainWindow();

@@ -42,6 +42,8 @@ import {
   type sessionSetApprovalModeRequestSchema,
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
+  type settingsReadRequestSchema,
+  type settingsSaveRequestSchema,
   type skillsCreateRequestSchema,
   type skillsImportHarnessRequestSchema,
   type skillsInstallRequestSchema,
@@ -59,6 +61,7 @@ import { AgentDeskError } from '@agentdesk/shared';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
+import type { ConfigStore } from './config/config-store';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
 import type {
@@ -124,6 +127,10 @@ export interface IpcHandlerDeps {
   packages: PackageManager;
   /** M7：插件安全审查（README 8.5.1）。 */
   packageSecurity: PackageSecurityInspector;
+  /** M7：设置页 ConfigStore（README 9.7 / 16.2）。 */
+  config: ConfigStore;
+  /** 内核二进制路径（设置页 2 健康状态展示）。 */
+  kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
 }
@@ -554,6 +561,30 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     >;
     return { inspection: await deps.packageSecurity.inspect(normalizePackageSource(req.source)) };
   });
+
+  // ---- 设置页（README 9.7 / 16.2，M7 第七步）----
+
+  ipcMain.handle(IPC_CHANNELS['settings:read'], async (_event, raw: unknown) => {
+    const req = parseRequest('settings:read', raw) as z.infer<typeof settingsReadRequestSchema>;
+    return deps.config.read(req.file, req.scope, req.workspacePath);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['settings:save'], async (_event, raw: unknown) => {
+    const req = parseRequest('settings:save', raw) as z.infer<typeof settingsSaveRequestSchema>;
+    return deps.config.save(
+      req.file,
+      req.scope,
+      {
+        ...(req.raw !== undefined ? { raw: req.raw } : {}),
+        ...(req.parsed !== undefined ? { parsed: req.parsed } : {}),
+      },
+      req.workspacePath,
+    );
+  });
+
+  ipcMain.handle(IPC_CHANNELS['settings:kernel-status'], async () =>
+    deps.config.kernelStatus(deps.kernelBinary),
+  );
 
   // ---- Provider / Model / 密钥（README 8.6）----
 

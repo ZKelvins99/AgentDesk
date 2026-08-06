@@ -132,6 +132,13 @@ const api = {
     inspect: (req: InvokeMap['packages:inspect']['request']) =>
       safeInvoke(IPC_CHANNELS['packages:inspect'], req),
   },
+  settings: {
+    read: (req: InvokeMap['settings:read']['request']) =>
+      safeInvoke(IPC_CHANNELS['settings:read'], req),
+    save: (req: InvokeMap['settings:save']['request']) =>
+      safeInvoke(IPC_CHANNELS['settings:save'], req),
+    kernelStatus: () => safeInvoke(IPC_CHANNELS['settings:kernel-status'], undefined),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

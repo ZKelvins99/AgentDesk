@@ -9,6 +9,7 @@ import {
 } from '@agentdesk/mock-provider';
 import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
+import { ConfigStore } from '../config/config-store';
 import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
 import { PackageManager } from '../packages/package-manager';
@@ -37,6 +38,7 @@ export interface SessionRuntimeHandle {
   skills: SkillManager;
   packages: PackageManager;
   packageSecurity: PackageSecurityInspector;
+  config: ConfigStore;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -109,6 +111,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const skillManager = new SkillManager();
   const packageManager = new PackageManager(binary ? { binary } : {});
   const packageSecurity = new PackageSecurityInspector();
+  const configStore = new ConfigStore();
   let sessionManager: SessionManager;
   const approvalStore = new ApprovalStore(db);
   const approvals = new ApprovalEngine({
@@ -182,6 +185,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     skills: skillManager,
     packages: packageManager,
     packageSecurity,
+    config: configStore,
     uplink,
     kernel: { binary },
     dispose: async () => {

@@ -22,7 +22,7 @@ export function Sidebar(): React.JSX.Element {
   const removeWorkspace = useWorkspaceStore((s) => s.removeWorkspace);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const openModelPicker = useUiStore((s) => s.openModelPicker);
-  const openProviderSettings = useUiStore((s) => s.openProviderSettings);
+  const openSettingsPanel = useUiStore((s) => s.openSettingsPanel);
   const openMcpSettings = useUiStore((s) => s.openMcpSettings);
   const openSkillSettings = useUiStore((s) => s.openSkillSettings);
   const openPackageSettings = useUiStore((s) => s.openPackageSettings);
@@ -141,9 +141,9 @@ export function Sidebar(): React.JSX.Element {
         <button
           type="button"
           className="icon-btn footer-settings"
-          title={t('provider.settings')}
-          aria-label={t('provider.settings')}
-          onClick={openProviderSettings}
+          title="设置（⌘,）"
+          aria-label="设置"
+          onClick={openSettingsPanel}
         >
           ⚙
         </button>

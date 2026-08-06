@@ -17,6 +17,9 @@ export function useKeyboard(): void {
       } else if (mod && key === 'b') {
         e.preventDefault();
         useUiStore.getState().toggleSidebar();
+      } else if (mod && key === ',') {
+        e.preventDefault();
+        useUiStore.getState().openSettingsPanel();
       } else if (e.key === 'Escape') {
         const { activeSessionId, abort } = useSessionStore.getState();
         if (activeSessionId) void abort();

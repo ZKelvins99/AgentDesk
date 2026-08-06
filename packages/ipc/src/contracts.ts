@@ -796,6 +796,55 @@ export const packagesInspectResponseSchema = z.object({
   inspection: packageSecurityInspectionSchema,
 });
 
+/** 设置页（README 9.7 / 16.2）：ConfigStore 读写 + schema 校验。 */
+export const configFileKindSchema = z.enum(['settings', 'models']);
+export const configScopeSchema = z.enum(['global', 'project']);
+export const configValidationIssueSchema = z.object({
+  path: z.string(),
+  line: z.number().int().nullable(),
+  message: z.string(),
+});
+export type ConfigValidationIssue = z.infer<typeof configValidationIssueSchema>;
+
+export const settingsReadRequestSchema = z.object({
+  file: configFileKindSchema,
+  scope: configScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const settingsReadResponseSchema = z.object({
+  path: z.string(),
+  raw: z.string(),
+  parsed: z.record(z.string(), z.unknown()),
+  validation: z.array(configValidationIssueSchema),
+});
+export type SettingsReadResult = z.infer<typeof settingsReadResponseSchema>;
+
+export const settingsSaveRequestSchema = z
+  .object({
+    file: configFileKindSchema,
+    scope: configScopeSchema,
+    raw: z.string().optional(),
+    parsed: z.record(z.string(), z.unknown()).optional(),
+    workspacePath: z.string().optional(),
+  })
+  .refine((d) => d.raw !== undefined || d.parsed !== undefined, {
+    message: 'raw 或 parsed 必须提供一个',
+  });
+export const settingsSaveResponseSchema = settingsReadResponseSchema.extend({
+  saved: z.boolean(),
+});
+export type SettingsSaveResult = z.infer<typeof settingsSaveResponseSchema>;
+
+export const settingsKernelStatusResponseSchema = z.object({
+  agentDir: z.string(),
+  binary: z.string().nullable(),
+  binaryExists: z.boolean(),
+  binDir: z.string(),
+  binDirExists: z.boolean(),
+  version: z.string().nullable(),
+});
+export type KernelStatus = z.infer<typeof settingsKernelStatusResponseSchema>;
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1046,6 +1095,18 @@ export interface InvokeMap {
     request: z.infer<typeof packagesInspectRequestSchema>;
     response: z.infer<typeof packagesInspectResponseSchema>;
   };
+  'settings:read': {
+    request: z.infer<typeof settingsReadRequestSchema>;
+    response: z.infer<typeof settingsReadResponseSchema>;
+  };
+  'settings:save': {
+    request: z.infer<typeof settingsSaveRequestSchema>;
+    response: z.infer<typeof settingsSaveResponseSchema>;
+  };
+  'settings:kernel-status': {
+    request: undefined;
+    response: z.infer<typeof settingsKernelStatusResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -1122,6 +1183,9 @@ export const invokeRequestSchemas = {
   'packages:update': packagesUpdateRequestSchema,
   'packages:set-filter': packagesSetFilterRequestSchema,
   'packages:inspect': packagesInspectRequestSchema,
+  'settings:read': settingsReadRequestSchema,
+  'settings:save': settingsSaveRequestSchema,
+  'settings:kernel-status': z.undefined(),
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

@@ -69,6 +69,9 @@ export const IPC_CHANNELS = {
   'packages:update': 'packages:update',
   'packages:set-filter': 'packages:set-filter',
   'packages:inspect': 'packages:inspect',
+  'settings:read': 'settings:read',
+  'settings:save': 'settings:save',
+  'settings:kernel-status': 'settings:kernel-status',
 } as const;
 
 /** 请求/响应通道（invoke） */

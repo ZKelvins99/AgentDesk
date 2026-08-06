@@ -5,6 +5,7 @@ import { McpSettings } from './components/McpSettings';
 import { ModelPicker } from './components/ModelPicker';
 import { PackageSettings } from './components/PackageSettings';
 import { ProviderSettings } from './components/ProviderSettings';
+import { SettingsPanel } from './components/SettingsPanel';
 import { Sidebar } from './components/Sidebar';
 import { SkillSettings } from './components/SkillSettings';
 import { TitleBar } from './components/TitleBar';
@@ -44,6 +45,7 @@ export default function App(): React.JSX.Element {
       <McpSettings />
       <SkillSettings />
       <PackageSettings />
+      <SettingsPanel />
       <ApprovalModal />
       <AuditPanel />
     </div>

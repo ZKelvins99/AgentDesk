@@ -5,6 +5,8 @@ import type {
   ApprovalRequestView,
   ApprovalRule,
   AuthProviderStatus,
+  ConfigValidationIssue,
+  KernelStatus,
   McpCallLogEntry,
   McpServerView,
   McpSnapshot,
@@ -254,6 +256,32 @@ declare global {
             | { type: 'git'; url: string; ref?: string }
             | { type: 'local'; path: string };
         }): Promise<{ inspection: PackageSecurityInspection }>;
+      };
+      settings: {
+        read(req: {
+          file: 'settings' | 'models';
+          scope: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{
+          path: string;
+          raw: string;
+          parsed: Record<string, unknown>;
+          validation: ConfigValidationIssue[];
+        }>;
+        save(req: {
+          file: 'settings' | 'models';
+          scope: 'global' | 'project';
+          raw?: string;
+          parsed?: Record<string, unknown>;
+          workspacePath?: string;
+        }): Promise<{
+          path: string;
+          raw: string;
+          parsed: Record<string, unknown>;
+          validation: ConfigValidationIssue[];
+          saved: boolean;
+        }>;
+        kernelStatus(): Promise<KernelStatus>;
       };
       approval: {
         respond(req: {
