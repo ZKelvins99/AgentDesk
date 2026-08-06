@@ -61,6 +61,15 @@ export function SkillSettings(): React.JSX.Element | null {
   const [recommended, setRecommended] = useState<
     Array<{ id: string; name: string; url: string; description: string }>
   >([]);
+  const [harnesses, setHarnesses] = useState<
+    Array<{
+      id: 'claude' | 'codex';
+      name: string;
+      path: string;
+      exists: boolean;
+      imported: boolean;
+    }>
+  >([]);
   const [installResult, setInstallResult] = useState('');
   const [installing, setInstalling] = useState(false);
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -228,10 +237,15 @@ export function SkillSettings(): React.JSX.Element | null {
     setZipPath('');
     setDirPath('');
     try {
-      const r = await window.agentdesk.skills.recommended();
+      const [r, h] = await Promise.all([
+        window.agentdesk.skills.recommended(),
+        window.agentdesk.skills.harnessStatus(),
+      ]);
       setRecommended(r.sources);
+      setHarnesses(h.harnesses);
     } catch {
       setRecommended([]);
+      setHarnesses([]);
     }
   };
 
@@ -271,6 +285,26 @@ export function SkillSettings(): React.JSX.Element | null {
       await load();
     } catch (err) {
       setInstallResult(`安装失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const doImportHarness = async (harness: 'claude' | 'codex'): Promise<void> => {
+    setInstalling(true);
+    setInstallResult('');
+    try {
+      const r = await window.agentdesk.skills.importHarness({ harness });
+      setInstallResult(
+        r.added.length > 0
+          ? `已加入 settings.skills[]：${r.added.join(', ')}`
+          : '已在 settings.skills[] 中',
+      );
+      const h = await window.agentdesk.skills.harnessStatus();
+      setHarnesses(h.harnesses);
+      await load();
+    } catch (err) {
+      setInstallResult(`导入失败：${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setInstalling(false);
     }
@@ -642,6 +676,30 @@ export function SkillSettings(): React.JSX.Element | null {
                       disabled={installing}
                     >
                       安装
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {harnesses.length > 0 ? (
+              <div className="skill-install-source">
+                <div className="skill-group-label">导入其他 harness（加入 settings.skills[]）</div>
+                {harnesses.map((h) => (
+                  <div className="skill-install-row" key={h.id}>
+                    <div className="skill-recommended">
+                      <div className="skill-name">{h.name}</div>
+                      <div className="skill-desc">
+                        {h.path} · {h.exists ? (h.imported ? '已导入' : '未导入') : '目录不存在'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => void doImportHarness(h.id)}
+                      disabled={installing || !h.exists || h.imported}
+                    >
+                      {h.imported ? '已导入' : '导入'}
                     </button>
                   </div>
                 ))}

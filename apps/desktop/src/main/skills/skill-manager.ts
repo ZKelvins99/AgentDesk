@@ -80,6 +80,12 @@ export class SkillManager {
   private readonly agentDir: string;
   private readonly homeDir: string;
 
+  private expandTilde(value: string): string {
+    if (value === '~') return this.homeDir;
+    if (value.startsWith('~/')) return path.join(this.homeDir, value.slice(2));
+    return value;
+  }
+
   constructor(options: SkillManagerOptions = {}) {
     this.agentDir =
       options.agentDir ?? process.env.PI_CODING_AGENT_DIR ?? path.join(homedir(), '.pi', 'agent');
@@ -93,6 +99,7 @@ export class SkillManager {
       scope: McpScope;
       settingsDir: string;
     }> = [];
+    const seenRoots = new Set<string>();
     const pushRoot = (
       root: string,
       allowFileSkills: boolean,
@@ -100,6 +107,9 @@ export class SkillManager {
       scope: McpScope,
       settingsDir: string,
     ): void => {
+      const key = path.resolve(root);
+      if (seenRoots.has(key)) return;
+      seenRoots.add(key);
       if (!existsSync(root)) return;
       if (existsSync(path.join(root, 'SKILL.md'))) {
         discovered.push({
@@ -113,6 +123,11 @@ export class SkillManager {
         discovered.push({ skill, source, scope, settingsDir }),
       );
     };
+
+    const globalSettings = readPiSettings(path.join(this.agentDir, 'settings.json'));
+    const projectSettings = workspacePath
+      ? readPiSettings(path.join(workspacePath, '.pi', 'settings.json'))
+      : null;
 
     pushRoot(path.join(this.agentDir, 'skills'), true, 'global', 'global', this.agentDir);
     pushRoot(
@@ -140,10 +155,29 @@ export class SkillManager {
       );
     }
 
-    const globalSettings = readPiSettings(path.join(this.agentDir, 'settings.json'));
-    const projectSettings = workspacePath
-      ? readPiSettings(path.join(workspacePath, '.pi', 'settings.json'))
-      : null;
+    // settings.skills[] 的 include 项（普通路径 / +强制包含）也是发现位置（README 4.11）
+    const pushInclude = (
+      entry: string,
+      settingsDir: string,
+      source: SkillSource,
+      scope: McpScope,
+    ): void => {
+      if (entry.startsWith('-') || entry.startsWith('!')) return;
+      const raw = entry.startsWith('+') ? entry.slice(1) : entry;
+      const expanded = this.expandTilde(raw);
+      const abs = path.isAbsolute(expanded) ? expanded : path.resolve(settingsDir, expanded);
+      if (!existsSync(abs)) return;
+      pushRoot(abs, path.basename(abs) === 'skills', source, scope, settingsDir);
+    };
+    for (const entry of globalSettings.skills ?? []) {
+      pushInclude(entry, this.agentDir, 'global', 'global');
+    }
+    if (projectSettings) {
+      for (const entry of projectSettings.skills ?? []) {
+        pushInclude(entry, path.join(workspacePath ?? '', '.pi'), 'project', 'workspace');
+      }
+    }
+
     const exclusionEntries = [...(globalSettings.skills ?? []), ...(projectSettings?.skills ?? [])];
 
     const views: SkillView[] = discovered.map(({ skill, source, scope, settingsDir }) =>
@@ -271,6 +305,61 @@ export class SkillManager {
         description: 'pi 生态技能集合',
       },
     ];
+  }
+
+  otherHarnessStatus(): Array<{
+    id: 'claude' | 'codex';
+    name: string;
+    path: string;
+    exists: boolean;
+    imported: boolean;
+  }> {
+    const candidates = [
+      {
+        id: 'claude' as const,
+        name: 'Claude Code',
+        path: path.join(this.homeDir, '.claude', 'skills'),
+      },
+      {
+        id: 'codex' as const,
+        name: 'Codex',
+        path: path.join(this.homeDir, '.codex', 'skills'),
+      },
+    ];
+    const entries = readPiSettings(path.join(this.agentDir, 'settings.json')).skills ?? [];
+    const isImported = (dir: string): boolean =>
+      entries.some((entry) => {
+        const raw = entry.startsWith('-') || entry.startsWith('+') ? entry.slice(1) : entry;
+        const expanded = this.expandTilde(raw).split('\\').join('/');
+        return (
+          expanded === dir.split('\\').join('/') || path.resolve(expanded) === path.resolve(dir)
+        );
+      });
+    return candidates.map((c) => ({
+      ...c,
+      exists: existsSync(c.path),
+      imported: isImported(c.path),
+    }));
+  }
+
+  importOtherHarness(harness: 'claude' | 'codex'): { added: string[]; skipped: string[] } {
+    const sourceDir = path.join(
+      this.homeDir,
+      harness === 'claude' ? '.claude' : '.codex',
+      'skills',
+    );
+    if (!existsSync(sourceDir)) {
+      throw new Error(`未找到 ${sourceDir}`);
+    }
+    const settingsFile = path.join(this.agentDir, 'settings.json');
+    const settings = readPiSettings(settingsFile);
+    const skills = settings.skills ?? [];
+    const entry = `~/${path.relative(this.homeDir, sourceDir).split('\\').join('/')}`;
+    if (skills.includes(entry)) {
+      return { added: [], skipped: [entry] };
+    }
+    writePiSettings(settingsFile, { ...settings, skills: [...skills, entry] });
+    return { added: [entry], skipped: [] };
   }
 
   setEnabled(id: string, enabled: boolean, workspacePath?: string): SkillView {

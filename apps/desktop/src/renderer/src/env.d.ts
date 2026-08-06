@@ -194,6 +194,19 @@ declare global {
         recommended(): Promise<{
           sources: Array<{ id: string; name: string; url: string; description: string }>;
         }>;
+        harnessStatus(): Promise<{
+          harnesses: Array<{
+            id: 'claude' | 'codex';
+            name: string;
+            path: string;
+            exists: boolean;
+            imported: boolean;
+          }>;
+        }>;
+        importHarness(req: { harness: 'claude' | 'codex' }): Promise<{
+          added: string[];
+          skipped: string[];
+        }>;
       };
       approval: {
         respond(req: {

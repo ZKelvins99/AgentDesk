@@ -37,6 +37,7 @@ import {
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
   type skillsCreateRequestSchema,
+  type skillsImportHarnessRequestSchema,
   type skillsInstallRequestSchema,
   type skillsListRequestSchema,
   type skillsReadRequestSchema,
@@ -437,6 +438,17 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['skills:recommended'], async () => ({
     sources: deps.skills.recommended(),
   }));
+
+  ipcMain.handle(IPC_CHANNELS['skills:harness-status'], async () => ({
+    harnesses: deps.skills.otherHarnessStatus(),
+  }));
+
+  ipcMain.handle(IPC_CHANNELS['skills:import-harness'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:import-harness', raw) as z.infer<
+      typeof skillsImportHarnessRequestSchema
+    >;
+    return deps.skills.importOtherHarness(req.harness);
+  });
 
   // ---- Provider / Model / 密钥（README 8.6）----
 

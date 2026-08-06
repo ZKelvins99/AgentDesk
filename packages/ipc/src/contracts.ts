@@ -662,6 +662,26 @@ export const skillsRecommendedResponseSchema = z.object({
   ),
 });
 
+export const skillsHarnessStatusResponseSchema = z.object({
+  harnesses: z.array(
+    z.object({
+      id: z.enum(['claude', 'codex']),
+      name: z.string(),
+      path: z.string(),
+      exists: z.boolean(),
+      imported: z.boolean(),
+    }),
+  ),
+});
+
+export const skillsImportHarnessRequestSchema = z.object({
+  harness: z.enum(['claude', 'codex']),
+});
+export const skillsImportHarnessResponseSchema = z.object({
+  added: z.array(z.string()),
+  skipped: z.array(z.string()),
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -880,6 +900,14 @@ export interface InvokeMap {
     request: undefined;
     response: z.infer<typeof skillsRecommendedResponseSchema>;
   };
+  'skills:harness-status': {
+    request: undefined;
+    response: z.infer<typeof skillsHarnessStatusResponseSchema>;
+  };
+  'skills:import-harness': {
+    request: z.infer<typeof skillsImportHarnessRequestSchema>;
+    response: z.infer<typeof skillsImportHarnessResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -948,6 +976,8 @@ export const invokeRequestSchemas = {
   'skills:validate': skillsValidateRequestSchema,
   'skills:install': skillsInstallRequestSchema,
   'skills:recommended': z.undefined(),
+  'skills:harness-status': z.undefined(),
+  'skills:import-harness': skillsImportHarnessRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

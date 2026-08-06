@@ -61,6 +61,8 @@ export const IPC_CHANNELS = {
   'skills:validate': 'skills:validate',
   'skills:install': 'skills:install',
   'skills:recommended': 'skills:recommended',
+  'skills:harness-status': 'skills:harness-status',
+  'skills:import-harness': 'skills:import-harness',
 } as const;
 
 /** 请求/响应通道（invoke） */

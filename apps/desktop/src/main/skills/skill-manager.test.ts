@@ -187,4 +187,62 @@ describe('SkillManager（README 8.4.1）', () => {
     expect(v.errors).toEqual([]);
     expect(v.infos.length).toBeGreaterThan(0);
   });
+
+  it('settings.skills[] include 项作为发现位置（README 4.11）', () => {
+    const external = path.join(root, 'home', '.claude', 'skills', 'from-claude');
+    mkdirSync(external, { recursive: true });
+    writeFileSync(
+      path.join(external, 'SKILL.md'),
+      SKILL_MD('from-claude', '来自其他 harness 的技能，描述足够长。'),
+    );
+    writeFileSync(
+      path.join(agentDir, 'settings.json'),
+      JSON.stringify({ skills: ['~/.claude/skills'] }),
+    );
+
+    const views = manager.list(ws);
+    const fromClaude = views.find((v) => v.name === 'from-claude');
+    expect(fromClaude).toBeDefined();
+    expect(fromClaude?.source).toBe('global');
+    expect(fromClaude?.status).toBe('active');
+  });
+
+  it('importOtherHarness 加入 ~/.claude/skills 并可列出其技能', () => {
+    const claudeDir = path.join(root, 'home', '.claude', 'skills', 'claude-skill');
+    mkdirSync(claudeDir, { recursive: true });
+    writeFileSync(
+      path.join(claudeDir, 'SKILL.md'),
+      SKILL_MD('claude-skill', 'Claude 技能，描述足够长。'),
+    );
+
+    const r = manager.importOtherHarness('claude');
+    expect(r.added).toEqual(['~/.claude/skills']);
+
+    const settings = JSON.parse(readFileSync(path.join(agentDir, 'settings.json'), 'utf8')) as {
+      skills?: string[];
+    };
+    expect(settings.skills).toContain('~/.claude/skills');
+
+    const views = manager.list(ws);
+    expect(views.some((v) => v.name === 'claude-skill')).toBe(true);
+
+    const again = manager.importOtherHarness('claude');
+    expect(again.added).toEqual([]);
+  });
+
+  it('harnessStatus 报告存在与导入状态', () => {
+    mkdirSync(path.join(root, 'home', '.codex', 'skills'), { recursive: true });
+    writeFileSync(
+      path.join(agentDir, 'settings.json'),
+      JSON.stringify({ skills: ['~/.claude/skills'] }),
+    );
+
+    const status = manager.otherHarnessStatus();
+    const claude = status.find((s) => s.id === 'claude');
+    const codex = status.find((s) => s.id === 'codex');
+    expect(claude?.exists).toBe(false);
+    expect(claude?.imported).toBe(true);
+    expect(codex?.exists).toBe(true);
+    expect(codex?.imported).toBe(false);
+  });
 });

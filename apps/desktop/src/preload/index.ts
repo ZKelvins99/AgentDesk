@@ -114,6 +114,9 @@ const api = {
     install: (req: InvokeMap['skills:install']['request']) =>
       safeInvoke(IPC_CHANNELS['skills:install'], req),
     recommended: () => safeInvoke(IPC_CHANNELS['skills:recommended'], undefined),
+    harnessStatus: () => safeInvoke(IPC_CHANNELS['skills:harness-status'], undefined),
+    importHarness: (req: InvokeMap['skills:import-harness']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:import-harness'], req),
   },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
