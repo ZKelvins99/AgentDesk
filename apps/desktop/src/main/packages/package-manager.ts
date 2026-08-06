@@ -141,6 +141,7 @@ function isPath(value: string): boolean {
   return (
     value === '~' ||
     value.startsWith('~/') ||
+    value.startsWith('.') ||
     path.isAbsolute(value) ||
     /^[a-zA-Z]:[\\/]/.test(value)
   );
@@ -494,7 +495,9 @@ export class PackageManager {
   }): Promise<PackageCommandResult> {
     if (!this.binary) throw new Error('未找到 pi 内核二进制，无法安装 Package');
     const spec = toSettingsSpec(req.source);
-    const args = ['install', spec];
+    // 本地源：pi install 不认 `local:` 前缀，直接传解析后的绝对路径（G7 场景 8 实测 pi 0.83.0）
+    const cliArg = req.source.type === 'local' ? path.resolve(req.source.path) : spec;
+    const args = ['install', cliArg];
     if (req.scope === 'project') args.push('-l');
     const cwd = req.scope === 'project' ? (req.workspacePath ?? this.agentDir) : this.agentDir;
     const result = await this.runner(this.binary, args, {
@@ -525,6 +528,16 @@ export class PackageManager {
     if (!this.binary) throw new Error('未找到 pi 内核二进制，无法卸载 Package');
     const parsed = parsePackageSource(req.source, this.baseDirOf(req.scope, req.workspacePath));
     const spec = specOfParsed(parsed);
+    // 本地源：pi remove 无法匹配本地路径条目（实测 pi 0.83.0），直接从 settings.packages[] 移除即可卸载干净
+    if (parsed.sourceType === 'local') {
+      this.removeEntry(parsed.identity, req.scope, req.workspacePath);
+      return {
+        ok: true,
+        log: '本地 Package：已从 settings.packages[] 移除（pi remove 不支持本地路径匹配，跳过内核调用）',
+        command: 'settings.packages.remove',
+        note: '本地包直接从 settings 移除',
+      };
+    }
     const args = ['remove', spec];
     if (req.scope === 'project') args.push('-l');
     const cwd = req.scope === 'project' ? (req.workspacePath ?? this.agentDir) : this.agentDir;

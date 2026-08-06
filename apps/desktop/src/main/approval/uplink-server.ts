@@ -1,6 +1,8 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
+import type { ResourceSnapshot } from '@agentdesk/ipc';
 import { prepareCallResult } from '../mcp/mcp-output';
 import type {
   McpCallOptions,
@@ -26,12 +28,59 @@ export interface UplinkMcpHost {
 export interface UplinkServerOptions {
   engine: ApprovalEngine;
   onLog?: (entry: { sessionId?: string; level?: string; message?: string }) => void;
+  /**
+   * G7：pi 0.83.0 的 resources_discover 事件只含 { type, cwd, reason } 通知，不含生效清单；
+   * 由主进程用与 pi 相同的规则计算清单补齐（README 8.2.3 以事件为触发、清单事件缺省时本地补）。
+   */
+  resolveResourceLists?: () =>
+    | Partial<ResourceSnapshot>
+    | Promise<Partial<ResourceSnapshot> | null>
+    | null;
   /** M6：MCP Host 能力（README 8.2.2 /mcp/tools、/mcp/call、/mcp/cancel）。 */
   mcp?: UplinkMcpHost;
   /** sessionId → workspacePath（用于 MCP 工具清单与调用的工作区上下文）。 */
   resolveWorkspacePath?: (sessionId: string) => string | undefined;
   /** sessionId → 附件目录（image/audio/video 降级落盘）。 */
   attachmentsDir?: (sessionId: string) => string;
+}
+
+function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') {
+        const record = item as Record<string, unknown>;
+        const name = record.name ?? record.path ?? record.id ?? record.title;
+        if (typeof name === 'string' && name.trim()) return name.trim();
+        try {
+          return JSON.stringify(record);
+        } catch {
+          return String(record);
+        }
+      }
+      return String(item);
+    })
+    .filter((s) => s.length > 0);
+}
+
+/** resources_discover 载荷归一化（README 8.2.3）：兼容 resources 嵌套或平铺两种形态。 */
+export function normalizeResourceSnapshot(raw: unknown): ResourceSnapshot {
+  const record = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const inner =
+    record.resources && typeof record.resources === 'object' && !Array.isArray(record.resources)
+      ? (record.resources as Record<string, unknown>)
+      : record;
+  return {
+    skills: toStringList(inner.skills),
+    extensions: toStringList(inner.extensions),
+    commands: toStringList(inner.commands),
+    prompts: toStringList(inner.prompts),
+    ...(inner.themes !== undefined ? { themes: toStringList(inner.themes) } : {}),
+  };
 }
 
 interface McpCallBody {
@@ -64,14 +113,17 @@ function errorMessage(error: unknown): string {
  * POST /mcp/cancel —— 按 callId 中止进行中的 MCP 调用
  * GET  /events   —— SSE 推送（mcp:changed 等热更新）
  */
-export class UplinkServer {
+export class UplinkServer extends EventEmitter {
   readonly token = randomBytes(32).toString('hex');
   private server: Server | null = null;
   private sseClients = new Set<ServerResponse>();
   private readonly activeCalls = new Map<string, AbortController>();
+  private resources: ResourceSnapshot | null = null;
   private _port = 0;
 
-  constructor(private readonly options: UplinkServerOptions) {}
+  constructor(private readonly options: UplinkServerOptions) {
+    super();
+  }
 
   get port(): number {
     return this._port;
@@ -79,6 +131,11 @@ export class UplinkServer {
 
   get url(): string {
     return `http://127.0.0.1:${this._port}`;
+  }
+
+  /** 最近一次 resources_discover 归一化快照（G7 场景 7）。 */
+  resourcesSnapshot(): ResourceSnapshot | null {
+    return this.resources;
   }
 
   listen(): Promise<void> {
@@ -146,6 +203,10 @@ export class UplinkServer {
       await this.handleLog(req, res);
       return;
     }
+    if (req.method === 'POST' && url.pathname === '/state/resources') {
+      await this.handleResources(req, res);
+      return;
+    }
     if (req.method === 'GET' && url.pathname === '/mcp/tools') {
       await this.handleMcpTools(url, res);
       return;
@@ -205,6 +266,28 @@ export class UplinkServer {
     if (typeof body.level === 'string') entry.level = body.level;
     if (typeof body.message === 'string') entry.message = body.message;
     this.options.onLog?.(entry);
+    res.writeHead(204);
+    res.end();
+  }
+
+  private async handleResources(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const body = (await readJsonBody(req, 2_000_000)) ?? {};
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined;
+    const raw = normalizeResourceSnapshot(body);
+    const resolved = await this.options.resolveResourceLists?.();
+    const resources: ResourceSnapshot = {
+      skills: raw.skills.length > 0 ? raw.skills : (resolved?.skills ?? []),
+      extensions: raw.extensions.length > 0 ? raw.extensions : (resolved?.extensions ?? []),
+      commands: raw.commands.length > 0 ? raw.commands : (resolved?.commands ?? []),
+      prompts: raw.prompts.length > 0 ? raw.prompts : (resolved?.prompts ?? []),
+      ...(raw.themes !== undefined
+        ? { themes: raw.themes }
+        : resolved?.themes !== undefined
+          ? { themes: resolved.themes }
+          : {}),
+    };
+    this.resources = resources;
+    this.emit('resources', resources, sessionId);
     res.writeHead(204);
     res.end();
   }

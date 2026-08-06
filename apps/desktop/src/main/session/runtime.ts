@@ -142,10 +142,28 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     },
     resolveWorkspacePath: (sessionId: string) => sessionManager.workspacePathOf(sessionId),
     attachmentsDir: () => path.join(sessionDir, 'attachments'),
+    // G7：pi 的 resources_discover 只发通知，生效清单由主进程按同规则补齐（README 8.2.3）
+    resolveResourceLists: async () => {
+      const skillViews = await skillManager.list();
+      const active = skillViews.filter((v) => v.status === 'active');
+      const skillNames = active.map((v) => v.name).filter((n): n is string => n !== null);
+      return {
+        skills: skillNames,
+        commands: skillNames.map((n) => `/skill:${n}`),
+        extensions: extensionCompat.list().extensions.map((e) => e.name),
+      };
+    },
   });
   await uplink.listen();
   // MCP 工具清单变化 → 通知 Bridge Extension 重注册（README 8.2.2 /events 热更新）
   mcpHost.on('tools', () => uplink.broadcast({ type: 'mcp:changed' }));
+  // 资源生效清单（README 8.2.3）：resources_discover → event:resources 广播到所有窗口
+  uplink.on('resources', (resources, sessionId) => {
+    const payload = { ...(sessionId !== undefined ? { sessionId } : {}), resources };
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('event:resources', payload);
+    }
+  });
 
   const bridgeExt = path.join(
     app.getAppPath(),

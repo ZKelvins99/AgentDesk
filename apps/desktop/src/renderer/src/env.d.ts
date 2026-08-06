@@ -18,6 +18,7 @@ import type {
   ProfileView,
   ProviderPreset,
   ProviderView,
+  ResourceSnapshot,
   SecretsStatusResponse,
   SessionState,
   SkillView,
@@ -331,6 +332,9 @@ declare global {
         cb: (payload: { sessionId: string; seq: number; ev: AgentDeskEvent }) => void,
       ): () => void;
       onApprovalEvent(cb: (payload: ApprovalRequestView) => void): () => void;
+      onResourcesEvent(
+        cb: (payload: { sessionId?: string; resources: ResourceSnapshot }) => void,
+      ): () => void;
     };
   }
 }

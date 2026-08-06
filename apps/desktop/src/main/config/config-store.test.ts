@@ -2,7 +2,63 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ConfigStore, locateIssueLines, parseJsonc, validateConfig } from './config-store';
+import {
+  ConfigStore,
+  locateIssueLines,
+  parseJsonc,
+  piSettingsSchema,
+  validateConfig,
+} from './config-store';
+
+/** README 4.3 settings.json 字段清单（G7：任意 pi 设置项都能在 UI 改到）。 */
+const README_SETTINGS_FIELDS = [
+  'defaultProvider',
+  'defaultModel',
+  'defaultThinkingLevel',
+  'thinkingBudgets',
+  'enabledModels',
+  'hideThinkingBlock',
+  'showCacheMissNotices',
+  'theme',
+  'externalEditor',
+  'quietStartup',
+  'collapseChangelog',
+  'uiMode',
+  'fullscreenScrollbar',
+  'doubleEscapeAction',
+  'treeFilterMode',
+  'editorPaddingX',
+  'outputPad',
+  'autocompleteMaxVisible',
+  'showHardwareCursor',
+  'defaultProjectTrust',
+  'enableInstallTelemetry',
+  'enableAnalytics',
+  'trackingId',
+  'httpProxy',
+  'transport',
+  'httpIdleTimeoutMs',
+  'websocketConnectTimeoutMs',
+  'warnings',
+  'compaction',
+  'branchSummary',
+  'retry',
+  'steeringMode',
+  'followUpMode',
+  'terminal',
+  'images',
+  'shellPath',
+  'shellCommandPrefix',
+  'npmCommand',
+  'sessionDir',
+  'markdown',
+  'packages',
+  'extensions',
+  'skills',
+  'prompts',
+  'themes',
+  'enableSkillCommands',
+] as const;
 
 describe('config-store（README 4.3 / 9.7 / 16.2）', () => {
   let root: string;
@@ -100,5 +156,24 @@ describe('config-store（README 4.3 / 9.7 / 16.2）', () => {
     expect(status.binaryExists).toBe(false);
     expect(status.agentDir).toBe(agentDir);
     expect(status.version).toBeNull();
+  });
+
+  it('G7：piSettingsSchema 覆盖 README 4.3 全部字段（图形表单 + 原始编辑器共用）', () => {
+    const shape = piSettingsSchema.shape as Record<string, unknown>;
+    for (const field of README_SETTINGS_FIELDS) {
+      expect(shape[field], `缺少设置字段：${field}`).toBeDefined();
+    }
+  });
+
+  it('G7：原始编辑器 passthrough —— 未知顶层字段保存后不丢失', () => {
+    const s = store();
+    const saved = s.save('settings', 'global', {
+      parsed: { theme: 'dark', customField: { a: 1 }, 'x.y': 2 },
+    });
+    expect(saved.saved).toBe(true);
+    const read = s.read('settings', 'global');
+    expect(read.parsed.customField).toEqual({ a: 1 });
+    expect(read.parsed['x.y']).toBe(2);
+    expect(read.parsed.theme).toBe('dark');
   });
 });

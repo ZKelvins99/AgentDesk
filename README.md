@@ -822,6 +822,8 @@ export default async function (pi: ExtensionAPI, ctx: ExtensionContext) {
 ```
 
 > **`resources_discover` 是关键**：Skill/Extension 的"真实生效清单"只有 pi 自己知道（涉及信任、glob、去重、重名保留规则）。AgentDesk 的管理界面**必须以此事件为准**，而不是自己扫目录猜——自己扫目录必然与 pi 的实际加载结果不一致。
+>
+> **pi 0.83.0 实测**：`resources_discover` 只发通知（`{ type, cwd, reason }`，不含清单）。AgentDesk 以该事件为触发，清单缺省时用与 pi 相同规则计算的生效清单补齐（全局/项目扩展目录 + `settings.skills[]` 排除 diff + `/skill:<name>` 命令列表），再广播 `event:resources`。
 
 ### 8.3 MCP Host
 
@@ -1794,7 +1796,7 @@ AgentDesk 的审批拦截发生在 Bridge Extension 的 `tool_call` 事件层，
 | RPC 事件集 | README 列出的事件全部能触发到 |
 | `tool_call` 拦截 | 返回 `{ block: true }` 确实能阻止执行 |
 | `registerTool` | 注入工具能被模型看到并调用 |
-| `resources_discover` | 载荷包含 skills/extensions/commands/prompts |
+| `resources_discover` | 能触发；载荷为通知（pi 0.83.0），AgentDesk 用自身规则补齐 skills/extensions/commands 清单 |
 | 信任行为 | 不传 `-a` 时项目资源确实不加载；传 `-a` 时加载 |
 | 配置路径 | `PI_CODING_AGENT_DIR` 确实重定向全部子目录 |
 | `$VAR` 插值 | `models.json` 的 `$AGENTDESK_KEY_X` 能从 env 取到 |

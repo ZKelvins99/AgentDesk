@@ -2,6 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ConfigStore } from '../config/config-store';
+import { PackageManager } from '../packages/package-manager';
 import { DEFAULT_PROFILE_ID, isSafeProfileId, ProfileManager, slugify } from './profile-manager';
 
 interface Fixture {
@@ -133,5 +135,32 @@ describe('ProfileManager（README 8.8.3 / 4.15）', () => {
     writeFileSync(stateFile, '{oops');
     expect(manager.activeId()).toBe(DEFAULT_PROFILE_ID);
     expect(manager.currentAgentDir()).toBe(defaultAgentDir);
+  });
+
+  it('G7：切 Profile 后两套配置互不影响（ConfigStore/PackageManager 各自 agentDir）', () => {
+    const { manager, defaultAgentDir } = makeFixture();
+    const created = manager.create('Demo');
+    const defaultStore = new ConfigStore({ agentDir: defaultAgentDir });
+    const isolatedStore = new ConfigStore({ agentDir: created.agentDir });
+
+    expect(defaultStore.save('settings', 'global', { parsed: { theme: 'dark' } }).saved).toBe(true);
+    expect(isolatedStore.save('settings', 'global', { parsed: { theme: 'light' } }).saved).toBe(
+      true,
+    );
+    expect(defaultStore.read('settings', 'global').parsed.theme).toBe('dark');
+    expect(isolatedStore.read('settings', 'global').parsed.theme).toBe('light');
+    expect(existsSync(path.join(defaultAgentDir, 'settings.json'))).toBe(true);
+    expect(existsSync(path.join(created.agentDir, 'settings.json'))).toBe(true);
+
+    manager.switch(created.id);
+    expect(manager.currentAgentDir()).toBe(created.agentDir);
+    const switchedStore = new ConfigStore({ agentDir: manager.currentAgentDir() });
+    expect(switchedStore.read('settings', 'global').parsed.theme).toBe('light');
+
+    const defaultPm = new PackageManager({ agentDir: defaultAgentDir });
+    const isolatedPm = new PackageManager({ agentDir: created.agentDir });
+    expect(defaultPm.globalSettingsFile()).not.toBe(isolatedPm.globalSettingsFile());
+    expect(defaultPm.globalSettingsFile()).toBe(path.join(defaultAgentDir, 'settings.json'));
+    expect(isolatedPm.globalSettingsFile()).toBe(path.join(created.agentDir, 'settings.json'));
   });
 });

@@ -86,6 +86,7 @@ export const INVOKE_CHANNELS = IPC_CHANNELS;
 export const EVENT_CHANNELS = {
   'event:session': 'event:session',
   'event:approval': 'event:approval',
+  'event:resources': 'event:resources',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

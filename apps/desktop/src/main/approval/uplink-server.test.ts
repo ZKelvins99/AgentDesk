@@ -4,7 +4,7 @@ import { McpCallError } from '../mcp/mcp-types';
 import { openDatabase } from '../storage/db';
 import { ApprovalEngine } from './approval-engine';
 import { ApprovalStore } from './approval-store';
-import { type UplinkMcpHost, UplinkServer } from './uplink-server';
+import { normalizeResourceSnapshot, type UplinkMcpHost, UplinkServer } from './uplink-server';
 
 describe('UplinkServer（README 8.2.2）', () => {
   let db: ReturnType<typeof openDatabase>;
@@ -88,6 +88,87 @@ describe('UplinkServer（README 8.2.2）', () => {
     });
     expect(res.status).toBe(204);
     expect(logs).toEqual([{ sessionId: 's1', level: 'warn', message: 'ext err' }]);
+  });
+
+  it('POST /state/resources：归一化快照 + resources 事件广播（G7 场景 7）', async () => {
+    const events: Array<{ resources: unknown; sessionId?: string }> = [];
+    server.on('resources', (resources, sessionId) => {
+      events.push({ resources, sessionId });
+    });
+    const res = await fetch(`${server.url}/state/resources`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${server.token}`,
+      },
+      body: JSON.stringify({
+        sessionId: 's1',
+        resources: {
+          skills: [{ name: 'greet' }, 'other'],
+          extensions: ['ext1.ts'],
+          commands: ['/skill:greet'],
+          prompts: ['p.md'],
+          themes: ['t.json'],
+        },
+      }),
+    });
+    expect(res.status).toBe(204);
+    expect(events).toHaveLength(1);
+    expect(server.resourcesSnapshot()).toEqual({
+      skills: ['greet', 'other'],
+      extensions: ['ext1.ts'],
+      commands: ['/skill:greet'],
+      prompts: ['p.md'],
+      themes: ['t.json'],
+    });
+    expect(events[0]?.sessionId).toBe('s1');
+  });
+
+  it('normalizeResourceSnapshot：兼容平铺形态与缺失字段', () => {
+    expect(
+      normalizeResourceSnapshot({
+        skills: ['a'],
+        commands: ['/skill:a'],
+      }),
+    ).toEqual({ skills: ['a'], extensions: [], commands: ['/skill:a'], prompts: [] });
+    expect(normalizeResourceSnapshot('garbage')).toEqual({
+      skills: [],
+      extensions: [],
+      commands: [],
+      prompts: [],
+    });
+  });
+
+  it('POST /state/resources：清单缺省时用 resolveResourceLists 补齐（G7 场景 7）', async () => {
+    const augment = new UplinkServer({
+      engine,
+      resolveResourceLists: async () => ({
+        skills: ['greet'],
+        commands: ['/skill:greet'],
+        extensions: ['ext.ts'],
+      }),
+    });
+    await augment.listen();
+    try {
+      expect(augment.port).toBeGreaterThan(0);
+      const res = await fetch(`${augment.url}/state/resources`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${augment.token}`,
+        },
+        body: JSON.stringify({ sessionId: 's1', type: 'resources_discover', reason: 'startup' }),
+      });
+      expect(res.status).toBe(204);
+      expect(augment.resourcesSnapshot()).toEqual({
+        skills: ['greet'],
+        extensions: ['ext.ts'],
+        commands: ['/skill:greet'],
+        prompts: [],
+      });
+    } finally {
+      await augment.close();
+    }
   });
 
   it('GET /events 为 SSE 握手（M6 预留）', async () => {

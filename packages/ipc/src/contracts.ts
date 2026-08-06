@@ -917,6 +917,22 @@ export const extensionsListResponseSchema = z.object({
   runtimeNotes: z.array(extensionRuntimeNoteSchema),
 });
 
+/** 资源生效清单（README 8.2.3 / 14.3 event:resources，来源 resources_discover）。 */
+export const resourceSnapshotSchema = z.object({
+  skills: z.array(z.string()),
+  extensions: z.array(z.string()),
+  commands: z.array(z.string()),
+  prompts: z.array(z.string()),
+  themes: z.array(z.string()).optional(),
+});
+export type ResourceSnapshot = z.infer<typeof resourceSnapshotSchema>;
+
+export const resourcesEventSchema = z.object({
+  sessionId: z.string().optional(),
+  resources: resourceSnapshotSchema,
+});
+export type ResourcesEvent = z.infer<typeof resourcesEventSchema>;
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1205,6 +1221,7 @@ export interface InvokeMap {
 export interface EventMap {
   'event:session': z.infer<typeof sessionEventSchema>;
   'event:approval': z.infer<typeof approvalRequestViewSchema>;
+  'event:resources': z.infer<typeof resourcesEventSchema>;
 }
 
 /** 运行时请求校验表：main 侧 handler 执行前必须过 zod（README 16.1）。 */

@@ -47,6 +47,17 @@ export default async function agentdeskBridge(pi: {
     console.warn(`[agentdesk] MCP 工具注册失败（降级为空工具集）：${(error as Error).message}`);
   });
 
+  // 资源生效清单上报（README 8.2.3）：Skill/Extension 的“真实生效清单”只有 pi 自己知道，
+  // resources_discover 是 AgentDesk 管理界面的权威来源（G7 场景 7 验收）。
+  pi.on('resources_discover', (event: unknown) => {
+    void uplink
+      ?.post('/state/resources', {
+        ...(event && typeof event === 'object' ? event : {}),
+        sessionId,
+      })
+      .catch(() => {});
+  });
+
   pi.on('session_shutdown', () => {
     uplink?.close();
   });

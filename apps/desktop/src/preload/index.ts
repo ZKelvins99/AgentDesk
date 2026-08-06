@@ -182,6 +182,8 @@ const api = {
     safeOn(EVENT_CHANNELS['event:session'], cb),
   onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>
     safeOn(EVENT_CHANNELS['event:approval'], cb),
+  onResourcesEvent: (cb: (payload: EventMap['event:resources']) => void) =>
+    safeOn(EVENT_CHANNELS['event:resources'], cb),
   platform: process.platform,
 };
 

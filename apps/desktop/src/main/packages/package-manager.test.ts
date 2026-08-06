@@ -53,6 +53,9 @@ describe('package-manager（README 8.5.1 / 4.13）', () => {
     const local = parsePackageSource('local:C:/tmp/my-pkg', agentDir);
     expect(local.sourceType).toBe('local');
     expect(local.identity).toBe('C:/tmp/my-pkg');
+    const piRelative = parsePackageSource('..\\pkg', agentDir);
+    expect(piRelative.sourceType).toBe('local');
+    expect(piRelative.identity).toBe(path.join(agentDir, '..', 'pkg').split('\\').join('/'));
   });
 
   it('countPackageResources 按约定目录统计（README 4.13）', () => {
@@ -124,6 +127,20 @@ describe('package-manager（README 8.5.1 / 4.13）', () => {
     expect(settings.packages).toEqual(['npm:foo']);
   });
 
+  it('install：本地源传绝对路径给 pi（不带 local: 前缀），settings 写 local:<abs>', async () => {
+    const pkgDir = path.join(root, 'local-pkg');
+    mkdirSync(pkgDir, { recursive: true });
+    const res = await manager().install({
+      source: { type: 'local', path: pkgDir },
+      scope: 'global',
+    });
+    expect(res.ok).toBe(true);
+    expect(calls[0]?.args).toEqual(['install', path.resolve(pkgDir)]);
+    expect(readPiSettings(path.join(agentDir, 'settings.json')).packages).toEqual([
+      `local:${pkgDir}`,
+    ]);
+  });
+
   it('install：项目作用域加 -l 并写项目 settings；已存在条目不重复', async () => {
     const m = manager();
     await m.install({
@@ -179,6 +196,19 @@ describe('package-manager（README 8.5.1 / 4.13）', () => {
     expect(readPiSettings(path.join(agentDir, 'settings.json')).packages).toEqual([
       { source: 'npm:bar', extensions: [] },
     ]);
+  });
+
+  it('uninstall：本地源不调 pi remove，直接从 settings 移除并返回 note', async () => {
+    const pkgDir = path.join(root, 'local-pkg');
+    mkdirSync(pkgDir, { recursive: true });
+    const m = manager();
+    writePiSettings(path.join(agentDir, 'settings.json'), { packages: [`local:${pkgDir}`] });
+    const before = calls.length;
+    const res = await m.uninstall({ source: `local:${pkgDir}`, scope: 'global' });
+    expect(res.ok).toBe(true);
+    expect(res.command).toContain('settings.packages');
+    expect(calls.length).toBe(before);
+    expect(readPiSettings(path.join(agentDir, 'settings.json')).packages).toEqual([]);
   });
 
   it('update：单包与 --extensions 批量；npm 带版本 spec 附说明', async () => {
