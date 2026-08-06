@@ -26,9 +26,11 @@ export function SessionView(): React.JSX.Element {
     <div className="session-view">
       <div className="session-main">
         <SessionHeader
+          sessionId={session.id}
           workspacePath={session.workspacePath}
           title={session.title}
           model={session.model}
+          approvalMode={session.approvalMode}
           messageCount={session.messages.filter((m) => m.kind !== 'system').length}
         />
         <MessageList messages={session.messages} />

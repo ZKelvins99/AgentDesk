@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
+import { ApprovalModal } from './components/ApprovalModal';
+import { AuditPanel } from './components/AuditPanel';
 import { ModelPicker } from './components/ModelPicker';
 import { ProviderSettings } from './components/ProviderSettings';
 import { Sidebar } from './components/Sidebar';
 import { TitleBar } from './components/TitleBar';
 import { TrustDialog } from './components/TrustDialog';
 import { SessionView } from './features/session/SessionView';
+import { useApprovalEvents } from './hooks/use-approval-events';
 import { useKeyboard } from './hooks/use-keyboard';
 import { useSessionEvents } from './hooks/use-session-events';
 import { useTheme } from './hooks/use-theme';
@@ -15,6 +18,7 @@ import { useWorkspaceStore } from './stores/workspace-store';
 export default function App(): React.JSX.Element {
   useTheme();
   useSessionEvents();
+  useApprovalEvents();
   useKeyboard();
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
 
@@ -34,6 +38,8 @@ export default function App(): React.JSX.Element {
       <TrustDialog />
       <ModelPicker />
       <ProviderSettings />
+      <ApprovalModal />
+      <AuditPanel />
     </div>
   );
 }

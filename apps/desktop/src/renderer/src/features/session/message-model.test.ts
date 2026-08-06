@@ -92,6 +92,7 @@ describe('message-model（README 9.4.2）', () => {
         steeringMode: 'all',
         followUpMode: 'all',
         autoCompactionEnabled: true,
+        approvalMode: 'full-access',
         messageCount: 3,
         pendingMessageCount: 0,
         sessionName: '测试会话',

@@ -1,4 +1,5 @@
 import type { AgentDeskEvent, AgentDeskUsage } from '@agentdesk/ipc';
+import type { ApprovalMode } from '@agentdesk/shared';
 
 /**
  * 事件 → 消息模型（README 9.4.2 四类元素：用户/助手/思考/工具卡）。
@@ -43,6 +44,7 @@ export interface SessionUiState {
   appliedSeq: number;
   model: string | null;
   thinkingLevel: string | null;
+  approvalMode: ApprovalMode;
   status: 'idle' | 'streaming' | 'degraded' | 'error';
   pendingCount: number;
   queueMode: 'steer' | 'followUp' | null;
@@ -61,6 +63,7 @@ export function createSessionUiState(id: string, workspacePath: string): Session
     appliedSeq: 0,
     model: null,
     thinkingLevel: null,
+    approvalMode: 'full-access',
     status: 'idle',
     pendingCount: 0,
     queueMode: null,
@@ -89,6 +92,7 @@ export function applyEvent(state: SessionUiState, ev: AgentDeskEvent): SessionUi
       const next: SessionUiState = {
         ...state,
         model: ev.state.model,
+        approvalMode: ev.state.approvalMode,
         pendingCount: ev.state.pendingMessageCount,
         title: ev.state.sessionName ?? state.title,
         status: ev.state.isStreaming ? 'streaming' : state.status === 'error' ? 'error' : 'idle',

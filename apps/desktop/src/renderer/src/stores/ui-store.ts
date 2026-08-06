@@ -1,3 +1,4 @@
+import type { ApprovalDecisionKind, ApprovalRequestView } from '@agentdesk/ipc';
 import { create } from 'zustand';
 
 export type Theme = 'dark' | 'light' | 'system';
@@ -8,6 +9,8 @@ interface UiStore {
   rightPanelOpen: boolean;
   modelPickerOpen: boolean;
   providerSettingsOpen: boolean;
+  approvals: ApprovalRequestView[];
+  auditOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   toggleRightPanel: () => void;
@@ -15,6 +18,10 @@ interface UiStore {
   closeModelPicker: () => void;
   openProviderSettings: () => void;
   closeProviderSettings: () => void;
+  pushApproval: (req: ApprovalRequestView) => void;
+  resolveApproval: (id: string, decision: ApprovalDecisionKind, reason?: string) => void;
+  openAudit: () => void;
+  closeAudit: () => void;
 }
 
 function initialTheme(): Theme {
@@ -33,6 +40,8 @@ export const useUiStore = create<UiStore>()((set) => ({
   rightPanelOpen: false,
   modelPickerOpen: false,
   providerSettingsOpen: false,
+  approvals: [],
+  auditOpen: false,
   setTheme: (theme) => {
     try {
       localStorage.setItem('agentdesk-theme', theme);
@@ -47,6 +56,20 @@ export const useUiStore = create<UiStore>()((set) => ({
   closeModelPicker: () => set({ modelPickerOpen: false }),
   openProviderSettings: () => set({ providerSettingsOpen: true }),
   closeProviderSettings: () => set({ providerSettingsOpen: false }),
+  pushApproval: (req) =>
+    set((s) =>
+      s.approvals.some((a) => a.id === req.id) ? s : { approvals: [...s.approvals, req] },
+    ),
+  resolveApproval: (id, decision, reason) => {
+    void window.agentdesk.approval.respond({
+      requestId: id,
+      decision,
+      ...(reason !== undefined ? { reason } : {}),
+    });
+    set((s) => ({ approvals: s.approvals.filter((a) => a.id !== id) }));
+  },
+  openAudit: () => set({ auditOpen: true }),
+  closeAudit: () => set({ auditOpen: false }),
 }));
 
 /** 解析 theme → data-theme（system 跟随 matchMedia），README 9.1 主题切换。 */

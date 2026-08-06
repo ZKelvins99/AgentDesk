@@ -1,12 +1,16 @@
 /// <reference types="vite/client" />
 import type {
   AgentDeskEvent,
+  ApprovalAuditEntry,
+  ApprovalRequestView,
+  ApprovalRule,
   AuthProviderStatus,
   ProviderPreset,
   ProviderView,
   SecretsStatusResponse,
   SessionState,
 } from '@agentdesk/ipc';
+import type { ApprovalMode } from '@agentdesk/shared';
 import type { SessionSummary, WorkspaceRecord } from './types';
 
 declare global {
@@ -58,6 +62,7 @@ declare global {
           }>;
         }>;
         setThinkingLevel(req: { sessionId: string; level: string }): Promise<void>;
+        setApprovalMode(req: { sessionId: string; mode: ApprovalMode }): Promise<void>;
         list(req?: {
           search?: string;
           archived?: boolean;
@@ -109,9 +114,37 @@ declare global {
         }): Promise<void>;
         pickDirectory(): Promise<{ path: string | null }>;
       };
+      approval: {
+        respond(req: {
+          requestId: string;
+          decision: 'allow-once' | 'always' | 'deny' | 'deny-with-reason';
+          reason?: string;
+        }): Promise<void>;
+        auditList(req?: {
+          sessionId?: string;
+          limit?: number;
+        }): Promise<{ entries: ApprovalAuditEntry[] }>;
+        auditExport(req: { format: 'md' | 'json' }): Promise<{ content: string }>;
+        auditClear(req?: { sessionId?: string }): Promise<{ cleared: number }>;
+        rulesList(req?: { sessionId?: string }): Promise<{ rules: ApprovalRule[] }>;
+        rulesSave(req: {
+          rule: {
+            scope: 'session' | 'workspace' | 'global';
+            sessionId?: string;
+            matcher: {
+              tool?: string;
+              bashPrefix?: string;
+              pathPrefix?: string;
+            };
+            decision: 'allow' | 'deny';
+          };
+        }): Promise<{ id: string }>;
+        rulesDelete(req: { id: string }): Promise<void>;
+      };
       onSessionEvent(
         cb: (payload: { sessionId: string; seq: number; ev: AgentDeskEvent }) => void,
       ): () => void;
+      onApprovalEvent(cb: (payload: ApprovalRequestView) => void): () => void;
     };
   }
 }

@@ -1,4 +1,5 @@
 import type { AgentDeskEvent } from '@agentdesk/ipc';
+import type { ApprovalMode } from '@agentdesk/shared';
 import { create } from 'zustand';
 import {
   addUserMessage,
@@ -31,6 +32,7 @@ interface SessionStore {
   setActive: (sessionId: string) => void;
   setSessionModel: (sessionId: string, model: string) => void;
   setSessionThinking: (sessionId: string, thinkingLevel: string) => void;
+  setSessionApprovalMode: (sessionId: string, mode: ApprovalMode) => void;
   renameSession: (sessionId: string, title: string) => Promise<void>;
   archiveSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -122,6 +124,14 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
       return { sessions };
     }),
 
+  setSessionApprovalMode: (sessionId, mode) => {
+    void window.agentdesk.session.setApprovalMode({ sessionId, mode });
+    set((s) => {
+      const cur = s.sessions[sessionId];
+      if (!cur) return s;
+      return { sessions: { ...s.sessions, [sessionId]: { ...cur, approvalMode: mode } } };
+    });
+  },
   setSessionThinking: (sessionId, thinkingLevel) =>
     set((s) => {
       const cur = s.sessions[sessionId];
