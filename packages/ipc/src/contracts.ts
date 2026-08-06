@@ -584,6 +584,7 @@ export const skillViewSchema = z.object({
   status: z.enum(['active', 'disabled', 'invalid', 'shadowed']),
   errors: z.array(z.string()),
   warnings: z.array(z.string()),
+  infos: z.array(z.string()),
 });
 export type SkillView = z.infer<typeof skillViewSchema>;
 
@@ -602,6 +603,32 @@ export const skillsSetEnabledRequestSchema = z.object({
   workspacePath: z.string().optional(),
 });
 export const skillsSetEnabledResponseSchema = z.object({ skill: skillViewSchema });
+
+export const skillsCreateRequestSchema = z.object({
+  name: z.string().min(1).max(64),
+  description: z.string().min(1).max(1024),
+  template: z.enum(['script', 'docs', 'api']).optional(),
+  scope: z.enum(['global', 'project']).optional(),
+  workspacePath: z.string().optional(),
+});
+export const skillsCreateResponseSchema = z.object({ skill: skillViewSchema });
+
+export const skillsUpdateRequestSchema = z.object({
+  id: z.string().min(1),
+  content: z.string(),
+  workspacePath: z.string().optional(),
+});
+export const skillsUpdateResponseSchema = z.object({ skill: skillViewSchema });
+
+export const skillsValidateRequestSchema = z.object({
+  content: z.string(),
+  dirName: z.string().optional(),
+});
+export const skillsValidateResponseSchema = z.object({
+  errors: z.array(z.string()),
+  warnings: z.array(z.string()),
+  infos: z.array(z.string()),
+});
 
 export interface InvokeMap {
   'app:ping': {
@@ -797,6 +824,18 @@ export interface InvokeMap {
     request: z.infer<typeof skillsSetEnabledRequestSchema>;
     response: z.infer<typeof skillsSetEnabledResponseSchema>;
   };
+  'skills:create': {
+    request: z.infer<typeof skillsCreateRequestSchema>;
+    response: z.infer<typeof skillsCreateResponseSchema>;
+  };
+  'skills:update': {
+    request: z.infer<typeof skillsUpdateRequestSchema>;
+    response: z.infer<typeof skillsUpdateResponseSchema>;
+  };
+  'skills:validate': {
+    request: z.infer<typeof skillsValidateRequestSchema>;
+    response: z.infer<typeof skillsValidateResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -859,6 +898,9 @@ export const invokeRequestSchemas = {
   'skills:list': skillsListRequestSchema,
   'skills:read': skillsReadRequestSchema,
   'skills:set-enabled': skillsSetEnabledRequestSchema,
+  'skills:create': skillsCreateRequestSchema,
+  'skills:update': skillsUpdateRequestSchema,
+  'skills:validate': skillsValidateRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

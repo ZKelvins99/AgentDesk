@@ -105,6 +105,12 @@ const api = {
       safeInvoke(IPC_CHANNELS['skills:read'], req),
     setEnabled: (req: InvokeMap['skills:set-enabled']['request']) =>
       safeInvoke(IPC_CHANNELS['skills:set-enabled'], req),
+    create: (req: InvokeMap['skills:create']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:create'], req),
+    update: (req: InvokeMap['skills:update']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:update'], req),
+    validate: (req: InvokeMap['skills:validate']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:validate'], req),
   },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>

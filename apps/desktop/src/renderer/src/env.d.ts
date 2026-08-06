@@ -162,6 +162,23 @@ declare global {
           enabled: boolean;
           workspacePath?: string;
         }): Promise<{ skill: SkillView }>;
+        create(req: {
+          name: string;
+          description: string;
+          template?: 'script' | 'docs' | 'api';
+          scope?: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{ skill: SkillView }>;
+        update(req: {
+          id: string;
+          content: string;
+          workspacePath?: string;
+        }): Promise<{ skill: SkillView }>;
+        validate(req: { content: string; dirName?: string }): Promise<{
+          errors: string[];
+          warnings: string[];
+          infos: string[];
+        }>;
       };
       approval: {
         respond(req: {

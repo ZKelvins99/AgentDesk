@@ -54,6 +54,17 @@ describe('parseSkillFrontmatter（README 8.4.3）', () => {
     expect(r.frontmatter.name).toBeNull();
     expect(r.errors).toContain('缺少 name');
   });
+
+  it('info 级诊断：description 过短 / name 与目录不一致 / allowed-tools', () => {
+    const r = parseSkillFrontmatter(
+      '---\nname: other-name\ndescription: 短\nallowed-tools: [bash]\n---\n',
+      'my-dir',
+    );
+    expect(r.errors).toEqual([]);
+    expect(r.infos.some((i) => i.includes('name 与父目录名'))).toBe(true);
+    expect(r.infos.some((i) => i.includes('description 少于 40 字符'))).toBe(true);
+    expect(r.infos.some((i) => i.includes('allowed-tools'))).toBe(true);
+  });
 });
 
 describe('parseYamlLite / extractFrontmatter', () => {

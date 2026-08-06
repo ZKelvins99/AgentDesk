@@ -1914,3 +1914,40 @@ button:disabled {
   background: color-mix(in srgb, #e74c3c 10%, transparent);
   margin-bottom: 8px;
 }
+.skill-infos {
+  color: #2980b9;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.skill-wizard,
+.skill-editor {
+  width: min(680px, calc(100vw - 48px));
+}
+.skill-wizard {
+  display: grid;
+  gap: 10px;
+}
+.skill-validation {
+  margin-top: 8px;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.skill-validation-error {
+  color: #e74c3c;
+}
+.skill-validation-warning {
+  color: #e67e22;
+}
+.skill-validation-info {
+  color: #2980b9;
+}
+.skill-validation-ok {
+  color: #27ae60;
+}
+.skill-editor .cm-editor {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
+}

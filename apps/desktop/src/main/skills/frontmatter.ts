@@ -19,6 +19,7 @@ export interface FrontmatterParseResult {
   frontmatter: SkillFrontmatter;
   errors: string[];
   warnings: string[];
+  infos: string[];
   raw: Record<string, unknown>;
 }
 
@@ -99,11 +100,12 @@ export function extractFrontmatter(markdown: string): { data: string | null; bod
   return { data: lines.slice(1, end).join('\n'), body: lines.slice(end + 1).join('\n') };
 }
 
-export function parseSkillFrontmatter(markdown: string): FrontmatterParseResult {
+export function parseSkillFrontmatter(markdown: string, dirName?: string): FrontmatterParseResult {
   const { data } = extractFrontmatter(markdown);
   const raw = data ? parseYamlLite(data) : {};
   const errors: string[] = [];
   const warnings: string[] = [];
+  const infos: string[] = [];
 
   const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : null;
   const description =
@@ -121,7 +123,7 @@ export function parseSkillFrontmatter(markdown: string): FrontmatterParseResult 
   if (typeof raw.license === 'string') frontmatter.license = raw.license.trim();
   if (typeof raw.compatibility === 'string') {
     const compatibility = raw.compatibility.trim();
-    if (compatibility.length > 200) warnings.push('compatibility 超过 200 字符');
+    if (compatibility.length > 500) warnings.push('compatibility 超过 500 字符');
     frontmatter.compatibility = compatibility;
   }
   if (raw.metadata && typeof raw.metadata === 'object') {
@@ -136,5 +138,16 @@ export function parseSkillFrontmatter(markdown: string): FrontmatterParseResult 
     frontmatter.disableModelInvocation = true;
   }
 
-  return { frontmatter, errors, warnings, raw };
+  // info 级诊断（README 8.4.3）：不阻塞加载，但提示跨 harness / 触发时机问题
+  if (name && dirName && name !== dirName) {
+    infos.push(`name 与父目录名（${dirName}）不一致（pi 允许，Agent Skills 标准不允许）`);
+  }
+  if (description && description.length < 40) {
+    infos.push('description 少于 40 字符（模型难以判断何时加载）');
+  }
+  if (frontmatter.allowedTools && frontmatter.allowedTools.length > 0) {
+    infos.push('使用了 allowed-tools（实验性字段，行为可能变化）');
+  }
+
+  return { frontmatter, errors, warnings, infos, raw };
 }

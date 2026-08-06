@@ -55,6 +55,9 @@ export const IPC_CHANNELS = {
   'skills:list': 'skills:list',
   'skills:read': 'skills:read',
   'skills:set-enabled': 'skills:set-enabled',
+  'skills:create': 'skills:create',
+  'skills:update': 'skills:update',
+  'skills:validate': 'skills:validate',
 } as const;
 
 /** 请求/响应通道（invoke） */

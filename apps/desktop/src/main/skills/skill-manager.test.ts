@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -123,5 +123,68 @@ describe('SkillManager（README 8.4.1）', () => {
 
     const missing = manager.read('workspace:dir:no-such', ws);
     expect(missing).toBeNull();
+  });
+
+  it('create 生成合规 SKILL.md 与目录骨架，重名拒绝', () => {
+    const created = manager.create({
+      name: 'brand-new',
+      description: '一个用于测试创建向导的全新技能，描述足够长以便于触发加载判断。',
+      template: 'script',
+      scope: 'global',
+    });
+    expect(created.name).toBe('brand-new');
+    expect(created.status).toBe('active');
+    expect(created.kind).toBe('dir');
+    expect(readFileSync(path.join(agentDir, 'skills', 'brand-new', 'SKILL.md'), 'utf8')).toContain(
+      'name: brand-new',
+    );
+    expect(existsSync(path.join(agentDir, 'skills', 'brand-new', 'scripts', 'README.md'))).toBe(
+      true,
+    );
+
+    expect(() =>
+      manager.create({
+        name: 'brand-new',
+        description: '重复名称应当被拒绝，长度满足要求。',
+        scope: 'global',
+      }),
+    ).toThrow(/已存在/);
+  });
+
+  it('create 项目作用域写入 .pi/skills，非法 name 拒绝', () => {
+    const created = manager.create({
+      name: 'project-skill',
+      description: '一个用于测试项目作用域创建的新技能，描述足够长。',
+      scope: 'project',
+      workspacePath: ws,
+    });
+    expect(created.source).toBe('project');
+    expect(existsSync(path.join(ws, '.pi', 'skills', 'project-skill', 'SKILL.md'))).toBe(true);
+
+    expect(() =>
+      manager.create({
+        name: 'Bad Name!',
+        description: '非法名称应当被拒绝。',
+        scope: 'global',
+      }),
+    ).toThrow(/创建失败/);
+  });
+
+  it('update 写回 SKILL.md 并刷新视图', () => {
+    const alpha = manager.list(ws).find((v) => v.name === 'alpha');
+    if (!alpha) throw new Error('alpha 未发现');
+    const updated = manager.update(
+      alpha.id,
+      '---\nname: alpha\ndescription: 更新后的描述，长度足够。\n---\n新正文',
+      ws,
+    );
+    expect(updated.description).toBe('更新后的描述，长度足够。');
+    expect(readFileSync(alpha.path, 'utf8')).toContain('新正文');
+  });
+
+  it('validate 返回实时校验诊断', () => {
+    const v = manager.validate('---\nname: alpha\ndescription: 短\n---\n', 'beta');
+    expect(v.errors).toEqual([]);
+    expect(v.infos.length).toBeGreaterThan(0);
   });
 });

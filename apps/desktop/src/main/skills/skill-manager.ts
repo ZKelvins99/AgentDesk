@@ -4,11 +4,18 @@
  * 磁盘 skill，解析 frontmatter 并校验，与 settings.skills[] 排除规则做 diff，
  * 标注 active / disabled / invalid / shadowed。启停只写 settings.json，不删用户文件。
  */
-import { type Dirent, existsSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  type Dirent,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { McpScope } from '@agentdesk/ipc';
-import { parseSkillFrontmatter, type SkillFrontmatter } from './frontmatter';
+import { parseSkillFrontmatter, SKILL_NAME_RE, type SkillFrontmatter } from './frontmatter';
 import {
   addSkillExclusion,
   isSkillExcluded,
@@ -17,6 +24,7 @@ import {
   removeSkillExclusion,
   writePiSettings,
 } from './pi-settings';
+import { type SkillTemplate, skillSkeleton } from './skill-templates';
 
 export type SkillSource = 'global' | 'project';
 export type SkillStatus = 'active' | 'disabled' | 'invalid' | 'shadowed';
@@ -32,6 +40,7 @@ export interface SkillView extends SkillFrontmatter {
   status: SkillStatus;
   errors: string[];
   warnings: string[];
+  infos: string[];
 }
 
 interface DiscoveredSkill {
@@ -159,6 +168,63 @@ export class SkillManager {
     }
   }
 
+  create(input: {
+    name: string;
+    description: string;
+    template?: SkillTemplate;
+    scope?: 'global' | 'project';
+    workspacePath?: string;
+  }): SkillView {
+    const name = input.name.trim();
+    const description = input.description.trim();
+    const errors: string[] = [];
+    if (!name) errors.push('缺少 name');
+    else if (name.length > 64) errors.push('name 超过 64 字符');
+    else if (!SKILL_NAME_RE.test(name))
+      errors.push('name 仅允许小写字母/数字/连字符（无首尾或连续连字符）');
+    if (!description) errors.push('缺少 description');
+    else if (description.length > 1024) errors.push('description 超过 1024 字符');
+    if (errors.length > 0) throw new Error(`Skill 创建失败：${errors.join('；')}`);
+
+    const scope = input.scope ?? 'global';
+    const settingsDir =
+      scope === 'global' ? this.agentDir : path.join(input.workspacePath ?? '', '.pi');
+    const root = path.join(settingsDir, 'skills', name);
+    if (existsSync(root)) throw new Error(`Skill ${name} 已存在：${root}`);
+
+    const skeleton = skillSkeleton(name, description, input.template ?? 'docs');
+    for (const file of skeleton.files) {
+      const target = path.join(root, file.path);
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, file.content, 'utf8');
+    }
+
+    const view = this.list(input.workspacePath).find((v) => v.name === name);
+    if (!view) throw new Error('Skill 创建后刷新失败');
+    return view;
+  }
+
+  update(id: string, content: string, workspacePath?: string): SkillView {
+    const view = this.list(workspacePath).find((v) => v.id === id);
+    if (!view) throw new Error(`Skill ${id} 不存在`);
+    writeFileSync(view.path, content, 'utf8');
+    const refreshed = this.list(workspacePath).find((v) => v.id === id);
+    if (!refreshed) throw new Error('Skill 更新后刷新失败');
+    return refreshed;
+  }
+
+  validate(
+    markdown: string,
+    dirName?: string,
+  ): {
+    errors: string[];
+    warnings: string[];
+    infos: string[];
+  } {
+    const r = parseSkillFrontmatter(markdown, dirName);
+    return { errors: r.errors, warnings: r.warnings, infos: r.infos };
+  }
+
   setEnabled(id: string, enabled: boolean, workspacePath?: string): SkillView {
     const view = this.list(workspacePath).find((v) => v.id === id);
     if (!view) throw new Error(`Skill ${id} 不存在`);
@@ -222,7 +288,10 @@ export class SkillManager {
     } catch {
       // 读取失败按 invalid 处理
     }
-    const parsed = parseSkillFrontmatter(markdown);
+    const parsed = parseSkillFrontmatter(
+      markdown,
+      skill.kind === 'dir' ? path.basename(skill.dir) : undefined,
+    );
     const target = skill.kind === 'dir' ? skill.dir : skill.path;
     const relPath = relativeSkillPath(settingsDir, target);
     const disabled = isSkillExcluded(exclusionEntries, relPath, target);
@@ -240,6 +309,7 @@ export class SkillManager {
       status,
       errors: parsed.errors,
       warnings: parsed.warnings,
+      infos: parsed.infos,
     };
   }
 }

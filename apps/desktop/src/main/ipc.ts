@@ -36,9 +36,12 @@ import {
   type sessionSetApprovalModeRequestSchema,
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
+  type skillsCreateRequestSchema,
   type skillsListRequestSchema,
   type skillsReadRequestSchema,
   type skillsSetEnabledRequestSchema,
+  type skillsUpdateRequestSchema,
+  type skillsValidateRequestSchema,
   type workspaceAddRequestSchema,
   type workspaceOpenRequestSchema,
   type workspaceRemoveRequestSchema,
@@ -388,6 +391,29 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       typeof skillsSetEnabledRequestSchema
     >;
     return { skill: deps.skills.setEnabled(req.id, req.enabled, req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:create'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:create', raw) as z.infer<typeof skillsCreateRequestSchema>;
+    return {
+      skill: deps.skills.create({
+        name: req.name,
+        description: req.description,
+        ...(req.template !== undefined ? { template: req.template } : {}),
+        ...(req.scope !== undefined ? { scope: req.scope } : {}),
+        ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+      }),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:update'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:update', raw) as z.infer<typeof skillsUpdateRequestSchema>;
+    return { skill: deps.skills.update(req.id, req.content, req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:validate'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:validate', raw) as z.infer<typeof skillsValidateRequestSchema>;
+    return deps.skills.validate(req.content, req.dirName);
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----
