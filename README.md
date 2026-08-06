@@ -1447,6 +1447,9 @@ AgentDesk  ›  重构 Pi Bridge  ✎        [42.1k/200k ▓▓▓░░]   打�
 | `workspace:tree` | invoke | 懒加载目录（`{ path, root? }`，一层 + .gitignore） |
 | `workspace:readFile` | invoke | 返回内容 + 语言推断（有大小上限） |
 | `workspace:search` | invoke | 文件名搜索（rg --files 尊重 .gitignore，rg 缺失时 Node 回退） |
+| `diff:compute` | invoke | 两段文本逐块 diff（结构化 hunk + unified） |
+| `diff:file` | invoke | 单文件 git 工作区 diff（working tree vs HEAD，未跟踪基线为空） |
+| `diff:apply-hunk` | invoke | 逐块接受/回滚（applyPatch / reversePatch 写回，记入 file_audit） |
 | `workspace:revealInOS` / `openExternal` | invoke | 只允许 workspace 内路径与 `http(s)` |
 | `workspace:applyRevert` | invoke | 回滚某次 edit（反向 patch） |
 

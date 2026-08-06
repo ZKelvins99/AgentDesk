@@ -128,4 +128,18 @@ export const MIGRATIONS: Migration[] = [
       )`,
     ],
   },
+  {
+    id: '0002_file_audit',
+    sql: [
+      `CREATE TABLE file_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT NOT NULL,
+        workspacePath TEXT,
+        action TEXT NOT NULL,
+        patchJson TEXT NOT NULL,
+        at INTEGER NOT NULL
+      )`,
+      `CREATE INDEX idx_file_audit_at ON file_audit (at DESC)`,
+    ],
+  },
 ];

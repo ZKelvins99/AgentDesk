@@ -946,6 +946,61 @@ export const workspaceSearchResponseSchema = z.object({
 });
 export type FileSearchMatch = z.infer<typeof workspaceSearchResponseSchema>['matches'][number];
 
+/** Diff（README 8.9 / M8 第二步）：逐块接受/回滚 + 审计。 */
+export const diffLinePrefixSchema = z.enum([' ', '+', '-']);
+export const diffHunkLineSchema = z.object({
+  prefix: diffLinePrefixSchema,
+  text: z.string(),
+});
+export const diffHunkSchema = z.object({
+  id: z.string(),
+  oldStart: z.number().int(),
+  oldLines: z.number().int(),
+  newStart: z.number().int(),
+  newLines: z.number().int(),
+  lines: z.array(diffHunkLineSchema),
+  /** 单块 unified patch，可直接喂 applyPatch。 */
+  patch: z.string(),
+});
+export type DiffHunk = z.infer<typeof diffHunkSchema>;
+
+export const diffResultSchema = z.object({
+  fileName: z.string(),
+  original: z.string(),
+  modified: z.string(),
+  hunks: z.array(diffHunkSchema),
+  unified: z.string(),
+});
+export type DiffResult = z.infer<typeof diffResultSchema>;
+
+export const diffComputeRequestSchema = z.object({
+  fileName: z.string().min(1),
+  original: z.string(),
+  modified: z.string(),
+});
+export const diffComputeResponseSchema = diffResultSchema;
+
+export const diffFileRequestSchema = z.object({
+  root: z.string().min(1),
+  file: z.string().min(1),
+});
+export const diffFileResponseSchema = diffResultSchema.extend({
+  tracked: z.boolean(),
+  gitAvailable: z.boolean(),
+});
+export type FileDiffResult = z.infer<typeof diffFileResponseSchema>;
+
+export const diffApplyHunkRequestSchema = z.object({
+  file: z.string().min(1),
+  patch: z.string().min(1),
+  direction: z.enum(['accept', 'revert']),
+  workspacePath: z.string().optional(),
+});
+export const diffApplyHunkResponseSchema = z.object({
+  ok: z.boolean(),
+  message: z.string(),
+});
+
 /** 资源生效清单（README 8.2.3 / 14.3 event:resources，来源 resources_discover）。 */
 export const resourceSnapshotSchema = z.object({
   skills: z.array(z.string()),
@@ -1043,6 +1098,18 @@ export interface InvokeMap {
   'workspace:search': {
     request: z.infer<typeof workspaceSearchRequestSchema>;
     response: z.infer<typeof workspaceSearchResponseSchema>;
+  };
+  'diff:compute': {
+    request: z.infer<typeof diffComputeRequestSchema>;
+    response: z.infer<typeof diffComputeResponseSchema>;
+  };
+  'diff:file': {
+    request: z.infer<typeof diffFileRequestSchema>;
+    response: z.infer<typeof diffFileResponseSchema>;
+  };
+  'diff:apply-hunk': {
+    request: z.infer<typeof diffApplyHunkRequestSchema>;
+    response: z.infer<typeof diffApplyHunkResponseSchema>;
   };
   'provider:list': {
     request: undefined;
@@ -1287,6 +1354,9 @@ export const invokeRequestSchemas = {
   'workspace:pick-file': z.undefined(),
   'workspace:tree': workspaceTreeRequestSchema,
   'workspace:search': workspaceSearchRequestSchema,
+  'diff:compute': diffComputeRequestSchema,
+  'diff:file': diffFileRequestSchema,
+  'diff:apply-hunk': diffApplyHunkRequestSchema,
   'provider:list': z.undefined(),
   'provider:save': providerSaveRequestSchema,
   'provider:delete': providerDeleteRequestSchema,

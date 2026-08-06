@@ -7,6 +7,9 @@ import {
   type approvalRuleSaveRequestSchema,
   type approvalRulesListRequestSchema,
   type authLaunchLoginRequestSchema,
+  type diffApplyHunkRequestSchema,
+  type diffComputeRequestSchema,
+  type diffFileRequestSchema,
   type extensionsListRequestSchema,
   type InvokeChannel,
   IPC_CHANNELS,
@@ -68,6 +71,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { ConfigStore } from './config/config-store';
+import type { DiffEngine } from './diff/diff-engine';
 import type { ExtensionCompatService } from './extensions/extension-compat';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
@@ -144,6 +148,8 @@ export interface IpcHandlerDeps {
   extensions: ExtensionCompatService;
   /** M8：文件树（懒加载 + .gitignore + rg 搜索，README 8.9）。 */
   fileTree: FileTreeService;
+  /** M8：Diff 面板（逐块接受/回滚 + 审计，README 8.9）。 */
+  diff: DiffEngine;
   /** 内核二进制路径（设置页 2 健康状态展示）。 */
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
@@ -650,6 +656,28 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       root: req.root,
       query: req.query,
       ...(req.maxResults !== undefined ? { maxResults: req.maxResults } : {}),
+    });
+  });
+
+  // ---- Diff（README 8.9 / M8 第二步）----
+
+  ipcMain.handle(IPC_CHANNELS['diff:compute'], async (_event, raw: unknown) => {
+    const req = parseRequest('diff:compute', raw) as z.infer<typeof diffComputeRequestSchema>;
+    return deps.diff.compute(req);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['diff:file'], async (_event, raw: unknown) => {
+    const req = parseRequest('diff:file', raw) as z.infer<typeof diffFileRequestSchema>;
+    return deps.diff.file(req);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['diff:apply-hunk'], async (_event, raw: unknown) => {
+    const req = parseRequest('diff:apply-hunk', raw) as z.infer<typeof diffApplyHunkRequestSchema>;
+    return deps.diff.applyHunk({
+      file: req.file,
+      patch: req.patch,
+      direction: req.direction,
+      ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
     });
   });
 

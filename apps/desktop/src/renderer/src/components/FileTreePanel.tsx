@@ -1,5 +1,6 @@
 import type { FileTreeEntry } from '@agentdesk/ipc';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useUiStore } from '../stores/ui-store';
 
 /** 文件树（README 8.9 / M8）：懒加载、尊重 .gitignore、rg 文件名搜索。 */
 export function FileTreePanel({ root }: { root: string }): React.JSX.Element | null {
@@ -11,6 +12,7 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
   const [searching, setSearching] = useState(false);
   const [matches, setMatches] = useState<Array<{ path: string }> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openDiff = useUiStore((s) => s.openDiff);
 
   const loadDir = useCallback(
     async (dir: string): Promise<void> => {
@@ -92,6 +94,7 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
           data-hidden={entry.hidden || undefined}
           onClick={() => {
             if (isDir) toggle(entry.path);
+            else openDiff(entry.path);
           }}
           title={entry.path}
         >

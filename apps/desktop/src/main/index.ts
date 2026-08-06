@@ -33,6 +33,7 @@ if (!gotTheLock) {
       profiles: runtime.profiles,
       extensions: runtime.extensions,
       fileTree: runtime.fileTree,
+      diff: runtime.diff,
       kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
     });

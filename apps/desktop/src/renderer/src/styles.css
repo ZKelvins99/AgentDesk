@@ -2498,3 +2498,124 @@ button:disabled {
   font-size: 12px;
   color: var(--danger, #e74c3c);
 }
+
+/* ---- Diff 面板（README 8.9 / M8）---- */
+.diff-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.diff-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.diff-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diff-mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.diff-mode-tab {
+  background: var(--bg);
+  color: var(--fg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.diff-mode-tab.active {
+  border-color: var(--accent, #3b82f6);
+  color: var(--fg-primary);
+}
+.diff-merge-host {
+  height: 46vh;
+  min-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.diff-merge-host .cm-mergeView {
+  height: 100%;
+}
+.diff-note,
+.diff-empty {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.diff-error {
+  font-size: 12px;
+  color: var(--danger, #e74c3c);
+}
+.diff-ok {
+  font-size: 12px;
+  color: #27ae60;
+}
+.diff-hunks {
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+}
+.diff-hunk {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.diff-hunk-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+.diff-hunk-meta code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-secondary);
+}
+.diff-hunk-actions {
+  display: flex;
+  gap: 6px;
+}
+.diff-hunk-lines {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.diff-line {
+  display: flex;
+  gap: 6px;
+  white-space: pre;
+  padding: 0 8px;
+}
+.diff-line-prefix {
+  color: var(--fg-muted);
+  width: 10px;
+  flex: none;
+}
+.diff-line-add {
+  background: rgba(39, 174, 96, 0.16);
+  color: var(--fg-primary);
+}
+.diff-line-del {
+  background: rgba(231, 76, 60, 0.16);
+  color: var(--fg-primary);
+}
+.diff-line-ctx {
+  color: var(--fg-secondary);
+}

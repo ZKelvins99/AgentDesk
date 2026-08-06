@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { t } from '../i18n';
 import { useSessionStore } from '../stores/session-store';
+import { useUiStore } from '../stores/ui-store';
+import { DiffPanel } from './DiffPanel';
 
 /** 右侧栈叠面板（README 9.2）：会话信息 + M3 会话操作（重命名/归档/删除/导出）。 */
 export function RightPanel(): React.JSX.Element {
@@ -8,11 +10,16 @@ export function RightPanel(): React.JSX.Element {
     s.activeSessionId ? s.sessions[s.activeSessionId] : undefined,
   );
   const activeId = useSessionStore((s) => s.activeSessionId);
+  const diffFile = useUiStore((s) => s.diffFile);
+  const closeDiff = useUiStore((s) => s.closeDiff);
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [exportedPath, setExportedPath] = useState<string | null>(null);
 
   if (!session || !activeId) return <aside className="right-panel" />;
+  if (diffFile) {
+    return <DiffPanel root={session.workspacePath} file={diffFile} onClose={closeDiff} />;
+  }
 
   const statusKey: 'status.idle' | 'status.streaming' | 'status.degraded' | 'status.error' =
     session.status === 'idle'

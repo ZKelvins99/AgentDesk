@@ -116,6 +116,16 @@ export const pluginCache = sqliteTable('plugin_cache', {
   fetchedAt: integer('fetchedAt').notNull(),
 });
 
+/** 文件变更审计（README 8.9：Diff 逐块接受/回滚记录）。 */
+export const fileAudit = sqliteTable('file_audit', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  path: text('path').notNull(),
+  workspacePath: text('workspacePath'),
+  action: text('action').notNull(),
+  patchJson: text('patchJson').notNull(),
+  at: integer('at').notNull(),
+});
+
 export const appState = sqliteTable('app_state', {
   key: text('key').primaryKey(),
   valueJson: text('valueJson').notNull(),

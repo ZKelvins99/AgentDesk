@@ -14,6 +14,7 @@ interface UiStore {
   skillSettingsOpen: boolean;
   packageSettingsOpen: boolean;
   settingsPanelOpen: boolean;
+  diffFile: string | null;
   approvals: ApprovalRequestView[];
   auditOpen: boolean;
   setTheme: (theme: Theme) => void;
@@ -32,6 +33,8 @@ interface UiStore {
   closePackageSettings: () => void;
   openSettingsPanel: () => void;
   closeSettingsPanel: () => void;
+  openDiff: (file: string) => void;
+  closeDiff: () => void;
   pushApproval: (req: ApprovalRequestView) => void;
   resolveApproval: (id: string, decision: ApprovalDecisionKind, reason?: string) => void;
   openAudit: () => void;
@@ -59,6 +62,7 @@ export const useUiStore = create<UiStore>()((set) => ({
   skillSettingsOpen: false,
   packageSettingsOpen: false,
   settingsPanelOpen: false,
+  diffFile: null,
   approvals: [],
   auditOpen: false,
   setTheme: (theme) => {
@@ -84,6 +88,8 @@ export const useUiStore = create<UiStore>()((set) => ({
   closePackageSettings: () => set({ packageSettingsOpen: false }),
   openSettingsPanel: () => set({ settingsPanelOpen: true }),
   closeSettingsPanel: () => set({ settingsPanelOpen: false }),
+  openDiff: (file) => set({ diffFile: file, rightPanelOpen: true }),
+  closeDiff: () => set({ diffFile: null }),
   pushApproval: (req) =>
     set((s) =>
       s.approvals.some((a) => a.id === req.id) ? s : { approvals: [...s.approvals, req] },

@@ -184,6 +184,13 @@ const api = {
     search: (req: InvokeMap['workspace:search']['request']) =>
       safeInvoke(IPC_CHANNELS['workspace:search'], req),
   },
+  diff: {
+    compute: (req: InvokeMap['diff:compute']['request']) =>
+      safeInvoke(IPC_CHANNELS['diff:compute'], req),
+    file: (req: InvokeMap['diff:file']['request']) => safeInvoke(IPC_CHANNELS['diff:file'], req),
+    applyHunk: (req: InvokeMap['diff:apply-hunk']['request']) =>
+      safeInvoke(IPC_CHANNELS['diff:apply-hunk'], req),
+  },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
   onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>

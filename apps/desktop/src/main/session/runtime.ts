@@ -10,6 +10,7 @@ import {
 import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { ConfigStore } from '../config/config-store';
+import { DiffEngine } from '../diff/diff-engine';
 import { ExtensionCompatService } from '../extensions/extension-compat';
 import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
@@ -20,6 +21,7 @@ import { DEFAULT_PROFILE_ID, ProfileManager } from '../profile/profile-manager';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
+import { FileAuditStore } from '../storage/file-audit-store';
 import { FileTreeService } from '../workspace/file-tree';
 import { SessionManager } from './session-manager';
 
@@ -45,6 +47,7 @@ export interface SessionRuntimeHandle {
   profiles: ProfileManager;
   extensions: ExtensionCompatService;
   fileTree: FileTreeService;
+  diff: DiffEngine;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -105,6 +108,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const agentDir = mockSetup?.agentDir ?? profileAgentDir;
   const extensionCompat = new ExtensionCompatService(agentDir);
   const fileTree = new FileTreeService(agentDir);
+  const diff = new DiffEngine(new FileAuditStore(db));
 
   const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
 
@@ -237,6 +241,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     profiles: profileManager,
     extensions: extensionCompat,
     fileTree,
+    diff,
     uplink,
     kernel: { binary },
     dispose: async () => {

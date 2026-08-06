@@ -6,6 +6,7 @@ import type {
   ApprovalRule,
   AuthProviderStatus,
   ConfigValidationIssue,
+  DiffHunk,
   ExtensionRuntimeNote,
   ExtensionView,
   FileTreeEntry,
@@ -136,6 +137,30 @@ declare global {
           query: string;
           maxResults?: number;
         }): Promise<{ matches: Array<{ path: string }> }>;
+      };
+      diff: {
+        compute(req: { fileName: string; original: string; modified: string }): Promise<{
+          fileName: string;
+          original: string;
+          modified: string;
+          hunks: DiffHunk[];
+          unified: string;
+        }>;
+        file(req: { root: string; file: string }): Promise<{
+          fileName: string;
+          original: string;
+          modified: string;
+          hunks: DiffHunk[];
+          unified: string;
+          tracked: boolean;
+          gitAvailable: boolean;
+        }>;
+        applyHunk(req: {
+          file: string;
+          patch: string;
+          direction: 'accept' | 'revert';
+          workspacePath?: string;
+        }): Promise<{ ok: boolean; message: string }>;
       };
       mcp: {
         list(req?: { workspacePath?: string }): Promise<{ servers: McpServerView[] }>;
