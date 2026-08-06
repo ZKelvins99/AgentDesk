@@ -124,6 +124,18 @@ async function extractArchive(archive, dest) {
   }
 }
 
+
+async function copyDir(src, dest) {
+  const { copyFile } = await import('node:fs/promises');
+  await mkdir(dest, { recursive: true });
+  const entries = await readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const from = path.join(src, entry.name);
+    const to = path.join(dest, entry.name);
+    if (entry.isDirectory()) await copyDir(from, to);
+    else if (entry.isFile()) await copyFile(from, to);
+  }
+}
 async function findBinary(dir, name) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -194,12 +206,11 @@ async function main() {
     if (!binary) throw new Error(`解压产物中找不到 ${target.binary}`);
 
     const outDir = path.join(args.out, args.platform);
-    await mkdir(outDir, { recursive: true });
+    // 完整复制解压产物：pi.exe 依赖同目录 theme/ 与 native/（README 4.1 事实）
+    await copyDir(extractDir, outDir);
     const destBinary = path.join(outDir, target.binary);
-    const binStat = await stat(binary);
-    const { copyFile } = await import('node:fs/promises');
-    await copyFile(binary, destBinary);
     if (process.platform !== 'win32') await chmod(destBinary, 0o755);
+    const binStat = await stat(destBinary);
 
     const manifest = {
       repo: 'earendil-works/pi',

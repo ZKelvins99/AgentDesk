@@ -5,8 +5,8 @@
   "platform": "win32-x64",
   "asset": "pi-windows-x64.zip",
   "sha256": "7bda7993553a0d556f1eed53d96dd4a83e183332475265fb87c79ff269bf357d",
-  "binary": "win32-x64\\pi.exe",
+  "binary": "win32-x64/pi.exe",
   "sizeBytes": 111228928,
-  "downloadedAt": "2026-08-06T01:44:48.456Z",
+  "downloadedAt": "2026-08-06T01:55:58.805Z",
   "url": "https://github.com/earendil-works/pi/releases/download/v0.83.0/pi-windows-x64.zip"
 }
