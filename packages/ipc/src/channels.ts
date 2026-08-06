@@ -52,6 +52,9 @@ export const IPC_CHANNELS = {
   'mcp:tools': 'mcp:tools',
   'mcp:logs': 'mcp:logs',
   'mcp:export': 'mcp:export',
+  'skills:list': 'skills:list',
+  'skills:read': 'skills:read',
+  'skills:set-enabled': 'skills:set-enabled',
 } as const;
 
 /** 请求/响应通道（invoke） */

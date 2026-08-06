@@ -26,6 +26,7 @@ if (!gotTheLock) {
       approvals: runtime.approvals,
       mcp: runtime.mcp,
       mcpHost: runtime.mcpHost,
+      skills: runtime.skills,
       uplink: runtime.uplink,
     });
     createMainWindow();

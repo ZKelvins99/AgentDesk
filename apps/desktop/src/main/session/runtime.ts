@@ -13,6 +13,7 @@ import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
 import { PiBridge, SidecarPool } from '../pi';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
+import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
 import { SessionManager } from './session-manager';
 
@@ -31,6 +32,7 @@ export interface SessionRuntimeHandle {
   approvals: ApprovalEngine;
   mcp: McpConfigStore;
   mcpHost: McpConnectionManager;
+  skills: SkillManager;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -100,6 +102,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const bridge = new PiBridge({ binary: binary ?? '', pool });
 
   const mcpStore = new McpConfigStore();
+  const skillManager = new SkillManager();
   let sessionManager: SessionManager;
   const approvalStore = new ApprovalStore(db);
   const approvals = new ApprovalEngine({
@@ -170,6 +173,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     approvals,
     mcp: mcpStore,
     mcpHost,
+    skills: skillManager,
     uplink,
     kernel: { binary },
     dispose: async () => {

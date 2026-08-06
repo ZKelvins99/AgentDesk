@@ -99,6 +99,13 @@ const api = {
       safeInvoke(IPC_CHANNELS['mcp:logs'], req ?? {}),
     export: (req?: { workspacePath?: string }) => safeInvoke(IPC_CHANNELS['mcp:export'], req ?? {}),
   },
+  skills: {
+    list: (req?: { workspacePath?: string }) => safeInvoke(IPC_CHANNELS['skills:list'], req ?? {}),
+    read: (req: InvokeMap['skills:read']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:read'], req),
+    setEnabled: (req: InvokeMap['skills:set-enabled']['request']) =>
+      safeInvoke(IPC_CHANNELS['skills:set-enabled'], req),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

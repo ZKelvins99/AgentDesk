@@ -10,6 +10,7 @@ interface UiStore {
   modelPickerOpen: boolean;
   providerSettingsOpen: boolean;
   mcpSettingsOpen: boolean;
+  skillSettingsOpen: boolean;
   approvals: ApprovalRequestView[];
   auditOpen: boolean;
   setTheme: (theme: Theme) => void;
@@ -21,6 +22,8 @@ interface UiStore {
   closeProviderSettings: () => void;
   openMcpSettings: () => void;
   closeMcpSettings: () => void;
+  openSkillSettings: () => void;
+  closeSkillSettings: () => void;
   pushApproval: (req: ApprovalRequestView) => void;
   resolveApproval: (id: string, decision: ApprovalDecisionKind, reason?: string) => void;
   openAudit: () => void;
@@ -44,6 +47,7 @@ export const useUiStore = create<UiStore>()((set) => ({
   modelPickerOpen: false,
   providerSettingsOpen: false,
   mcpSettingsOpen: false,
+  skillSettingsOpen: false,
   approvals: [],
   auditOpen: false,
   setTheme: (theme) => {
@@ -62,6 +66,8 @@ export const useUiStore = create<UiStore>()((set) => ({
   closeProviderSettings: () => set({ providerSettingsOpen: false }),
   openMcpSettings: () => set({ mcpSettingsOpen: true }),
   closeMcpSettings: () => set({ mcpSettingsOpen: false }),
+  openSkillSettings: () => set({ skillSettingsOpen: true }),
+  closeSkillSettings: () => set({ skillSettingsOpen: false }),
   pushApproval: (req) =>
     set((s) =>
       s.approvals.some((a) => a.id === req.id) ? s : { approvals: [...s.approvals, req] },

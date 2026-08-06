@@ -5,6 +5,7 @@ import { McpSettings } from './components/McpSettings';
 import { ModelPicker } from './components/ModelPicker';
 import { ProviderSettings } from './components/ProviderSettings';
 import { Sidebar } from './components/Sidebar';
+import { SkillSettings } from './components/SkillSettings';
 import { TitleBar } from './components/TitleBar';
 import { TrustDialog } from './components/TrustDialog';
 import { SessionView } from './features/session/SessionView';
@@ -40,6 +41,7 @@ export default function App(): React.JSX.Element {
       <ModelPicker />
       <ProviderSettings />
       <McpSettings />
+      <SkillSettings />
       <ApprovalModal />
       <AuditPanel />
     </div>

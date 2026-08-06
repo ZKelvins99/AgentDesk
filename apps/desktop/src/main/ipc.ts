@@ -36,6 +36,9 @@ import {
   type sessionSetApprovalModeRequestSchema,
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
+  type skillsListRequestSchema,
+  type skillsReadRequestSchema,
+  type skillsSetEnabledRequestSchema,
   type workspaceAddRequestSchema,
   type workspaceOpenRequestSchema,
   type workspaceRemoveRequestSchema,
@@ -49,6 +52,7 @@ import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
+import type { SkillManager } from './skills/skill-manager';
 import type { WorkspaceManager } from './storage';
 
 /** 边界数据必须过 zod 校验后才进入 handler（README 16.1）。 */
@@ -73,6 +77,8 @@ export interface IpcHandlerDeps {
   approvals: ApprovalEngine;
   mcp: McpConfigStore;
   mcpHost: McpConnectionManager;
+  /** M7：Skill 浏览/详情/启停（README 8.4.1）。 */
+  skills: SkillManager;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
 }
@@ -355,6 +361,33 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['mcp:export'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:export', raw) as z.infer<typeof mcpExportRequestSchema>;
     return { json: deps.mcp.exportJson(req.workspacePath) };
+  });
+
+  // ---- Skills（README 8.4.1）：浏览 / 详情 / 启停 ----
+
+  ipcMain.handle(IPC_CHANNELS['skills:list'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:list', raw) as z.infer<typeof skillsListRequestSchema>;
+    return { skills: deps.skills.list(req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:read'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:read', raw) as z.infer<typeof skillsReadRequestSchema>;
+    const result = deps.skills.read(req.id, req.workspacePath);
+    if (!result) {
+      throw new AgentDeskError({
+        code: 'SKILL_NOT_FOUND',
+        scope: 'skills',
+        userMessage: 'Skill 不存在',
+      });
+    }
+    return result;
+  });
+
+  ipcMain.handle(IPC_CHANNELS['skills:set-enabled'], async (_event, raw: unknown) => {
+    const req = parseRequest('skills:set-enabled', raw) as z.infer<
+      typeof skillsSetEnabledRequestSchema
+    >;
+    return { skill: deps.skills.setEnabled(req.id, req.enabled, req.workspacePath) };
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

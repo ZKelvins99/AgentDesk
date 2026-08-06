@@ -13,6 +13,7 @@ import type {
   ProviderView,
   SecretsStatusResponse,
   SessionState,
+  SkillView,
 } from '@agentdesk/ipc';
 import type { ApprovalMode } from '@agentdesk/shared';
 import type { SessionSummary, WorkspaceRecord } from './types';
@@ -152,6 +153,15 @@ declare global {
           logs: McpCallLogEntry[];
         }>;
         export(req?: { workspacePath?: string }): Promise<{ json: string }>;
+      };
+      skills: {
+        list(req?: { workspacePath?: string }): Promise<{ skills: SkillView[] }>;
+        read(req: { id: string; workspacePath?: string }): Promise<{ content: string }>;
+        setEnabled(req: {
+          id: string;
+          enabled: boolean;
+          workspacePath?: string;
+        }): Promise<{ skill: SkillView }>;
       };
       approval: {
         respond(req: {

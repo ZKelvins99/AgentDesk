@@ -566,6 +566,43 @@ export const mcpLogsResponseSchema = z.object({ logs: z.array(mcpCallLogEntrySch
 export const mcpExportRequestSchema = z.object({ workspacePath: z.string().optional() });
 export const mcpExportResponseSchema = z.object({ json: z.string() });
 
+export const skillViewSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
+  license: z.string().optional(),
+  compatibility: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  allowedTools: z.array(z.string()).optional(),
+  disableModelInvocation: z.boolean().optional(),
+  source: z.enum(['global', 'project']),
+  scope: mcpScopeSchema,
+  kind: z.enum(['dir', 'file']),
+  path: z.string(),
+  dir: z.string(),
+  files: z.array(z.string()),
+  status: z.enum(['active', 'disabled', 'invalid', 'shadowed']),
+  errors: z.array(z.string()),
+  warnings: z.array(z.string()),
+});
+export type SkillView = z.infer<typeof skillViewSchema>;
+
+export const skillsListRequestSchema = z.object({ workspacePath: z.string().optional() });
+export const skillsListResponseSchema = z.object({ skills: z.array(skillViewSchema) });
+
+export const skillsReadRequestSchema = z.object({
+  id: z.string().min(1),
+  workspacePath: z.string().optional(),
+});
+export const skillsReadResponseSchema = z.object({ content: z.string() });
+
+export const skillsSetEnabledRequestSchema = z.object({
+  id: z.string().min(1),
+  enabled: z.boolean(),
+  workspacePath: z.string().optional(),
+});
+export const skillsSetEnabledResponseSchema = z.object({ skill: skillViewSchema });
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -748,6 +785,18 @@ export interface InvokeMap {
     request: z.infer<typeof mcpExportRequestSchema>;
     response: z.infer<typeof mcpExportResponseSchema>;
   };
+  'skills:list': {
+    request: z.infer<typeof skillsListRequestSchema>;
+    response: z.infer<typeof skillsListResponseSchema>;
+  };
+  'skills:read': {
+    request: z.infer<typeof skillsReadRequestSchema>;
+    response: z.infer<typeof skillsReadResponseSchema>;
+  };
+  'skills:set-enabled': {
+    request: z.infer<typeof skillsSetEnabledRequestSchema>;
+    response: z.infer<typeof skillsSetEnabledResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -807,6 +856,9 @@ export const invokeRequestSchemas = {
   'mcp:tools': mcpToolsRequestSchema,
   'mcp:logs': mcpLogsRequestSchema,
   'mcp:export': mcpExportRequestSchema,
+  'skills:list': skillsListRequestSchema,
+  'skills:read': skillsReadRequestSchema,
+  'skills:set-enabled': skillsSetEnabledRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];
