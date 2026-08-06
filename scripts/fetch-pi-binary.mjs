@@ -124,7 +124,6 @@ async function extractArchive(archive, dest) {
   }
 }
 
-
 async function copyDir(src, dest) {
   const { copyFile } = await import('node:fs/promises');
   await mkdir(dest, { recursive: true });

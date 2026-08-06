@@ -1,5 +1,5 @@
-import { piEventSchema, type PiEvent } from './events';
-import { piResponseSchema, type PiResponse } from './responses';
+import { type PiEvent, piEventSchema } from './events';
+import { type PiResponse, piResponseSchema } from './responses';
 
 export type ParsedPiLine =
   | { kind: 'response'; response: PiResponse }
