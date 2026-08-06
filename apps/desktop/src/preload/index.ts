@@ -51,6 +51,10 @@ const api = {
     abort: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:abort'], req),
     setModel: (req: { sessionId: string; model: string }) =>
       safeInvoke(IPC_CHANNELS['session:set-model'], req),
+    getModels: (req: InvokeMap['session:get-models']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:get-models'], req),
+    setThinkingLevel: (req: InvokeMap['session:set-thinking-level']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:set-thinking-level'], req),
     list: (req?: { search?: string; archived?: boolean; limit?: number; offset?: number }) =>
       safeInvoke(IPC_CHANNELS['session:list'], req ?? {}),
     rename: (req: { sessionId: string; title: string }) =>
@@ -59,6 +63,24 @@ const api = {
     delete: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:delete'], req),
     export: (req: { sessionId: string; format: 'md' | 'json' }) =>
       safeInvoke(IPC_CHANNELS['session:export'], req),
+  },
+  provider: {
+    list: () => safeInvoke(IPC_CHANNELS['provider:list'], undefined),
+    save: (req: InvokeMap['provider:save']['request']) =>
+      safeInvoke(IPC_CHANNELS['provider:save'], req),
+    delete: (req: { name: string }) => safeInvoke(IPC_CHANNELS['provider:delete'], req),
+    presets: () => safeInvoke(IPC_CHANNELS['provider:presets'], undefined),
+    discoverModels: (req: InvokeMap['provider:discover-models']['request']) =>
+      safeInvoke(IPC_CHANNELS['provider:discover-models'], req),
+    test: (req: { name: string; model?: string }) => safeInvoke(IPC_CHANNELS['provider:test'], req),
+  },
+  secrets: {
+    status: () => safeInvoke(IPC_CHANNELS['secrets:status'], undefined),
+  },
+  auth: {
+    status: () => safeInvoke(IPC_CHANNELS['auth:status'], undefined),
+    launchLogin: (req?: { provider?: string }) =>
+      safeInvoke(IPC_CHANNELS['auth:launch-login'], req ?? {}),
   },
   workspace: {
     add: (req: { path: string }) => safeInvoke(IPC_CHANNELS['workspace:add'], req),

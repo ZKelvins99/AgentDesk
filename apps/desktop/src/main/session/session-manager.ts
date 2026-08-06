@@ -64,6 +64,8 @@ export interface SessionManagerOptions {
   trust: 'allow' | 'deny';
   /** TrustGate：按 workspace 决策解析 -a/-na（M3，README R3） */
   resolveTrust?: (workspacePath: string) => 'allow' | 'deny';
+  /** 会话 provider 的密钥 env（M4，README 8.6.2 最小暴露） */
+  resolveProviderEnv?: (provider: string | null) => Record<string, string>;
   agentDir?: string;
   offline?: boolean;
   onEvent: (sessionId: string, seq: number, ev: AgentDeskEvent) => void;
@@ -132,6 +134,8 @@ export function stateFromRecord(record: SessionRecord): SessionState {
 
 class SessionRuntime {
   readonly sessionId: string;
+  /** 会话 provider（set_model 需要 provider + modelId，README 8.6.4）。 */
+  readonly provider: string | null;
   sidecar: PiSidecar;
   private readonly manager: SessionManager;
   private readonly history: AgentDeskEvent[] = [];
@@ -141,9 +145,16 @@ class SessionRuntime {
   private pending: PendingEvent[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(manager: SessionManager, sessionId: string, sidecar: PiSidecar, seqOffset = 0) {
+  constructor(
+    manager: SessionManager,
+    sessionId: string,
+    sidecar: PiSidecar,
+    provider: string | null,
+    seqOffset = 0,
+  ) {
     this.manager = manager;
     this.sessionId = sessionId;
+    this.provider = provider;
     this.sidecar = sidecar;
     this.seq = seqOffset;
     this.attach(sidecar);
@@ -282,6 +293,8 @@ export class SessionManager {
     const thinking = opts.thinkingLevel ?? this.options.defaultThinkingLevel;
     if (thinking) sidecarOpts.thinkingLevel = thinking;
     if (this.options.agentDir) sidecarOpts.agentDir = this.options.agentDir;
+    const providerEnv = this.options.resolveProviderEnv?.(provider ?? null) ?? {};
+    if (Object.keys(providerEnv).length > 0) sidecarOpts.env = providerEnv;
 
     const workspace = this.options.store.upsertWorkspace(workspacePath).workspace;
     this.options.store.createSession({
@@ -304,7 +317,7 @@ export class SessionManager {
         cause: err,
       });
     }
-    const rt = new SessionRuntime(this, sessionId, sidecar);
+    const rt = new SessionRuntime(this, sessionId, sidecar, provider ?? null);
     this.runtimes.set(sessionId, rt);
     sidecar.start();
 
@@ -372,10 +385,12 @@ export class SessionManager {
     };
     if (this.options.offline) sidecarOpts.offline = true;
     if (this.options.agentDir) sidecarOpts.agentDir = this.options.agentDir;
+    const providerEnv = this.options.resolveProviderEnv?.(record.provider) ?? {};
+    if (Object.keys(providerEnv).length > 0) sidecarOpts.env = providerEnv;
     try {
       const sidecar = this.options.bridge.createSessionSidecar(sessionId, sidecarOpts);
       const seqOffset = this.options.store.latestSeq(sessionId);
-      const rt = new SessionRuntime(this, sessionId, sidecar, seqOffset);
+      const rt = new SessionRuntime(this, sessionId, sidecar, record.provider, seqOffset);
       this.runtimes.set(sessionId, rt);
       sidecar.start();
       const state = await sidecar.waitReady(15_000);
@@ -411,7 +426,71 @@ export class SessionManager {
 
   async setModel(sessionId: string, model: string): Promise<void> {
     const rt = this.get(sessionId);
-    await rt.sidecar.command('set_model', { model }, { timeoutMs: 10_000 });
+    await rt.sidecar.command(
+      'set_model',
+      { provider: rt.provider ?? '', modelId: model },
+      { timeoutMs: 10_000 },
+    );
+    // v0.83.0 RPC 模式在 set_model 后不保证发状态事件，主动 get_state 校正（README 8.6.4）。
+    const state = (await rt.sidecar.command(
+      'get_state',
+      {},
+      { timeoutMs: 5_000 },
+    )) as PiSessionState;
+    rt.setState(toSessionState(state));
+  }
+
+  /** get_available_models → 渲染层模型选择器（README 8.6.4） */
+  async getModels(sessionId: string): Promise<
+    Array<{
+      id: string;
+      name: string | null;
+      provider: string | null;
+      api: string | null;
+      reasoning: boolean;
+      input: string[];
+      contextWindow: number | null;
+      maxTokens: number | null;
+      cost: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number } | null;
+    }>
+  > {
+    const rt = this.get(sessionId);
+    const data = (await rt.sidecar.command('get_available_models', {}, { timeoutMs: 10_000 })) as {
+      models: Array<{
+        id: string;
+        name?: string;
+        provider?: string;
+        api?: string;
+        reasoning?: boolean;
+        input?: string[];
+        contextWindow?: number;
+        maxTokens?: number;
+        cost?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+      }>;
+    };
+    return (data.models ?? []).map((m) => ({
+      id: m.id,
+      name: m.name ?? null,
+      provider: m.provider ?? null,
+      api: m.api ?? null,
+      reasoning: m.reasoning ?? false,
+      input: m.input ?? [],
+      contextWindow: m.contextWindow ?? null,
+      maxTokens: m.maxTokens ?? null,
+      cost: m.cost ?? null,
+    }));
+  }
+
+  async setThinkingLevel(sessionId: string, level: string): Promise<void> {
+    const rt = this.get(sessionId);
+    await rt.sidecar.command('set_thinking_level', { level }, { timeoutMs: 10_000 });
+    // 同上：主动 get_state 校正思考强度。
+    const state = (await rt.sidecar.command(
+      'get_state',
+      {},
+      { timeoutMs: 5_000 },
+    )) as PiSessionState;
+    rt.setState(toSessionState(state));
   }
 
   list(query: SessionListQuery = {}): SessionSummary[] {
@@ -468,14 +547,19 @@ export class SessionManager {
   /** 事件合流后落库（渲染缓存 + 索引更新），再广播。 */
   persist(sessionId: string, batch: PendingEvent[]): void {
     if (batch.length === 0) return;
-    const rt = this.runtimes.get(sessionId);
-    const state = rt?.stateSnapshot;
-    this.options.store.appendEvents(sessionId, batch, {
-      messageCount: rt?.messageCount ?? 0,
-      status: state?.isStreaming ? 'streaming' : 'idle',
-      updatedAt: Date.now(),
-    });
-    if (rt) this.syncSessionRow(sessionId, rt);
+    if (!this.options.store.isOpen()) return;
+    try {
+      const rt = this.runtimes.get(sessionId);
+      const state = rt?.stateSnapshot;
+      this.options.store.appendEvents(sessionId, batch, {
+        messageCount: rt?.messageCount ?? 0,
+        status: state?.isStreaming ? 'streaming' : 'idle',
+        updatedAt: Date.now(),
+      });
+      if (rt) this.syncSessionRow(sessionId, rt);
+    } catch (err) {
+      console.warn(`[session] 事件落库失败：${(err as Error)?.message ?? String(err)}`);
+    }
   }
 
   private syncSessionRow(sessionId: string, rt: SessionRuntime): void {

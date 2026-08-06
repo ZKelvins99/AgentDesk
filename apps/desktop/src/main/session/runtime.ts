@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   type MockProvider,
@@ -9,6 +9,7 @@ import {
 } from '@agentdesk/mock-provider';
 import { app, BrowserWindow } from 'electron';
 import { PiBridge, SidecarPool } from '../pi';
+import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
 import { SessionManager } from './session-manager';
 
@@ -23,6 +24,7 @@ import { SessionManager } from './session-manager';
 export interface SessionRuntimeHandle {
   sessionManager: SessionManager;
   workspaces: WorkspaceManager;
+  providers: ProviderManager;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
 }
@@ -68,6 +70,12 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   // 「本次信任」不跨重启：启动时重置为未知，下次打开重新询问（README 8.9）
   store.resetOnceTrust();
   const workspaces = new WorkspaceManager({ store });
+  const secrets = new SecretsStore(path.join(homedir(), '.agentdesk'), electronSecretEncryptor);
+  const providers = new ProviderManager({
+    modelsDir: process.env.PI_CODING_AGENT_DIR ?? path.join(homedir(), '.pi', 'agent'),
+    secrets,
+    binary,
+  });
 
   let mockSetup: MockSetup | null = null;
   if (process.env.AGENTDESK_MOCK_PROVIDER === '1') {
@@ -94,6 +102,8 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     defaultThinkingLevel: process.env.AGENTDESK_THINKING_LEVEL,
     trust,
     resolveTrust: (p: string) => workspaces.resolveTrustForSpawn(p),
+    resolveProviderEnv: (provider: string | null) =>
+      provider ? providers.envForProvider(provider) : {},
     ...(mockSetup?.agentDir ? { agentDir: mockSetup.agentDir } : {}),
     offline,
     onEvent: (sessionId, seq, ev) => {
@@ -106,6 +116,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   return {
     sessionManager,
     workspaces,
+    providers,
     kernel: { binary },
     dispose: async () => {
       await sessionManager.shutdownAll(5_000);

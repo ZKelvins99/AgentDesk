@@ -1,17 +1,24 @@
 import {
+  type authLaunchLoginRequestSchema,
   type InvokeChannel,
   IPC_CHANNELS,
   invokeRequestSchemas,
+  type providerDeleteRequestSchema,
+  type providerDiscoverModelsRequestSchema,
+  type providerSaveRequestSchema,
+  type providerTestRequestSchema,
   type sessionAbortRequestSchema,
   type sessionArchiveRequestSchema,
   type sessionAttachRequestSchema,
   type sessionCreateRequestSchema,
   type sessionDeleteRequestSchema,
   type sessionExportRequestSchema,
+  type sessionGetModelsRequestSchema,
   type sessionListRequestSchema,
   type sessionRenameRequestSchema,
   type sessionSendRequestSchema,
   type sessionSetModelRequestSchema,
+  type sessionSetThinkingLevelRequestSchema,
   type workspaceAddRequestSchema,
   type workspaceOpenRequestSchema,
   type workspaceRemoveRequestSchema,
@@ -20,6 +27,7 @@ import {
 import { AgentDeskError } from '@agentdesk/shared';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
+import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { WorkspaceManager } from './storage';
 
@@ -41,6 +49,7 @@ function parseRequest(channel: InvokeChannel, raw: unknown): unknown {
 export interface IpcHandlerDeps {
   sessionManager: SessionManager;
   workspaces: WorkspaceManager;
+  providers: ProviderManager;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -158,6 +167,64 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['workspace:trust'], async (_event, raw: unknown) => {
     const req = parseRequest('workspace:trust', raw) as z.infer<typeof workspaceTrustRequestSchema>;
     deps.workspaces.trust(req.workspaceId, req.decision);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:get-models'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:get-models', raw) as z.infer<
+      typeof sessionGetModelsRequestSchema
+    >;
+    return { models: await deps.sessionManager.getModels(req.sessionId) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:set-thinking-level'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:set-thinking-level', raw) as z.infer<
+      typeof sessionSetThinkingLevelRequestSchema
+    >;
+    await deps.sessionManager.setThinkingLevel(req.sessionId, req.level);
+  });
+
+  // ---- Provider / Model / 密钥（README 8.6）----
+
+  ipcMain.handle(IPC_CHANNELS['provider:list'], async () => ({
+    providers: deps.providers.list(),
+  }));
+
+  ipcMain.handle(IPC_CHANNELS['provider:save'], async (_event, raw: unknown) => {
+    const req = parseRequest('provider:save', raw) as z.infer<typeof providerSaveRequestSchema>;
+    deps.providers.save(req.config, req.apiKey);
+    return { name: req.config.name };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['provider:delete'], async (_event, raw: unknown) => {
+    const req = parseRequest('provider:delete', raw) as z.infer<typeof providerDeleteRequestSchema>;
+    deps.providers.delete(req.name);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['provider:presets'], async () => ({
+    presets: deps.providers.presets(),
+  }));
+
+  ipcMain.handle(IPC_CHANNELS['provider:discover-models'], async (_event, raw: unknown) => {
+    const req = parseRequest('provider:discover-models', raw) as z.infer<
+      typeof providerDiscoverModelsRequestSchema
+    >;
+    return { models: await deps.providers.discoverModels(req) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['provider:test'], async (_event, raw: unknown) => {
+    const req = parseRequest('provider:test', raw) as z.infer<typeof providerTestRequestSchema>;
+    return deps.providers.testProvider(req.name, req.model);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['secrets:status'], async () => deps.providers.secretsStatus());
+
+  ipcMain.handle(IPC_CHANNELS['auth:status'], async () => ({
+    providers: await deps.providers.authStatus(),
+  }));
+
+  ipcMain.handle(IPC_CHANNELS['auth:launch-login'], async (_event, raw: unknown) => {
+    parseRequest('auth:launch-login', raw) as z.infer<typeof authLaunchLoginRequestSchema>;
+    return deps.providers.launchLogin();
   });
 
   ipcMain.handle(IPC_CHANNELS['workspace:pick-directory'], async (event) => {

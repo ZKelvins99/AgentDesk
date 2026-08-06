@@ -43,7 +43,12 @@ export const newSessionRequestSchema = z
   .passthrough();
 
 export const setModelRequestSchema = z
-  .object({ ...baseRequest, type: z.literal('set_model'), model: z.string() })
+  .object({
+    ...baseRequest,
+    type: z.literal('set_model'),
+    provider: z.string(),
+    modelId: z.string(),
+  })
   .passthrough();
 
 export const cycleModelRequestSchema = z

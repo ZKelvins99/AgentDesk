@@ -22,6 +22,7 @@ if (!gotTheLock) {
     registerIpcHandlers({
       sessionManager: runtime.sessionManager,
       workspaces: runtime.workspaces,
+      providers: runtime.providers,
     });
     createMainWindow();
 

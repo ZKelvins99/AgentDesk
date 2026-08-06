@@ -167,6 +167,7 @@ function toSession(row: SessionRow): SessionRecord {
 
 export class SessionStore {
   private readonly sqlite: Database.Database;
+  private closed = false;
   private readonly exportsDir: string;
 
   constructor(database: AppDatabase, exportsDir: string) {
@@ -416,7 +417,12 @@ export class SessionStore {
     return file;
   }
 
+  isOpen(): boolean {
+    return !this.closed;
+  }
+
   close(): void {
+    this.closed = true;
     this.sqlite.close();
   }
 }
