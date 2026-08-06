@@ -10,6 +10,7 @@ import {
 import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { ConfigStore } from '../config/config-store';
+import { ExtensionCompatService } from '../extensions/extension-compat';
 import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
 import { PackageManager } from '../packages/package-manager';
@@ -41,6 +42,7 @@ export interface SessionRuntimeHandle {
   packageSecurity: PackageSecurityInspector;
   config: ConfigStore;
   profiles: ProfileManager;
+  extensions: ExtensionCompatService;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -99,6 +101,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const profileManager = new ProfileManager();
   const profileAgentDir = profileManager.currentAgentDir();
   const agentDir = mockSetup?.agentDir ?? profileAgentDir;
+  const extensionCompat = new ExtensionCompatService(agentDir);
 
   const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
 
@@ -181,6 +184,18 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
         | undefined) ?? 'full-access',
     offline,
     onEvent: (sessionId, seq, ev) => {
+      // Extension 兼容性运行时捕获（README 8.5.2）：无法映射的 UI 请求 / extension_error 记录在案
+      if (ev.k === 'ui.request') {
+        extensionCompat.runtimeTracker().recordUiRequest(ev.kind);
+      } else if (ev.k === 'error' && ev.scope === 'extension') {
+        const detail = ev.detail as { extensionPath?: unknown } | undefined;
+        extensionCompat
+          .runtimeTracker()
+          .recordExtensionError(
+            typeof detail?.extensionPath === 'string' ? detail.extensionPath : undefined,
+            ev.message,
+          );
+      }
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send('event:session', { sessionId, seq, ev });
       }
@@ -199,6 +214,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     packageSecurity,
     config: configStore,
     profiles: profileManager,
+    extensions: extensionCompat,
     uplink,
     kernel: { binary },
     dispose: async () => {

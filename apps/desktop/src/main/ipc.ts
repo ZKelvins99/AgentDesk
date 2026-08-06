@@ -7,6 +7,7 @@ import {
   type approvalRuleSaveRequestSchema,
   type approvalRulesListRequestSchema,
   type authLaunchLoginRequestSchema,
+  type extensionsListRequestSchema,
   type InvokeChannel,
   IPC_CHANNELS,
   invokeRequestSchemas,
@@ -65,6 +66,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { ConfigStore } from './config/config-store';
+import type { ExtensionCompatService } from './extensions/extension-compat';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
 import type {
@@ -135,6 +137,8 @@ export interface IpcHandlerDeps {
   config: ConfigStore;
   /** M7：Profile（Agent Dir 隔离，README 8.8.3）。 */
   profiles: ProfileManager;
+  /** M7：Extension 兼容性标注（README 8.5.2，静态扫描 + 运行时捕获）。 */
+  extensions: ExtensionCompatService;
   /** 内核二进制路径（设置页 2 健康状态展示）。 */
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
@@ -614,6 +618,13 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     const req = parseRequest('profile:delete', raw) as z.infer<typeof profileDeleteRequestSchema>;
     deps.profiles.delete(req.id);
     return { deleted: req.id };
+  });
+
+  // ---- Extension 兼容性标注（README 8.5.2，M7 第九步）----
+
+  ipcMain.handle(IPC_CHANNELS['extensions:list'], async (_event, raw: unknown) => {
+    const req = parseRequest('extensions:list', raw) as z.infer<typeof extensionsListRequestSchema>;
+    return deps.extensions.list(req.workspacePath);
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

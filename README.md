@@ -1487,6 +1487,7 @@ AgentDesk  ›  重构 Pi Bridge  ✎        [42.1k/200k ▓▓▓░░]   打�
 | `mcp:import` / `export` | invoke | 兼容 Claude Desktop / Cursor 的 `mcpServers` 格式 |
 | `pkg:list` / `install` / `uninstall` / `update` | invoke | Pi Package 管理（调 `pi package` 子命令） |
 | `pkg:info` | invoke | 包内资源清单与过滤配置 |
+| `extensions:list` | invoke | Extension 兼容性标注（FULL / PARTIAL / DEGRADED / TUI_ONLY，静态扫描 + 运行时捕获） |
 | `plugin:list` / `install` / `uninstall` / `enable` / `permissions` | invoke | AgentDesk 插件（P1） |
 
 **内核 / 终端 / 应用**

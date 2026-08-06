@@ -2324,3 +2324,88 @@ button:disabled {
   color: #27ae60;
   border-color: color-mix(in srgb, #27ae60 45%, var(--border-subtle));
 }
+
+/* ---- Extension 兼容性标注（README 8.5.2，M7）---- */
+.ext-compat-card {
+  width: min(680px, calc(100vw - 48px));
+  max-height: 82vh;
+  overflow: auto;
+}
+.ext-list {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0;
+}
+.ext-row {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+}
+.ext-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ext-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+.ext-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  word-break: break-all;
+}
+.ext-level-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--border);
+}
+.ext-level-full {
+  color: #27ae60;
+  border-color: color-mix(in srgb, #27ae60 45%, var(--border-subtle));
+}
+.ext-level-partial {
+  color: #3b82f6;
+  border-color: color-mix(in srgb, #3b82f6 45%, var(--border-subtle));
+}
+.ext-level-degraded {
+  color: #e67e22;
+  border-color: color-mix(in srgb, #e67e22 45%, var(--border-subtle));
+}
+.ext-level-tui_only {
+  color: var(--fg-muted);
+  border-color: var(--border);
+}
+.ext-issues {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+.ext-issues code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--warn, #e67e22);
+}
+.ext-issues-ok {
+  font-size: 12px;
+  color: #27ae60;
+}
+.ext-runtime-notes {
+  display: grid;
+  gap: 2px;
+}
+.ext-runtime-note {
+  font-size: 12px;
+  color: var(--fg-muted);
+  border-left: 2px solid var(--warn, #e67e22);
+  padding-left: 8px;
+}

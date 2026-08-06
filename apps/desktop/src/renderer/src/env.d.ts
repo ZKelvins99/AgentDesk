@@ -6,6 +6,8 @@ import type {
   ApprovalRule,
   AuthProviderStatus,
   ConfigValidationIssue,
+  ExtensionRuntimeNote,
+  ExtensionView,
   KernelStatus,
   McpCallLogEntry,
   McpServerView,
@@ -291,6 +293,12 @@ declare global {
           id: string;
         }): Promise<{ activeId: string; agentDir: string; requiresRestart: boolean }>;
         delete(req: { id: string }): Promise<{ deleted: string }>;
+      };
+      extensions: {
+        list(req?: { workspacePath?: string }): Promise<{
+          extensions: ExtensionView[];
+          runtimeNotes: ExtensionRuntimeNote[];
+        }>;
       };
       approval: {
         respond(req: {

@@ -878,6 +878,45 @@ export const profileDeleteRequestSchema = z.object({
 });
 export const profileDeleteResponseSchema = z.object({ deleted: z.string() });
 
+/** Extension 兼容性标注（README 8.5.2）。 */
+export const extensionCompatLevelSchema = z.enum(['FULL', 'PARTIAL', 'DEGRADED', 'TUI_ONLY']);
+export type ExtensionCompatLevel = z.infer<typeof extensionCompatLevelSchema>;
+
+export const extensionCompatIssueSchema = z.object({
+  api: z.string(),
+  level: extensionCompatLevelSchema,
+  line: z.number().int().nullable(),
+  snippet: z.string().optional(),
+});
+export type ExtensionCompatIssue = z.infer<typeof extensionCompatIssueSchema>;
+
+export const extensionRuntimeNoteSchema = z.object({
+  at: z.string(),
+  kind: z.enum(['ui.request', 'extension.error']),
+  detail: z.string(),
+  extensionPath: z.string().optional(),
+});
+export type ExtensionRuntimeNote = z.infer<typeof extensionRuntimeNoteSchema>;
+
+export const extensionViewSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  source: z.enum(['global', 'project', 'configured']),
+  level: extensionCompatLevelSchema,
+  issues: z.array(extensionCompatIssueSchema),
+  runtimeNotes: z.array(extensionRuntimeNoteSchema),
+});
+export type ExtensionView = z.infer<typeof extensionViewSchema>;
+
+export const extensionsListRequestSchema = z.object({
+  workspacePath: z.string().optional(),
+});
+export const extensionsListResponseSchema = z.object({
+  extensions: z.array(extensionViewSchema),
+  runtimeNotes: z.array(extensionRuntimeNoteSchema),
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1156,6 +1195,10 @@ export interface InvokeMap {
     request: z.infer<typeof profileDeleteRequestSchema>;
     response: z.infer<typeof profileDeleteResponseSchema>;
   };
+  'extensions:list': {
+    request: z.infer<typeof extensionsListRequestSchema>;
+    response: z.infer<typeof extensionsListResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -1239,6 +1282,7 @@ export const invokeRequestSchemas = {
   'profile:create': profileCreateRequestSchema,
   'profile:switch': profileSwitchRequestSchema,
   'profile:delete': profileDeleteRequestSchema,
+  'extensions:list': extensionsListRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

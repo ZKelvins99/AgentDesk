@@ -148,6 +148,10 @@ const api = {
     delete: (req: InvokeMap['profile:delete']['request']) =>
       safeInvoke(IPC_CHANNELS['profile:delete'], req),
   },
+  extensions: {
+    list: (req?: { workspacePath?: string }) =>
+      safeInvoke(IPC_CHANNELS['extensions:list'], req ?? {}),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

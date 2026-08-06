@@ -76,6 +76,7 @@ export const IPC_CHANNELS = {
   'profile:create': 'profile:create',
   'profile:switch': 'profile:switch',
   'profile:delete': 'profile:delete',
+  'extensions:list': 'extensions:list',
 } as const;
 
 /** 请求/响应通道（invoke） */

@@ -31,6 +31,7 @@ if (!gotTheLock) {
       packageSecurity: runtime.packageSecurity,
       config: runtime.config,
       profiles: runtime.profiles,
+      extensions: runtime.extensions,
       kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
     });

@@ -2,6 +2,7 @@ import type { PackageSecurityInspection, PackageView } from '@agentdesk/ipc';
 import { useCallback, useEffect, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { ExtensionCompatPanel } from './ExtensionCompatPanel';
 
 const SOURCE_LABEL: Record<PackageView['sourceType'], string> = {
   npm: 'npm',
@@ -65,6 +66,7 @@ export function PackageSettings(): React.JSX.Element | null {
   const [error, setError] = useState('');
   const [actionLog, setActionLog] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [extPanelOpen, setExtPanelOpen] = useState(false);
 
   const [installOpen, setInstallOpen] = useState(false);
   const [installScope, setInstallScope] = useState<'global' | 'project'>('global');
@@ -351,6 +353,9 @@ export function PackageSettings(): React.JSX.Element | null {
             }
           >
             更新扩展
+          </button>
+          <button type="button" className="btn" onClick={() => setExtPanelOpen(true)}>
+            扩展兼容性
           </button>
           <button type="button" className="modal-close" onClick={close} aria-label="close">
             ×
@@ -746,6 +751,13 @@ export function PackageSettings(): React.JSX.Element | null {
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {extPanelOpen ? (
+        <ExtensionCompatPanel
+          workspacePath={workspacePath}
+          onClose={() => setExtPanelOpen(false)}
+        />
       ) : null}
     </div>
   );
