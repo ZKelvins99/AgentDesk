@@ -9,6 +9,7 @@ import {
   type SessionUiState,
 } from '../features/session/message-model';
 import type { SessionSummary } from '../types';
+import { cleanErrorMessage } from '../utils/error-message';
 
 export type SendMode = 'normal' | 'steer' | 'followUp';
 
@@ -207,7 +208,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
         const errMsg: SessionUiState = applyEvent(withSent, {
           k: 'error',
           scope: 'provider',
-          message: (err as Error).message,
+          message: cleanErrorMessage((err as Error).message),
         });
         return { sessions: { ...s.sessions, [sessionId]: errMsg } };
       });

@@ -20,9 +20,19 @@ export function SessionView(): React.JSX.Element {
   const toggleTerminal = useUiStore((s) => s.toggleTerminal);
 
   if (!activeId || !session) {
+    // activeId 存在但状态还没到 = 正在创建/恢复；完全没有 activeId = 尚未选择会话
     return (
       <div className="session-view">
-        <div className="session-empty-pane">{t('session.creating')}</div>
+        <div className="session-empty-pane">
+          {activeId ? (
+            <span>{t('session.creating')}</span>
+          ) : (
+            <div className="session-welcome">
+              <div className="empty-title">{t('session.emptyTitle')}</div>
+              <div className="empty-hint">{t('session.emptyHint')}</div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -44,6 +54,7 @@ export function SessionView(): React.JSX.Element {
           status={session.status}
           pendingCount={session.pendingCount}
           model={session.model}
+          approvalMode={session.approvalMode}
         />
       </div>
       {rightPanelOpen ? <RightPanel /> : null}

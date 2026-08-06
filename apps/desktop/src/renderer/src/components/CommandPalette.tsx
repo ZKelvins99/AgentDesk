@@ -5,6 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { shortcut } from '../utils/shortcut';
+import { Icon } from './Icon';
 
 interface Command {
   id: string;
@@ -199,7 +201,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.JSX.Elem
     >
       <div className="command-palette-panel">
         <div className="command-palette-input-wrap">
-          <span className="command-palette-icon">⌘</span>
+          <span className="command-palette-icon">
+            <Icon name="command" size={15} />
+          </span>
           <input
             ref={inputRef}
             className="command-palette-input"
@@ -231,7 +235,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.JSX.Elem
                 tabIndex={i === cursor ? 0 : -1}
               >
                 <span className="command-palette-label">{cmd.label}</span>
-                {cmd.shortcut && <kbd className="command-palette-shortcut">{cmd.shortcut}</kbd>}
+                {cmd.shortcut && (
+                  <kbd className="command-palette-shortcut">{shortcut(cmd.shortcut)}</kbd>
+                )}
               </div>
             ))}
           </div>

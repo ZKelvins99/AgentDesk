@@ -3,6 +3,7 @@
  * 点击会话头 token 徽标弹出，展示用量分解。
  */
 import { useCallback, useEffect, useState } from 'react';
+import { Icon } from './Icon';
 
 interface ContextUsage {
   used: number;
@@ -74,7 +75,7 @@ export function ContextUsageDrawer({
             aria-label="关闭"
             className="context-drawer-close"
           >
-            ×
+            <Icon name="close" size={15} />
           </button>
         </div>
         {error && <div className="context-drawer-error">{error}</div>}
@@ -95,7 +96,8 @@ export function ContextUsageDrawer({
             </div>
             {nearLimit && (
               <div className="context-usage-warn">
-                ⚠ 接近压缩阈值（{fmt(usage.compactionThreshold)}），pi 将自动压缩上下文。
+                <Icon name="alert" size={13} /> 接近压缩阈值（{fmt(usage.compactionThreshold)}），pi
+                将自动压缩上下文。
               </div>
             )}
             <table className="context-breakdown">

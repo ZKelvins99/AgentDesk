@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { t } from '../i18n';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { modelDetail } from '../utils/model-label';
 import { DiffPanel } from './DiffPanel';
+import { Icon } from './Icon';
 
 /** 右侧栈叠面板（README 9.2）：会话信息 + M3 会话操作（重命名/归档/删除/导出）。 */
 export function RightPanel(): React.JSX.Element {
@@ -54,7 +56,7 @@ export function RightPanel(): React.JSX.Element {
         <dt>{t('panel.status')}</dt>
         <dd data-status={session.status}>{t(statusKey)}</dd>
         <dt>{t('panel.model')}</dt>
-        <dd>{session.model ?? '—'}</dd>
+        <dd>{modelDetail(session.model)}</dd>
         <dt>{t('panel.seq')}</dt>
         <dd>{session.seq}</dd>
         <dt>{t('panel.messages')}</dt>
@@ -77,10 +79,10 @@ export function RightPanel(): React.JSX.Element {
             }}
           />
           <button type="button" className="session-action" onClick={() => void commitRename()}>
-            ✓
+            <Icon name="check" size={14} />
           </button>
           <button type="button" className="session-action" onClick={() => setRenaming(false)}>
-            ✕
+            <Icon name="close" size={14} />
           </button>
         </div>
       ) : (

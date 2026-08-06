@@ -4,6 +4,9 @@ import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
 import type { WorkspaceRecord } from '../types';
+import { isRealModel, modelLabel } from '../utils/model-label';
+import { shortcut } from '../utils/shortcut';
+import { Icon, type IconName } from './Icon';
 
 /** 左侧栏（README 9.3）：品牌区 / 主导航 / 项目（含信任态与拖拽添加）/ 最近会话 / 底部状态。 */
 export function Sidebar(): React.JSX.Element {
@@ -26,9 +29,12 @@ export function Sidebar(): React.JSX.Element {
   const openMcpSettings = useUiStore((s) => s.openMcpSettings);
   const openSkillSettings = useUiStore((s) => s.openSkillSettings);
   const openPackageSettings = useUiStore((s) => s.openPackageSettings);
+  const openGlobalSearch = useUiStore((s) => s.openGlobalSearch);
+  const openCommandPalette = useUiStore((s) => s.openCommandPalette);
 
   const recent = summaries.slice(0, 8);
   const activeWorkspacePath = activeId ? (sessions[activeId]?.workspacePath ?? '') : '';
+  const activeModel = activeId ? (sessions[activeId]?.model ?? null) : null;
 
   const handleDrop = (e: DragEvent<HTMLElement>): void => {
     e.preventDefault();
@@ -44,25 +50,25 @@ export function Sidebar(): React.JSX.Element {
       onDrop={handleDrop}
     >
       <div className="sidebar-brand">
-        <span className="brand-name">{t('app.name')} ⌄</span>
+        <span className="brand-name">{t('app.name')}</span>
         <span className="brand-actions">
           <button
             type="button"
             className="icon-btn"
-            disabled
-            title={t('sidebar.search')}
+            title={`${t('sidebar.search')} (${shortcut('⌘K')})`}
             aria-label={t('sidebar.search')}
+            onClick={openGlobalSearch}
           >
-            🔍
+            <Icon name="search" />
           </button>
           <button
             type="button"
             className="icon-btn"
-            disabled
-            title={t('sidebar.notifications')}
-            aria-label={t('sidebar.notifications')}
+            title={`${t('sidebar.commandPalette')} (${shortcut('⌘P')})`}
+            aria-label={t('sidebar.commandPalette')}
+            onClick={openCommandPalette}
           >
-            🔔
+            <Icon name="command" />
           </button>
         </span>
       </div>
@@ -73,9 +79,10 @@ export function Sidebar(): React.JSX.Element {
           className="nav-item"
           onClick={() => void createSession()}
           disabled={isCreating}
-          title={`${t('sidebar.newChat')} (⌘N)`}
+          title={`${t('sidebar.newChat')} (${shortcut('⌘N')})`}
         >
-          ＋ {t('sidebar.newChat')}
+          <Icon name="plus" />
+          {t('sidebar.newChat')}
         </button>
         {createError ? <div className="sidebar-error">{createError}</div> : null}
       </nav>
@@ -100,7 +107,8 @@ export function Sidebar(): React.JSX.Element {
           title={t('sidebar.dropHint')}
           onClick={() => void pickAndAdd()}
         >
-          ＋ {t('sidebar.addProject')}…
+          <Icon name="plus" size={14} />
+          {t('sidebar.addProject')}
         </button>
       </div>
 
@@ -130,50 +138,51 @@ export function Sidebar(): React.JSX.Element {
         <button
           type="button"
           className="footer-model"
-          title={t('model.picker.title')}
+          data-unset={!isRealModel(activeModel) || undefined}
+          title={t('composer.modelSwitch')}
           onClick={openModelPicker}
         >
-          {activeId && sessions[activeId]
-            ? (sessions[activeId]?.model ?? t('composer.model'))
-            : t('composer.model')}
+          {modelLabel(activeModel)}
+          <Icon name="chevronDown" size={12} />
         </button>
-        <span className="footer-help">? {t('sidebar.help')}</span>
-        <button
-          type="button"
-          className="icon-btn footer-settings"
-          title="设置（⌘,）"
-          aria-label="设置"
-          onClick={openSettingsPanel}
-        >
-          ⚙
-        </button>
-        <button
-          type="button"
-          className="icon-btn footer-settings"
-          title="MCP Host 管理"
-          aria-label="MCP Host 管理"
-          onClick={openMcpSettings}
-        >
-          🧩
-        </button>
-        <button
-          type="button"
-          className="icon-btn footer-settings"
-          title="Skill 管理"
-          aria-label="Skill 管理"
-          onClick={openSkillSettings}
-        >
-          📚
-        </button>
-        <button
-          type="button"
-          className="icon-btn footer-settings"
-          title="插件（Pi Package）管理"
-          aria-label="插件（Pi Package）管理"
-          onClick={openPackageSettings}
-        >
-          ⧩
-        </button>
+        <div className="footer-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            title={`${t('settings.title')} (${shortcut('⌘,')})`}
+            aria-label={t('settings.title')}
+            onClick={openSettingsPanel}
+          >
+            <Icon name="sliders" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title={t('mcp.title')}
+            aria-label={t('mcp.title')}
+            onClick={openMcpSettings}
+          >
+            <Icon name="plug" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title={t('skill.title')}
+            aria-label={t('skill.title')}
+            onClick={openSkillSettings}
+          >
+            <Icon name="book" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title={t('package.title')}
+            aria-label={t('package.title')}
+            onClick={openPackageSettings}
+          >
+            <Icon name="package" />
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -196,7 +205,7 @@ function WorkspaceItem({
   return (
     <div className="project-item" data-active={active} title={workspace.path}>
       <button type="button" className="project-icon" aria-label={workspace.path} onClick={onOpen}>
-        ▸
+        <Icon name="chevronRight" size={14} />
       </button>
       <button
         type="button"
@@ -207,7 +216,7 @@ function WorkspaceItem({
         {workspace.name}
       </button>
       <span className="project-trust" data-trust={workspace.trust} title={trustLabel}>
-        {trustIcon(workspace.trust)}
+        <Icon name={trustIcon(workspace.trust)} size={13} />
       </span>
       <button
         type="button"
@@ -216,23 +225,23 @@ function WorkspaceItem({
         aria-label={t('workspace.remove')}
         onClick={onRemove}
       >
-        ✕
+        <Icon name="close" size={13} />
       </button>
     </div>
   );
 }
 
-function trustIcon(trust: WorkspaceRecord['trust']): string {
+function trustIcon(trust: WorkspaceRecord['trust']): IconName {
   switch (trust) {
     case 'always':
     case 'alwaysParent':
-      return '✓';
+      return 'check';
     case 'once':
-      return '◐';
+      return 'shield';
     case 'never':
-      return '✕';
+      return 'close';
     default:
-      return '⚠';
+      return 'alert';
   }
 }
 

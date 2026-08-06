@@ -1,7 +1,9 @@
 import type { ApprovalMode } from '@agentdesk/shared';
+import { Icon } from '../../components/Icon';
 import { type I18nKey, t } from '../../i18n';
 import { useSessionStore } from '../../stores/session-store';
 import { useUiStore } from '../../stores/ui-store';
+import { isRealModel, modelLabel } from '../../utils/model-label';
 
 const APPROVAL_MODES: ApprovalMode[] = ['plan', 'read-only', 'auto-edit', 'full-access'];
 const MODE_KEYS: Record<ApprovalMode, I18nKey> = {
@@ -34,6 +36,7 @@ export function SessionHeader({
   const openAudit = useUiStore((s) => s.openAudit);
   const openContextUsageDrawer = useUiStore((s) => s.openContextUsageDrawer);
   const openSessionTree = useUiStore((s) => s.openSessionTree);
+  const openModelPicker = useUiStore((s) => s.openModelPicker);
   const workspaceName = workspaceNameOf(workspacePath);
   const sessionTitle = title || t('session.emptyTitle');
 
@@ -48,15 +51,23 @@ export function SessionHeader({
         <button
           type="button"
           className="token-badge"
-          title="查看上下文用量"
-          aria-label="查看上下文用量"
+          title={t('panel.messages')}
+          aria-label={t('panel.messages')}
           onClick={openContextUsageDrawer}
         >
-          {messageCount} msgs
+          <Icon name="gauge" size={14} />
+          {messageCount}
         </button>
-        <span className="model-chip" title={model ?? ''}>
-          {model ?? t('composer.model')}
-        </span>
+        <button
+          type="button"
+          className="model-chip"
+          data-unset={!isRealModel(model) || undefined}
+          title={t('composer.modelSwitch')}
+          onClick={openModelPicker}
+        >
+          {modelLabel(model)}
+          <Icon name="chevronDown" size={12} />
+        </button>
         <select
           className="approval-mode-chip"
           value={approvalMode}
@@ -78,10 +89,10 @@ export function SessionHeader({
           type="button"
           className="header-btn"
           onClick={openSessionTree}
-          title="会话树 (Ctrl+Shift+T)"
-          aria-label="会话树"
+          title={`${t('command.sessionTree')} (Ctrl+Shift+T)`}
+          aria-label={t('command.sessionTree')}
         >
-          ⎇
+          <Icon name="gitBranch" />
         </button>
         <button
           type="button"
@@ -90,7 +101,7 @@ export function SessionHeader({
           title={t('approval.audit')}
           aria-label={t('approval.audit')}
         >
-          🛡
+          <Icon name="shield" />
         </button>
         <button
           type="button"
@@ -100,7 +111,7 @@ export function SessionHeader({
           title={t('session.toggleFiles')}
           aria-label={t('session.toggleFiles')}
         >
-          ⊞
+          <Icon name="panelLeft" />
         </button>
         <button
           type="button"
@@ -110,7 +121,7 @@ export function SessionHeader({
           title={t('session.togglePanels')}
           aria-label={t('session.togglePanels')}
         >
-          ⧉
+          <Icon name="panelRight" />
         </button>
       </div>
     </header>

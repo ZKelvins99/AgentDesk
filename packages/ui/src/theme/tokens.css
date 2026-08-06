@@ -6,63 +6,87 @@
   --font-ui:
     ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", Inter, "Noto Sans SC", sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-  --font-size-base: 13px;
-  --line-height-base: 1.6;
-  --radius-card: 10px;
+  --font-size-base: 14px;
+  --font-size-sm: 12.5px;
+  --line-height-base: 1.65;
+  --radius-sm: 6px;
+  --radius-card: 12px;
+  /* 列表项 / 普通按钮 */
   --radius-chip: 8px;
-  --radius-bubble: 12px;
-  --titlebar-height: 32px;
-  --session-header-height: 44px;
-  --sidebar-width: 260px;
-  --msg-vspace: 12px;
-  --motion-in: 120ms;
-  --motion-out: 90ms;
-  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  /* 徽标类胶囊（模型、审批模式） */
+  --radius-pill: 999px;
+  --radius-bubble: 18px;
+  --radius-lg: 16px;
+  --titlebar-height: 36px;
+  --session-header-height: 48px;
+  --sidebar-width: 264px;
+  --msg-vspace: 18px;
+  --motion-in: 140ms;
+  --motion-out: 100ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 :root[data-theme="dark"] {
-  --bg-app: #0d0d0f;
-  --bg-sidebar: #131316;
-  --bg-surface: #1a1a1e;
-  --bg-elevated: #22222a;
-  --bg-input: #17171b;
-  --border-subtle: #26262d;
-  --border-strong: #34343d;
-  --fg-primary: #ececf1;
-  --fg-secondary: #a1a1aa;
-  --fg-muted: #6e6e78;
-  --accent: #4d9fff;
-  --accent-fg: #ffffff;
-  --ok: #3fb950;
-  --warn: #d29922;
-  --danger: #f85149;
-  --thinking: #8b7fd4;
+  --bg-app: #212121;
+  --bg-sidebar: #171717;
+  --bg-surface: #2a2a2a;
+  --bg-elevated: #303030;
+  --bg-input: #2f2f2f;
+  --bg-hover: rgb(255 255 255 / 6%);
+  --bg-active: rgb(255 255 255 / 10%);
+  --border-subtle: rgb(255 255 255 / 8%);
+  --border-strong: rgb(255 255 255 / 16%);
+  --fg-primary: #ececec;
+  --fg-secondary: #b4b4b4;
+  --fg-muted: #8f8f8f;
+  --accent: #6ea8fe;
+  --accent-fg: #1a1a1a;
+  /* 主操作按钮（发送）：codex 风格反色实心 */
+  --btn-primary-bg: #ececec;
+  --btn-primary-fg: #1a1a1a;
+  --ok: #5cc873;
+  --warn: #e3b341;
+  --danger: #f8776b;
+  --danger-bg: rgb(248 119 107 / 12%);
+  --thinking: #a99cea;
   --diff-add-bg: #12261a;
   --diff-del-bg: #2d1416;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 40%);
+  --shadow-lg: 0 16px 48px rgb(0 0 0 / 50%);
   --shiki-dark: #d4d4d8;
   --shiki-dark-bg: transparent;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg-app: #f7f7f8;
-  --bg-sidebar: #f0f0f2;
+  --bg-app: #ffffff;
+  --bg-sidebar: #f9f9f9;
   --bg-surface: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-input: #f2f2f4;
-  --border-subtle: #e4e4e9;
-  --border-strong: #d0d0d8;
-  --fg-primary: #1c1c22;
-  --fg-secondary: #55555f;
-  --fg-muted: #8a8a95;
-  --accent: #0a6ee8;
+  --bg-input: #f4f4f4;
+  --bg-hover: rgb(0 0 0 / 4%);
+  --bg-active: rgb(0 0 0 / 7%);
+  --border-subtle: rgb(0 0 0 / 8%);
+  --border-strong: rgb(0 0 0 / 15%);
+  --fg-primary: #0d0d0d;
+  --fg-secondary: #5d5d5d;
+  --fg-muted: #8f8f8f;
+  --accent: #0b6ee8;
   --accent-fg: #ffffff;
+  --btn-primary-bg: #0d0d0d;
+  --btn-primary-fg: #ffffff;
   --ok: #1a7f37;
   --warn: #9a6700;
   --danger: #d1242f;
+  --danger-bg: rgb(209 36 47 / 8%);
   --thinking: #6f5fc2;
   --diff-add-bg: #e6f4ea;
   --diff-del-bg: #fdebec;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 6%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 10%);
+  --shadow-lg: 0 16px 48px rgb(0 0 0 / 14%);
   --shiki-light: #24292f;
   --shiki-light-bg: transparent;
 }

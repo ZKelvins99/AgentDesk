@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
 import { useWorkspaceStore } from '../stores/workspace-store';
+import { Icon } from './Icon';
 
 type ResultKind = 'session' | 'file';
 
@@ -138,7 +139,9 @@ export function GlobalSearch({ onClose }: GlobalSearchProps): React.JSX.Element 
     >
       <div className="global-search-panel">
         <div className="global-search-input-wrap">
-          <span className="global-search-icon">🔍</span>
+          <span className="global-search-icon">
+            <Icon name="search" size={15} />
+          </span>
           <input
             ref={inputRef}
             className="global-search-input"
@@ -157,7 +160,7 @@ export function GlobalSearch({ onClose }: GlobalSearchProps): React.JSX.Element 
               onClick={() => setQuery('')}
               aria-label="清除"
             >
-              ×
+              <Icon name="close" size={12} />
             </button>
           )}
         </div>
@@ -178,7 +181,7 @@ export function GlobalSearch({ onClose }: GlobalSearchProps): React.JSX.Element 
                 tabIndex={i === cursor ? 0 : -1}
               >
                 <span className="global-search-result-icon">
-                  {r.kind === 'session' ? '💬' : '📄'}
+                  <Icon name={r.kind === 'session' ? 'message' : 'file'} size={14} />
                 </span>
                 <span className="global-search-result-label">{r.label}</span>
                 {r.sub && <span className="global-search-result-sub">{r.sub}</span>}

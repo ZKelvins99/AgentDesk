@@ -1,10 +1,11 @@
 import { t } from '../i18n';
 import { type Theme, useUiStore } from '../stores/ui-store';
+import { Icon, type IconName } from './Icon';
 
-const THEME_ICON: Record<Theme, string> = {
-  dark: '🌙',
-  light: '☀️',
-  system: '🖥',
+const THEME_ICON: Record<Theme, IconName> = {
+  dark: 'moon',
+  light: 'sun',
+  system: 'monitor',
 };
 
 const THEME_ORDER: Theme[] = ['dark', 'light', 'system'];
@@ -31,7 +32,7 @@ export function TitleBar(): React.JSX.Element {
           title={t('titlebar.theme')}
           aria-label={t('titlebar.theme')}
         >
-          {THEME_ICON[theme]}
+          <Icon name={THEME_ICON[theme]} size={15} />
         </button>
       </div>
       {!isMac ? (
@@ -43,7 +44,7 @@ export function TitleBar(): React.JSX.Element {
             aria-label={t('titlebar.minimize')}
             title={t('titlebar.minimize')}
           >
-            —
+            <Icon name="minimize" size={14} />
           </button>
           <button
             type="button"
@@ -52,7 +53,7 @@ export function TitleBar(): React.JSX.Element {
             aria-label={t('titlebar.maximize')}
             title={t('titlebar.maximize')}
           >
-            □
+            <Icon name="maximize" size={13} />
           </button>
           <button
             type="button"
@@ -61,7 +62,7 @@ export function TitleBar(): React.JSX.Element {
             aria-label={t('titlebar.close')}
             title={t('titlebar.close')}
           >
-            ✕
+            <Icon name="close" size={14} />
           </button>
         </div>
       ) : null}

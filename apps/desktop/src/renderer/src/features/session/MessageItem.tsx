@@ -1,4 +1,8 @@
 import { memo } from 'react';
+import { Icon } from '../../components/Icon';
+import { t } from '../../i18n';
+import { useUiStore } from '../../stores/ui-store';
+import { looksLikeMissingModel } from '../../utils/error-message';
 import type { UiMessage } from './message-model';
 import { StreamingMarkdown } from './StreamingMarkdown';
 import { ThinkingBlock } from './ThinkingBlock';
@@ -31,8 +35,34 @@ export const MessageItem = memo(function MessageItem({
         </div>
       );
     case 'system':
-      return <div className={`msg system-msg tone-${message.tone}`}>{message.text}</div>;
+      return message.tone === 'error' ? (
+        <SystemError text={message.text} />
+      ) : (
+        <div className={`msg system-msg tone-${message.tone}`}>{message.text}</div>
+      );
     default:
       return <span />;
   }
 });
+
+/** 错误提示卡：原因 + 可操作出口（缺模型时直达供应商配置）。 */
+function SystemError({ text }: { text: string }): React.JSX.Element {
+  const openProviderSettings = useUiStore((s) => s.openProviderSettings);
+  const needsProvider = looksLikeMissingModel(text);
+  return (
+    <div className="msg system-msg tone-error">
+      <Icon name="alert" size={15} className="system-msg-icon" />
+      <div className="system-msg-body">
+        <div>{text}</div>
+        {needsProvider ? (
+          <div className="system-msg-hint">
+            {t('session.needModel')}
+            <button type="button" className="link-btn" onClick={openProviderSettings}>
+              {t('session.goConfigure')}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
