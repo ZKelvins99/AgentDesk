@@ -68,6 +68,7 @@ export const IPC_CHANNELS = {
   'packages:uninstall': 'packages:uninstall',
   'packages:update': 'packages:update',
   'packages:set-filter': 'packages:set-filter',
+  'packages:inspect': 'packages:inspect',
 } as const;
 
 /** 请求/响应通道（invoke） */

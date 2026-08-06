@@ -1,4 +1,4 @@
-import type { PackageView } from '@agentdesk/ipc';
+import type { PackageSecurityInspection, PackageView } from '@agentdesk/ipc';
 import { useCallback, useEffect, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
@@ -76,6 +76,10 @@ export function PackageSettings(): React.JSX.Element | null {
   const [localPath, setLocalPath] = useState('');
   const [installLog, setInstallLog] = useState('');
   const [installing, setInstalling] = useState(false);
+  const [inspection, setInspection] = useState<PackageSecurityInspection | null>(null);
+  const [inspectionError, setInspectionError] = useState('');
+  const [inspecting, setInspecting] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     setError('');
@@ -210,24 +214,60 @@ export function PackageSettings(): React.JSX.Element | null {
     });
   };
 
+  const sourceOf = ():
+    | { type: 'npm'; name: string; version?: string }
+    | { type: 'git'; url: string; ref?: string }
+    | { type: 'local'; path: string } => {
+    if (installType === 'npm') {
+      return {
+        type: 'npm',
+        name: npmName.trim(),
+        ...(npmVersion.trim() ? { version: npmVersion.trim() } : {}),
+      };
+    }
+    if (installType === 'git') {
+      return {
+        type: 'git',
+        url: gitUrl.trim(),
+        ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
+      };
+    }
+    return { type: 'local', path: localPath };
+  };
+
+  const sourceValid = (): boolean => {
+    if (installType === 'npm') return npmName.trim().length > 0;
+    if (installType === 'git') return gitUrl.trim().length > 0;
+    return localPath.length > 0;
+  };
+
+  const resetReview = (): void => {
+    setInspection(null);
+    setInspectionError('');
+    setConfirmed(false);
+  };
+
+  const doInspect = (): void => {
+    const source = sourceOf();
+    if (!sourceValid()) return;
+    setInspecting(true);
+    setInspectionError('');
+    setInspection(null);
+    setConfirmed(false);
+    void window.agentdesk.packages
+      .inspect({ source })
+      .then((r) => setInspection(r.inspection))
+      .catch((err) =>
+        setInspectionError(`审查失败：${err instanceof Error ? err.message : String(err)}`),
+      )
+      .finally(() => setInspecting(false));
+  };
+
   const doInstall = (): void => {
+    const source = sourceOf();
     setInstalling(true);
     setInstallLog('');
     setError('');
-    const source =
-      installType === 'npm'
-        ? {
-            type: 'npm' as const,
-            name: npmName.trim(),
-            ...(npmVersion.trim() ? { version: npmVersion.trim() } : {}),
-          }
-        : installType === 'git'
-          ? {
-              type: 'git' as const,
-              url: gitUrl.trim(),
-              ...(gitRef.trim() ? { ref: gitRef.trim() } : {}),
-            }
-          : { type: 'local' as const, path: localPath };
     void window.agentdesk.packages
       .install({
         source,
@@ -238,6 +278,7 @@ export function PackageSettings(): React.JSX.Element | null {
         setInstallLog(r.ok ? `✓ ${r.command}\n${r.log}` : `✗ ${r.command}\n${r.log}`);
         if (r.ok) {
           setInstallOpen(false);
+          resetReview();
           void load();
         }
       })
@@ -287,6 +328,7 @@ export function PackageSettings(): React.JSX.Element | null {
               setGitUrl('');
               setGitRef('');
               setLocalPath('');
+              resetReview();
             }}
           >
             + 安装
@@ -525,7 +567,10 @@ export function PackageSettings(): React.JSX.Element | null {
                     type="radio"
                     name="install-type"
                     checked={installType === t}
-                    onChange={() => setInstallType(t)}
+                    onChange={() => {
+                      setInstallType(t);
+                      resetReview();
+                    }}
                   />
                   {t === 'npm' ? 'npm 包名' : t === 'git' ? 'Git URL' : '本地目录'}
                 </label>
@@ -542,14 +587,20 @@ export function PackageSettings(): React.JSX.Element | null {
                     className="skill-install-input"
                     placeholder="@scope/pkg"
                     value={npmName}
-                    onChange={(e) => setNpmName(e.target.value)}
+                    onChange={(e) => {
+                      setNpmName(e.target.value);
+                      resetReview();
+                    }}
                     spellCheck={false}
                   />
                   <input
                     className="skill-install-input skill-install-ref"
                     placeholder="版本（可选）"
                     value={npmVersion}
-                    onChange={(e) => setNpmVersion(e.target.value)}
+                    onChange={(e) => {
+                      setNpmVersion(e.target.value);
+                      resetReview();
+                    }}
                     spellCheck={false}
                   />
                 </div>
@@ -564,14 +615,20 @@ export function PackageSettings(): React.JSX.Element | null {
                     className="skill-install-input"
                     placeholder="https://github.com/user/repo.git"
                     value={gitUrl}
-                    onChange={(e) => setGitUrl(e.target.value)}
+                    onChange={(e) => {
+                      setGitUrl(e.target.value);
+                      resetReview();
+                    }}
                     spellCheck={false}
                   />
                   <input
                     className="skill-install-input skill-install-ref"
                     placeholder="ref（可选）"
                     value={gitRef}
-                    onChange={(e) => setGitRef(e.target.value)}
+                    onChange={(e) => {
+                      setGitRef(e.target.value);
+                      resetReview();
+                    }}
                     spellCheck={false}
                   />
                 </div>
@@ -601,18 +658,80 @@ export function PackageSettings(): React.JSX.Element | null {
               </div>
               <button
                 type="button"
+                className="btn"
+                disabled={inspecting || !sourceValid()}
+                onClick={doInspect}
+              >
+                {inspecting ? '审查中…' : '安全审查'}
+              </button>
+              <button
+                type="button"
                 className="primary-btn"
-                disabled={
-                  installing ||
-                  (installType === 'npm' && !npmName.trim()) ||
-                  (installType === 'git' && !gitUrl.trim()) ||
-                  (installType === 'local' && !localPath)
-                }
+                disabled={installing || !confirmed || !inspection}
                 onClick={doInstall}
               >
                 安装
               </button>
             </div>
+
+            {inspectionError ? <div className="skill-error">{inspectionError}</div> : null}
+
+            {inspection ? (
+              <div className="package-review">
+                <div className="skill-group-label">
+                  安全审查：{inspection.name}
+                  {inspection.version ? `@${inspection.version}` : ''}（{inspection.sourceType}，
+                  {inspection.fileCount} 个文件）
+                </div>
+                {inspection.warnings.length > 0 ? (
+                  <div className="package-review-warning">
+                    {inspection.warnings.map((w) => (
+                      <div key={w}>⚠ {w}</div>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="package-review-grid">
+                  <div>
+                    <div className="skill-group-label">文件清单（前 300 个）</div>
+                    <pre className="package-file-list">
+                      {inspection.files.length > 0 ? inspection.files.join('\n') : '（空）'}
+                    </pre>
+                  </div>
+                  <div>
+                    <div className="skill-group-label">dependencies</div>
+                    <pre className="package-file-list">
+                      {Object.keys(inspection.dependencies).length > 0
+                        ? Object.entries(inspection.dependencies)
+                            .map(([k, v]) => `${k}@${v}`)
+                            .join('\n')
+                        : '（无运行时依赖）'}
+                    </pre>
+                    <div className="skill-group-label">安装脚本</div>
+                    <pre className="package-file-list">
+                      {Object.keys(inspection.installScripts).length > 0
+                        ? Object.entries(inspection.installScripts)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join('\n')
+                        : '（无 preinstall/install/postinstall）'}
+                    </pre>
+                    {inspection.license ? (
+                      <div className="skill-group-label">许可证：{inspection.license}</div>
+                    ) : null}
+                    {inspection.description ? (
+                      <div className="skill-group-label">描述：{inspection.description}</div>
+                    ) : null}
+                  </div>
+                </div>
+                <label className="package-confirm">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                  />
+                  我理解此包将以我的权限运行任意代码
+                </label>
+              </div>
+            ) : null}
 
             {installLog ? (
               <div

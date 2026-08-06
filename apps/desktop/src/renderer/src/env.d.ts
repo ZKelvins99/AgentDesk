@@ -9,6 +9,7 @@ import type {
   McpServerView,
   McpSnapshot,
   McpToolView,
+  PackageSecurityInspection,
   PackageView,
   ProviderPreset,
   ProviderView,
@@ -247,6 +248,12 @@ declare global {
           };
           workspacePath?: string;
         }): Promise<{ package: PackageView }>;
+        inspect(req: {
+          source:
+            | { type: 'npm'; name: string; version?: string }
+            | { type: 'git'; url: string; ref?: string }
+            | { type: 'local'; path: string };
+        }): Promise<{ inspection: PackageSecurityInspection }>;
       };
       approval: {
         respond(req: {

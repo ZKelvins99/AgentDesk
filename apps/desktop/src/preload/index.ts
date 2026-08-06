@@ -129,6 +129,8 @@ const api = {
       safeInvoke(IPC_CHANNELS['packages:update'], req),
     setFilter: (req: InvokeMap['packages:set-filter']['request']) =>
       safeInvoke(IPC_CHANNELS['packages:set-filter'], req),
+    inspect: (req: InvokeMap['packages:inspect']['request']) =>
+      safeInvoke(IPC_CHANNELS['packages:inspect'], req),
   },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>

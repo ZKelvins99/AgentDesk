@@ -771,6 +771,31 @@ export const packagesSetFilterRequestSchema = z.object({
 });
 export const packagesSetFilterResponseSchema = z.object({ package: packageViewSchema });
 
+export const packageSecurityInspectionSchema = z.object({
+  source: z.string(),
+  sourceType: z.enum(['npm', 'git', 'local']),
+  name: z.string(),
+  version: z.string().optional(),
+  fileCount: z.number().int().nonnegative(),
+  files: z.array(z.string()),
+  hasPostinstall: z.boolean(),
+  installScripts: z.object({
+    preinstall: z.string().optional(),
+    install: z.string().optional(),
+    postinstall: z.string().optional(),
+  }),
+  dependencies: z.record(z.string(), z.string()),
+  license: z.string().optional(),
+  description: z.string().optional(),
+  warnings: z.array(z.string()),
+});
+export type PackageSecurityInspection = z.infer<typeof packageSecurityInspectionSchema>;
+
+export const packagesInspectRequestSchema = z.object({ source: packageInstallSourceSchema });
+export const packagesInspectResponseSchema = z.object({
+  inspection: packageSecurityInspectionSchema,
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1017,6 +1042,10 @@ export interface InvokeMap {
     request: z.infer<typeof packagesSetFilterRequestSchema>;
     response: z.infer<typeof packagesSetFilterResponseSchema>;
   };
+  'packages:inspect': {
+    request: z.infer<typeof packagesInspectRequestSchema>;
+    response: z.infer<typeof packagesInspectResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -1092,6 +1121,7 @@ export const invokeRequestSchemas = {
   'packages:uninstall': packagesUninstallRequestSchema,
   'packages:update': packagesUpdateRequestSchema,
   'packages:set-filter': packagesSetFilterRequestSchema,
+  'packages:inspect': packagesInspectRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

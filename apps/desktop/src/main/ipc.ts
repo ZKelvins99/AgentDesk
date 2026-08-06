@@ -19,6 +19,7 @@ import {
   type mcpSnapshotsRequestSchema,
   type mcpTestRequestSchema,
   type mcpToolsRequestSchema,
+  type packagesInspectRequestSchema,
   type packagesInstallRequestSchema,
   type packagesListRequestSchema,
   type packagesSetFilterRequestSchema,
@@ -60,7 +61,12 @@ import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
-import type { PackageManager, PackageResourceFilter } from './packages/package-manager';
+import type {
+  PackageInstallSource,
+  PackageManager,
+  PackageResourceFilter,
+} from './packages/package-manager';
+import type { PackageSecurityInspector } from './packages/package-security';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
@@ -81,6 +87,30 @@ function parseRequest(channel: InvokeChannel, raw: unknown): unknown {
   return parsed.data;
 }
 
+type PackageSourceInput =
+  | { type: 'npm'; name: string; version?: string | undefined }
+  | { type: 'git'; url: string; ref?: string | undefined }
+  | { type: 'local'; path: string };
+
+/** zod 推断的 optional 属性含显式 undefined，归一化后再交给管理器（exactOptionalPropertyTypes）。 */
+function normalizePackageSource(source: PackageSourceInput): PackageInstallSource {
+  if (source.type === 'npm') {
+    return {
+      type: 'npm',
+      name: source.name,
+      ...(source.version !== undefined ? { version: source.version } : {}),
+    };
+  }
+  if (source.type === 'git') {
+    return {
+      type: 'git',
+      url: source.url,
+      ...(source.ref !== undefined ? { ref: source.ref } : {}),
+    };
+  }
+  return source;
+}
+
 export interface IpcHandlerDeps {
   sessionManager: SessionManager;
   workspaces: WorkspaceManager;
@@ -92,6 +122,8 @@ export interface IpcHandlerDeps {
   skills: SkillManager;
   /** M7：Pi Package 管理（README 8.5.1）。 */
   packages: PackageManager;
+  /** M7：插件安全审查（README 8.5.1）。 */
+  packageSecurity: PackageSecurityInspector;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
 }
@@ -469,22 +501,8 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     const req = parseRequest('packages:install', raw) as z.infer<
       typeof packagesInstallRequestSchema
     >;
-    const source =
-      req.source.type === 'npm'
-        ? {
-            type: 'npm' as const,
-            name: req.source.name,
-            ...(req.source.version !== undefined ? { version: req.source.version } : {}),
-          }
-        : req.source.type === 'git'
-          ? {
-              type: 'git' as const,
-              url: req.source.url,
-              ...(req.source.ref !== undefined ? { ref: req.source.ref } : {}),
-            }
-          : req.source;
     return deps.packages.install({
-      source,
+      source: normalizePackageSource(req.source),
       scope: req.scope,
       ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
     });
@@ -528,6 +546,13 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
         ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
       }),
     };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['packages:inspect'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:inspect', raw) as z.infer<
+      typeof packagesInspectRequestSchema
+    >;
+    return { inspection: await deps.packageSecurity.inspect(normalizePackageSource(req.source)) };
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----
