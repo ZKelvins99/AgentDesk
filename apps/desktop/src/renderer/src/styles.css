@@ -1543,3 +1543,244 @@ button:disabled {
   border-color: var(--border-strong);
   color: var(--fg-primary);
 }
+
+/* MCP Host 管理界面（README 8.3.6） */
+.mcp-settings {
+  width: min(860px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 64px));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mcp-server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mcp-server-row {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+}
+.mcp-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fg-muted);
+}
+.mcp-status-ready {
+  background: #2ecc71;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
+}
+.mcp-status-connecting {
+  background: #3498db;
+}
+.mcp-status-degraded {
+  background: #f1c40f;
+}
+.mcp-status-failed {
+  background: #e74c3c;
+}
+.mcp-status-off {
+  background: var(--fg-muted);
+}
+.mcp-server-name {
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.mcp-server-tools {
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+.mcp-server-error {
+  font-size: 12px;
+  color: var(--danger, #e74c3c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-test-result {
+  font-size: 12px;
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mcp-tools {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.mcp-tool-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(180px, 2fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 70%, var(--bg-sidebar) 30%);
+}
+.mcp-tool-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.mcp-tool-pi {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+}
+.mcp-schema {
+  grid-column: 1 / -1;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  margin: 0;
+}
+.mcp-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.mcp-log-row {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto minmax(100px, 1fr) minmax(120px, 2fr);
+  gap: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  align-items: center;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mcp-log-at,
+.mcp-log-duration {
+  color: var(--fg-muted);
+}
+.mcp-log-server,
+.mcp-log-tool {
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-log-ok {
+  color: #2ecc71;
+}
+.mcp-log-err {
+  color: #e74c3c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-log-args,
+.mcp-log-result {
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-editor {
+  width: min(680px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 64px));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mcp-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.mcp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+}
+.mcp-field input,
+.mcp-field select,
+.mcp-field textarea {
+  background: var(--bg);
+  color: var(--fg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.mcp-field textarea {
+  min-height: 56px;
+  resize: vertical;
+}
+.mcp-field-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.mcp-json-input {
+  width: 100%;
+  min-height: 300px;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--fg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: vertical;
+}
+.mcp-editor-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.mcp-empty {
+  color: var(--fg-muted);
+  font-size: 12px;
+  padding: 8px 4px;
+}
+.mcp-error {
+  color: #e74c3c;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, #e74c3c 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, #e74c3c 10%, transparent);
+}

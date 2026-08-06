@@ -177,4 +177,25 @@ describe('McpConfigStore（README 8.3.1）', () => {
     const listed = store.list();
     expect(listed[0]?.config.customField).toEqual({ nested: 1 });
   });
+
+  it('exportJson 输出 AgentDesk mcp.json 格式（合并全局+工作区）', () => {
+    store.save({
+      name: 'global-srv',
+      scope: 'global',
+      config: { transport: 'stdio', command: 'a' },
+    });
+    store.save({
+      name: 'ws-srv',
+      scope: 'workspace',
+      workspacePath: ws,
+      config: { transport: 'http', url: 'https://example.com/mcp' },
+    });
+    const parsed = JSON.parse(store.exportJson(ws)) as {
+      version: number;
+      servers: Record<string, McpServerConfig>;
+    };
+    expect(parsed.version).toBe(1);
+    expect(Object.keys(parsed.servers).sort()).toEqual(['global-srv', 'ws-srv']);
+    expect(parsed.servers['ws-srv']?.transport).toBe('http');
+  });
 });

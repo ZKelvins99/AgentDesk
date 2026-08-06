@@ -11,9 +11,14 @@ import {
   IPC_CHANNELS,
   invokeRequestSchemas,
   type mcpDeleteRequestSchema,
+  type mcpExportRequestSchema,
   type mcpImportRequestSchema,
   type mcpListRequestSchema,
+  type mcpLogsRequestSchema,
   type mcpSaveRequestSchema,
+  type mcpSnapshotsRequestSchema,
+  type mcpTestRequestSchema,
+  type mcpToolsRequestSchema,
   type providerDeleteRequestSchema,
   type providerDiscoverModelsRequestSchema,
   type providerSaveRequestSchema,
@@ -41,6 +46,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { McpConfigStore } from './mcp/mcp-config';
+import type { McpConnectionManager } from './mcp/mcp-manager';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { WorkspaceManager } from './storage';
@@ -66,6 +72,7 @@ export interface IpcHandlerDeps {
   providers: ProviderManager;
   approvals: ApprovalEngine;
   mcp: McpConfigStore;
+  mcpHost: McpConnectionManager;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
 }
@@ -298,26 +305,57 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
   ipcMain.handle(IPC_CHANNELS['mcp:save'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:save', raw) as z.infer<typeof mcpSaveRequestSchema>;
     const { workspacePath, ...saveReq } = req;
-    return {
-      server: deps.mcp.save({
-        ...saveReq,
-        ...(workspacePath !== undefined ? { workspacePath } : {}),
-      }),
-    };
+    const server = deps.mcp.save({
+      ...saveReq,
+      ...(workspacePath !== undefined ? { workspacePath } : {}),
+    });
+    await deps.mcpHost.invalidate(req.name);
+    deps.uplink.broadcast({ type: 'mcp:changed' });
+    return { server };
   });
-  deps.uplink.broadcast({ type: 'mcp:changed' });
 
   ipcMain.handle(IPC_CHANNELS['mcp:delete'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:delete', raw) as z.infer<typeof mcpDeleteRequestSchema>;
-    return { deleted: deps.mcp.remove(req.name, req.scope, req.workspacePath) };
+    const deleted = deps.mcp.remove(req.name, req.scope, req.workspacePath);
+    if (deleted) await deps.mcpHost.invalidate(req.name);
+    deps.uplink.broadcast({ type: 'mcp:changed' });
+    return { deleted };
   });
-  deps.uplink.broadcast({ type: 'mcp:changed' });
 
   ipcMain.handle(IPC_CHANNELS['mcp:import'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:import', raw) as z.infer<typeof mcpImportRequestSchema>;
-    return deps.mcp.importClaude(req.json, req.scope, req.workspacePath);
+    const result = deps.mcp.importClaude(req.json, req.scope, req.workspacePath);
+    for (const name of result.imported.map((v) => v.name)) {
+      await deps.mcpHost.invalidate(name);
+    }
+    deps.uplink.broadcast({ type: 'mcp:changed' });
+    return result;
   });
-  deps.uplink.broadcast({ type: 'mcp:changed' });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:snapshots'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:snapshots', raw) as z.infer<typeof mcpSnapshotsRequestSchema>;
+    return { snapshots: deps.mcpHost.listSnapshots(req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:test'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:test', raw) as z.infer<typeof mcpTestRequestSchema>;
+    return deps.mcpHost.testConnection(req.name, req.workspacePath);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:tools'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:tools', raw) as z.infer<typeof mcpToolsRequestSchema>;
+    return { tools: await deps.mcpHost.listTools(req.name, req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:logs'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:logs', raw) as z.infer<typeof mcpLogsRequestSchema>;
+    return { logs: deps.mcpHost.callLogs(req.limit ?? 20) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['mcp:export'], async (_event, raw: unknown) => {
+    const req = parseRequest('mcp:export', raw) as z.infer<typeof mcpExportRequestSchema>;
+    return { json: deps.mcp.exportJson(req.workspacePath) };
+  });
 
   // ---- Provider / Model / 密钥（README 8.6）----
 

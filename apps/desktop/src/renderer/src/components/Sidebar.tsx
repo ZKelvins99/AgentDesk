@@ -23,6 +23,7 @@ export function Sidebar(): React.JSX.Element {
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const openModelPicker = useUiStore((s) => s.openModelPicker);
   const openProviderSettings = useUiStore((s) => s.openProviderSettings);
+  const openMcpSettings = useUiStore((s) => s.openMcpSettings);
 
   const recent = summaries.slice(0, 8);
   const activeWorkspacePath = activeId ? (sessions[activeId]?.workspacePath ?? '') : '';
@@ -143,6 +144,15 @@ export function Sidebar(): React.JSX.Element {
           onClick={openProviderSettings}
         >
           ⚙
+        </button>
+        <button
+          type="button"
+          className="icon-btn footer-settings"
+          title="MCP Host 管理"
+          aria-label="MCP Host 管理"
+          onClick={openMcpSettings}
+        >
+          🧩
         </button>
       </div>
     </aside>

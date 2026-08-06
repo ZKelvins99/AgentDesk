@@ -215,6 +215,13 @@ export class McpConfigStore {
     return readMcpFile(this.fileFor(scope, workspacePath));
   }
 
+  /** 导出合并后的配置（AgentDesk mcp.json 格式，README 8.3.1 / 8.3.6）。 */
+  exportJson(workspacePath?: string): string {
+    const servers: Record<string, McpServerConfig> = {};
+    for (const view of this.list(workspacePath)) servers[view.name] = view.config;
+    return JSON.stringify({ version: 1, servers }, null, 2);
+  }
+
   fileFor(scope: McpScope, workspacePath?: string): string {
     if (scope === 'workspace') {
       if (!workspacePath) throw new Error('workspace 作用域需要 workspacePath');

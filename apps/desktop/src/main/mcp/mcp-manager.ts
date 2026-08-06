@@ -6,6 +6,7 @@
 import { EventEmitter } from 'node:events';
 import { homedir } from 'node:os';
 import type { McpServerConfig, McpServerView } from '@agentdesk/ipc';
+import { type McpCallLogEntry, maskArgs, summarizeResult } from './mcp-call-log';
 import { interpolateConfig, type McpConfigStore } from './mcp-config';
 import { SdkMcpClient } from './mcp-sdk';
 import type {
@@ -81,6 +82,8 @@ export class McpConnectionManager extends EventEmitter {
   private readonly reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly settles = new Map<string, { promise: Promise<void>; resolve: () => void }>();
   private readonly disconnecting = new Set<string>();
+  private readonly logBuffer: McpCallLogEntry[] = [];
+  private logSeq = 0;
   private closed = false;
 
   constructor(options: McpManagerOptions) {
@@ -178,6 +181,44 @@ export class McpConnectionManager extends EventEmitter {
     this.clients.clear();
   }
 
+  /** 配置变更后使缓存的连接/快照失效，下一次使用按新配置重建（README 8.3.6 按工具开关与免审批）。 */
+  async invalidate(name?: string): Promise<void> {
+    const names = new Set<string>([
+      ...this.clients.keys(),
+      ...this.resolved.keys(),
+      ...this.snapshots.keys(),
+    ]);
+    if (name) {
+      if (!names.has(name)) return;
+      names.clear();
+      names.add(name);
+    }
+    const closing: Array<Promise<void>> = [];
+    for (const n of names) {
+      const timer = this.reconnectTimers.get(n);
+      if (timer) {
+        clearTimeout(timer);
+        this.reconnectTimers.delete(n);
+      }
+      this.resolved.delete(n);
+      this.snapshots.delete(n);
+      const client = this.clients.get(n);
+      if (client) {
+        this.disconnecting.add(n);
+        closing.push(
+          client
+            .close()
+            .catch(() => {})
+            .finally(() => {
+              this.disconnecting.delete(n);
+              if (this.clients.get(n) === client) this.clients.delete(n);
+            }),
+        );
+      }
+    }
+    await Promise.all(closing);
+  }
+
   /** 测试连接：强制重连一次并返回握手结果（README 8.3.6）。 */
   async testConnection(
     name: string,
@@ -209,6 +250,12 @@ export class McpConnectionManager extends EventEmitter {
         error: errorMessage(error),
       };
     }
+  }
+
+  /** 最近 N 次调用日志（默认 20，上限 100，README 8.3.6）。 */
+  callLogs(limit = 20): McpCallLogEntry[] {
+    const count = Math.max(1, Math.min(limit, 100));
+    return this.logBuffer.slice(-count);
   }
 
   /** 工具清单（uplink GET /mcp/tools 数据源）。 */
@@ -275,30 +322,58 @@ export class McpConnectionManager extends EventEmitter {
 
   /** 调用链路入口（README 8.3.4）：ensureReady → 工具开关校验 → callTool。 */
   async callTool(request: McpCallRequest, options: McpCallOptions = {}): Promise<McpCallResult> {
-    const workspacePath = options.workspacePath ?? this.options.defaultWorkspacePath;
-    const snapshot = await this.ensureReady(request.server, workspacePath);
-    const view = snapshot.tools.find(
-      (tool) => tool.name === request.tool || tool.piName === request.tool,
-    );
-    if (!view) {
-      throw new McpCallError(
-        'unavailable',
-        `MCP 工具 ${request.tool} 不存在于 server ${request.server}`,
+    const startedAt = Date.now();
+    let isError = false;
+    let errorText: string | null = null;
+    let resultSummary: unknown = null;
+    try {
+      const workspacePath = options.workspacePath ?? this.options.defaultWorkspacePath;
+      const snapshot = await this.ensureReady(request.server, workspacePath);
+      const view = snapshot.tools.find(
+        (tool) => tool.name === request.tool || tool.piName === request.tool,
       );
+      if (!view) {
+        throw new McpCallError(
+          'unavailable',
+          `MCP 工具 ${request.tool} 不存在于 server ${request.server}`,
+        );
+      }
+      if (!view.enabled) {
+        throw new McpCallError('unavailable', `MCP 工具 ${request.tool} 已被禁用`);
+      }
+      const client = this.clients.get(request.server);
+      if (!client) {
+        throw new McpCallError('unavailable', `MCP server ${request.server} 未连接`);
+      }
+      const resolved = this.resolved.get(request.server);
+      const timeoutMs = options.timeoutMs ?? resolved?.config.timeoutMs ?? 30_000;
+      const result = await client.callTool(view.name, request.args, {
+        timeoutMs,
+        ...(options.signal !== undefined ? { signal: options.signal } : {}),
+      });
+      resultSummary = summarizeResult(result);
+      return result;
+    } catch (error) {
+      isError = true;
+      errorText = error instanceof Error ? error.message : String(error);
+      throw error;
+    } finally {
+      this.pushCallLog({
+        server: request.server,
+        tool: request.tool,
+        args: maskArgs(request.args),
+        isError,
+        error: errorText,
+        durationMs: Date.now() - startedAt,
+        result: resultSummary,
+      });
     }
-    if (!view.enabled) {
-      throw new McpCallError('unavailable', `MCP 工具 ${request.tool} 已被禁用`);
-    }
-    const client = this.clients.get(request.server);
-    if (!client) {
-      throw new McpCallError('unavailable', `MCP server ${request.server} 未连接`);
-    }
-    const resolved = this.resolved.get(request.server);
-    const timeoutMs = options.timeoutMs ?? resolved?.config.timeoutMs ?? 30_000;
-    return client.callTool(view.name, request.args, {
-      timeoutMs,
-      ...(options.signal !== undefined ? { signal: options.signal } : {}),
-    });
+  }
+
+  private pushCallLog(entry: Omit<McpCallLogEntry, 'id' | 'at'>): void {
+    this.logSeq += 1;
+    this.logBuffer.push({ ...entry, id: this.logSeq, at: Date.now() });
+    if (this.logBuffer.length > 100) this.logBuffer.shift();
   }
 
   private resolveServer(name: string, workspacePath?: string): ResolvedServer {

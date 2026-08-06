@@ -341,4 +341,59 @@ describe('McpConnectionManager（README 8.3.2 连接管理）', () => {
     expect(snapshots.every((s) => s.status === 'disconnected')).toBe(true);
     await manager.disposeAll();
   });
+
+  it('callTool 记录调用日志（参数脱敏/时长/结果摘要）', async () => {
+    store.save({ name: 'fs', scope: 'global', config: stdioConfig() });
+    const manager = makeManager({ fs: {} });
+    await manager.ensureReady('fs');
+    await manager.callTool({
+      server: 'fs',
+      tool: 'read_file',
+      args: { path: '/tmp/a', token: 'secret-1' },
+    });
+    const logs = manager.callLogs();
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.server).toBe('fs');
+    expect(logs[0]?.tool).toBe('read_file');
+    expect(logs[0]?.isError).toBe(false);
+    expect(logs[0]?.args).toEqual({ path: '/tmp/a', token: '***' });
+    expect(logs[0]?.result).toContain('ok:read_file');
+    expect(typeof logs[0]?.durationMs).toBe('number');
+    await manager.disposeAll();
+  });
+
+  it('callTool 失败同样入日志（isError + error）', async () => {
+    store.save({
+      name: 'fs',
+      scope: 'global',
+      config: stdioConfig({ toolFilter: { deny: ['read_file'] } }),
+    });
+    const manager = makeManager({ fs: {} });
+    await expect(manager.callTool({ server: 'fs', tool: 'read_file', args: {} })).rejects.toThrow(
+      McpCallError,
+    );
+    const entry = manager.callLogs().pop();
+    expect(entry?.isError).toBe(true);
+    expect(entry?.error).toContain('被禁用');
+    await manager.disposeAll();
+  });
+
+  it('invalidate 后按新配置重建连接（工具开关生效）', async () => {
+    store.save({ name: 'fs', scope: 'global', config: stdioConfig() });
+    const manager = makeManager({ fs: {} });
+    await manager.ensureReady('fs');
+    expect(FakeMcpClient.all).toHaveLength(1);
+    store.save({
+      name: 'fs',
+      scope: 'global',
+      config: stdioConfig({ toolFilter: { deny: ['read_file'] } }),
+    });
+    await manager.invalidate('fs');
+    expect(FakeMcpClient.all[0]?.closed).toBe(true);
+    const snapshot = await manager.ensureReady('fs');
+    expect(snapshot.status).toBe('ready');
+    expect(snapshot.tools[0]?.enabled).toBe(false);
+    expect(FakeMcpClient.all).toHaveLength(2);
+    await manager.disposeAll();
+  });
 });

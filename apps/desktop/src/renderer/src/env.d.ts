@@ -5,7 +5,10 @@ import type {
   ApprovalRequestView,
   ApprovalRule,
   AuthProviderStatus,
+  McpCallLogEntry,
   McpServerView,
+  McpSnapshot,
+  McpToolView,
   ProviderPreset,
   ProviderView,
   SecretsStatusResponse,
@@ -136,6 +139,19 @@ declare global {
           imported: McpServerView[];
           skipped: Array<{ name: string; reason: string }>;
         }>;
+        snapshots(req?: { workspacePath?: string }): Promise<{ snapshots: McpSnapshot[] }>;
+        test(req: { name: string; workspacePath?: string }): Promise<{
+          ok: boolean;
+          serverInfo: McpSnapshot['serverInfo'];
+          toolCount: number;
+          latencyMs: number;
+          error: string | null;
+        }>;
+        tools(req: { name: string; workspacePath?: string }): Promise<{ tools: McpToolView[] }>;
+        logs(req?: { limit?: number; workspacePath?: string }): Promise<{
+          logs: McpCallLogEntry[];
+        }>;
+        export(req?: { workspacePath?: string }): Promise<{ json: string }>;
       };
       approval: {
         respond(req: {

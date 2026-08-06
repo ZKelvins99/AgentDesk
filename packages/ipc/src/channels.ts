@@ -47,6 +47,11 @@ export const IPC_CHANNELS = {
   'mcp:save': 'mcp:save',
   'mcp:delete': 'mcp:delete',
   'mcp:import': 'mcp:import',
+  'mcp:snapshots': 'mcp:snapshots',
+  'mcp:test': 'mcp:test',
+  'mcp:tools': 'mcp:tools',
+  'mcp:logs': 'mcp:logs',
+  'mcp:export': 'mcp:export',
 } as const;
 
 /** 请求/响应通道（invoke） */

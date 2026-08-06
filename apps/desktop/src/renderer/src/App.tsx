@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ApprovalModal } from './components/ApprovalModal';
 import { AuditPanel } from './components/AuditPanel';
+import { McpSettings } from './components/McpSettings';
 import { ModelPicker } from './components/ModelPicker';
 import { ProviderSettings } from './components/ProviderSettings';
 import { Sidebar } from './components/Sidebar';
@@ -38,6 +39,7 @@ export default function App(): React.JSX.Element {
       <TrustDialog />
       <ModelPicker />
       <ProviderSettings />
+      <McpSettings />
       <ApprovalModal />
       <AuditPanel />
     </div>

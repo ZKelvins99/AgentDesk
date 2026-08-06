@@ -91,6 +91,13 @@ const api = {
       safeInvoke(IPC_CHANNELS['mcp:delete'], req),
     importServers: (req: InvokeMap['mcp:import']['request']) =>
       safeInvoke(IPC_CHANNELS['mcp:import'], req),
+    snapshots: (req?: { workspacePath?: string }) =>
+      safeInvoke(IPC_CHANNELS['mcp:snapshots'], req ?? {}),
+    test: (req: InvokeMap['mcp:test']['request']) => safeInvoke(IPC_CHANNELS['mcp:test'], req),
+    tools: (req: InvokeMap['mcp:tools']['request']) => safeInvoke(IPC_CHANNELS['mcp:tools'], req),
+    logs: (req?: InvokeMap['mcp:logs']['request']) =>
+      safeInvoke(IPC_CHANNELS['mcp:logs'], req ?? {}),
+    export: (req?: { workspacePath?: string }) => safeInvoke(IPC_CHANNELS['mcp:export'], req ?? {}),
   },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>

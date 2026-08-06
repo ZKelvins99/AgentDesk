@@ -495,6 +495,76 @@ export const mcpImportResponseSchema = z.object({
   skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
 });
 
+export const mcpToolViewSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  inputSchema: z.record(z.string(), z.unknown()),
+  piName: z.string().min(1),
+  enabled: z.boolean(),
+  autoApprove: z.boolean(),
+});
+export type McpToolView = z.infer<typeof mcpToolViewSchema>;
+
+export const mcpServerInfoSchema = z.object({
+  name: z.string(),
+  version: z.string().optional(),
+});
+export type McpServerInfo = z.infer<typeof mcpServerInfoSchema>;
+
+export const mcpSnapshotSchema = z.object({
+  name: z.string(),
+  status: z.enum(['disconnected', 'connecting', 'ready', 'degraded', 'failed']),
+  tools: z.array(mcpToolViewSchema),
+  lastError: z.string().nullable(),
+  serverInfo: mcpServerInfoSchema.nullable(),
+  connectedAt: z.number().nullable(),
+  reconnectAttempts: z.number(),
+});
+export type McpSnapshot = z.infer<typeof mcpSnapshotSchema>;
+
+export const mcpCallLogEntrySchema = z.object({
+  id: z.number().int(),
+  at: z.number(),
+  server: z.string(),
+  tool: z.string(),
+  args: z.record(z.string(), z.unknown()),
+  isError: z.boolean(),
+  error: z.string().nullable(),
+  durationMs: z.number(),
+  result: z.unknown(),
+});
+export type McpCallLogEntry = z.infer<typeof mcpCallLogEntrySchema>;
+
+export const mcpSnapshotsRequestSchema = z.object({ workspacePath: z.string().optional() });
+export const mcpSnapshotsResponseSchema = z.object({ snapshots: z.array(mcpSnapshotSchema) });
+
+export const mcpTestRequestSchema = z.object({
+  name: z.string().min(1).max(64),
+  workspacePath: z.string().optional(),
+});
+export const mcpTestResponseSchema = z.object({
+  ok: z.boolean(),
+  serverInfo: mcpServerInfoSchema.nullable(),
+  toolCount: z.number().int().min(0),
+  latencyMs: z.number().int().min(0),
+  error: z.string().nullable(),
+});
+
+export const mcpToolsRequestSchema = z.object({
+  name: z.string().min(1).max(64),
+  workspacePath: z.string().optional(),
+});
+export const mcpToolsResponseSchema = z.object({ tools: z.array(mcpToolViewSchema) });
+
+export const mcpLogsRequestSchema = z.object({
+  limit: z.number().int().min(1).max(100).optional(),
+  workspacePath: z.string().optional(),
+});
+export const mcpLogsResponseSchema = z.object({ logs: z.array(mcpCallLogEntrySchema) });
+
+export const mcpExportRequestSchema = z.object({ workspacePath: z.string().optional() });
+export const mcpExportResponseSchema = z.object({ json: z.string() });
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -657,6 +727,26 @@ export interface InvokeMap {
     request: z.infer<typeof mcpImportRequestSchema>;
     response: z.infer<typeof mcpImportResponseSchema>;
   };
+  'mcp:snapshots': {
+    request: z.infer<typeof mcpSnapshotsRequestSchema>;
+    response: z.infer<typeof mcpSnapshotsResponseSchema>;
+  };
+  'mcp:test': {
+    request: z.infer<typeof mcpTestRequestSchema>;
+    response: z.infer<typeof mcpTestResponseSchema>;
+  };
+  'mcp:tools': {
+    request: z.infer<typeof mcpToolsRequestSchema>;
+    response: z.infer<typeof mcpToolsResponseSchema>;
+  };
+  'mcp:logs': {
+    request: z.infer<typeof mcpLogsRequestSchema>;
+    response: z.infer<typeof mcpLogsResponseSchema>;
+  };
+  'mcp:export': {
+    request: z.infer<typeof mcpExportRequestSchema>;
+    response: z.infer<typeof mcpExportResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -711,6 +801,11 @@ export const invokeRequestSchemas = {
   'mcp:save': mcpSaveRequestSchema,
   'mcp:delete': mcpDeleteRequestSchema,
   'mcp:import': mcpImportRequestSchema,
+  'mcp:snapshots': mcpSnapshotsRequestSchema,
+  'mcp:test': mcpTestRequestSchema,
+  'mcp:tools': mcpToolsRequestSchema,
+  'mcp:logs': mcpLogsRequestSchema,
+  'mcp:export': mcpExportRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];
