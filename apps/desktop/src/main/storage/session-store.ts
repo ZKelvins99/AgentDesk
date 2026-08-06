@@ -39,6 +39,7 @@ export interface SessionRecord {
   outputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
+  approvalMode: string | null;
   costUsd: number;
   seq: number;
   createdAt: number;
@@ -117,6 +118,7 @@ interface SessionRow {
   title: string;
   provider: string | null;
   model: string | null;
+  approvalMode: string | null;
   status: string;
   messageCount: number;
   inputTokens: number;
@@ -151,6 +153,7 @@ function toSession(row: SessionRow): SessionRecord {
     title: row.title,
     provider: row.provider,
     model: row.model,
+    approvalMode: row.approvalMode,
     status: (row.status as SessionStatus) ?? 'idle',
     messageCount: row.messageCount,
     inputTokens: row.inputTokens,

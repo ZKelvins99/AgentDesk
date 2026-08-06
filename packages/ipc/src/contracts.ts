@@ -325,6 +325,98 @@ export const sessionEventSchema = z.object({
   ev: agentDeskEventSchema,
 });
 
+/** 审批（README 8.7）：四档模式 / 风险分级 / 规则 / 审计 */
+export const sessionSetApprovalModeRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  mode: approvalModeSchema,
+});
+
+export const approvalDecisionSchema = z.enum(['allow-once', 'always', 'deny', 'deny-with-reason']);
+export type ApprovalDecisionKind = z.infer<typeof approvalDecisionSchema>;
+
+export const approvalRespondRequestSchema = z.object({
+  requestId: z.string().min(1),
+  decision: approvalDecisionSchema,
+  /** deny-with-reason 时必填；always 时可带 rule 范围说明 */
+  reason: z.string().max(500).optional(),
+});
+
+export const approvalRequestViewSchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  tool: z.string(),
+  argsSummary: z.string(),
+  risk: z.enum(['high', 'medium', 'low']),
+  cwd: z.string(),
+});
+export type ApprovalRequestView = z.infer<typeof approvalRequestViewSchema>;
+
+export const approvalAuditEntrySchema = z.object({
+  id: z.number().int(),
+  sessionId: z.string().nullable(),
+  tool: z.string(),
+  argsSummary: z.string().nullable(),
+  risk: z.string().nullable(),
+  decision: z.string(),
+  ruleId: z.string().nullable(),
+  at: z.number(),
+});
+export type ApprovalAuditEntry = z.infer<typeof approvalAuditEntrySchema>;
+
+export const approvalAuditListRequestSchema = z.object({
+  sessionId: z.string().optional(),
+  limit: z.number().int().min(1).max(500).optional(),
+});
+export const approvalAuditListResponseSchema = z.object({
+  entries: z.array(approvalAuditEntrySchema),
+});
+
+export const approvalAuditExportRequestSchema = z.object({
+  format: z.enum(['md', 'json']),
+});
+export const approvalAuditExportResponseSchema = z.object({ content: z.string() });
+
+export const approvalAuditClearRequestSchema = z.object({
+  sessionId: z.string().optional(),
+});
+export const approvalAuditClearResponseSchema = z.object({ cleared: z.number().int() });
+
+export const approvalRuleMatcherSchema = z.object({
+  sessionId: z.string().optional(),
+  tool: z.string().optional(),
+  bashPrefix: z.string().optional(),
+  pathPrefix: z.string().optional(),
+});
+export type ApprovalRuleMatcher = z.infer<typeof approvalRuleMatcherSchema>;
+
+export const approvalRuleSchema = z.object({
+  id: z.string(),
+  scope: z.enum(['session', 'workspace', 'global']),
+  sessionId: z.string().optional(),
+  workspaceId: z.string().optional(),
+  matcher: approvalRuleMatcherSchema,
+  decision: z.enum(['allow', 'deny']),
+  createdAt: z.number(),
+  expiresAt: z.number().nullable(),
+});
+export type ApprovalRule = z.infer<typeof approvalRuleSchema>;
+
+export const approvalRuleInputSchema = z.object({
+  scope: z.enum(['session', 'workspace', 'global']),
+  sessionId: z.string().optional(),
+  workspaceId: z.string().optional(),
+  matcher: approvalRuleMatcherSchema,
+  decision: z.enum(['allow', 'deny']),
+  expiresAt: z.number().optional(),
+});
+export type ApprovalRuleInput = z.infer<typeof approvalRuleInputSchema>;
+
+export const approvalRulesListRequestSchema = z.object({ sessionId: z.string().optional() });
+export const approvalRulesListResponseSchema = z.object({ rules: z.array(approvalRuleSchema) });
+export const approvalRuleSaveRequestSchema = z.object({ rule: approvalRuleInputSchema });
+export const approvalRuleSaveResponseSchema = z.object({ id: z.string() });
+export const approvalRuleDeleteRequestSchema = z.object({ id: z.string().min(1) });
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -439,11 +531,44 @@ export interface InvokeMap {
     request: z.infer<typeof sessionSetThinkingLevelRequestSchema>;
     response: undefined;
   };
+  'session:set-approval-mode': {
+    request: z.infer<typeof sessionSetApprovalModeRequestSchema>;
+    response: undefined;
+  };
+  'approval:respond': {
+    request: z.infer<typeof approvalRespondRequestSchema>;
+    response: undefined;
+  };
+  'approval:audit-list': {
+    request: z.infer<typeof approvalAuditListRequestSchema>;
+    response: z.infer<typeof approvalAuditListResponseSchema>;
+  };
+  'approval:audit-export': {
+    request: z.infer<typeof approvalAuditExportRequestSchema>;
+    response: z.infer<typeof approvalAuditExportResponseSchema>;
+  };
+  'approval:audit-clear': {
+    request: z.infer<typeof approvalAuditClearRequestSchema>;
+    response: z.infer<typeof approvalAuditClearResponseSchema>;
+  };
+  'approval:rules-list': {
+    request: z.infer<typeof approvalRulesListRequestSchema>;
+    response: z.infer<typeof approvalRulesListResponseSchema>;
+  };
+  'approval:rules-save': {
+    request: z.infer<typeof approvalRuleSaveRequestSchema>;
+    response: z.infer<typeof approvalRuleSaveResponseSchema>;
+  };
+  'approval:rules-delete': {
+    request: z.infer<typeof approvalRuleDeleteRequestSchema>;
+    response: undefined;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
 export interface EventMap {
   'event:session': z.infer<typeof sessionEventSchema>;
+  'event:approval': z.infer<typeof approvalRequestViewSchema>;
 }
 
 /** 运行时请求校验表：main 侧 handler 执行前必须过 zod（README 16.1）。 */
@@ -480,6 +605,14 @@ export const invokeRequestSchemas = {
   'auth:launch-login': authLaunchLoginRequestSchema,
   'session:get-models': sessionGetModelsRequestSchema,
   'session:set-thinking-level': sessionSetThinkingLevelRequestSchema,
+  'session:set-approval-mode': sessionSetApprovalModeRequestSchema,
+  'approval:respond': approvalRespondRequestSchema,
+  'approval:audit-list': approvalAuditListRequestSchema,
+  'approval:audit-export': approvalAuditExportRequestSchema,
+  'approval:audit-clear': approvalAuditClearRequestSchema,
+  'approval:rules-list': approvalRulesListRequestSchema,
+  'approval:rules-save': approvalRuleSaveRequestSchema,
+  'approval:rules-delete': approvalRuleDeleteRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

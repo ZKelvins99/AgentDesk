@@ -1,3 +1,4 @@
+import { approvalModeSchema } from '@agentdesk/shared';
 import { z } from 'zod';
 
 /**
@@ -38,6 +39,7 @@ export const sessionStateSchema = z.object({
   sessionId: z.string().optional(),
   sessionName: z.string().optional(),
   autoCompactionEnabled: z.boolean(),
+  approvalMode: approvalModeSchema,
   messageCount: z.number(),
   pendingMessageCount: z.number(),
 });

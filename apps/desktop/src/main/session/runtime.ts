@@ -8,6 +8,7 @@ import {
   textScenario,
 } from '@agentdesk/mock-provider';
 import { app, BrowserWindow } from 'electron';
+import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { PiBridge, SidecarPool } from '../pi';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
@@ -25,6 +26,7 @@ export interface SessionRuntimeHandle {
   sessionManager: SessionManager;
   workspaces: WorkspaceManager;
   providers: ProviderManager;
+  approvals: ApprovalEngine;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
 }
@@ -92,7 +94,26 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const pool = new SidecarPool({ idleTimeoutMs: 15 * 60 * 1000 });
   const bridge = new PiBridge({ binary: binary ?? '', pool });
 
-  const sessionManager = new SessionManager({
+  let sessionManager: SessionManager;
+  const approvalStore = new ApprovalStore(db);
+  const approvals = new ApprovalEngine({
+    store: approvalStore,
+    getApprovalMode: (sessionId) => sessionManager.approvalModeOf(sessionId),
+    getWorkspacePath: (sessionId) => sessionManager.workspacePathOf(sessionId),
+    ask: async () => 'timeout',
+  });
+  const uplink = new UplinkServer({ engine: approvals });
+  await uplink.listen();
+
+  const bridgeExt = path.join(
+    app.getAppPath(),
+    'resources',
+    'pi-ext',
+    'agentdesk-bridge',
+    'index.ts',
+  );
+
+  sessionManager = new SessionManager({
     bridge,
     workspacePath,
     sessionDir,
@@ -105,6 +126,16 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     resolveProviderEnv: (provider: string | null) =>
       provider ? providers.envForProvider(provider) : {},
     ...(mockSetup?.agentDir ? { agentDir: mockSetup.agentDir } : {}),
+    ...(existsSync(bridgeExt) ? { extensionPath: bridgeExt } : {}),
+    approvalEngine: approvals,
+    uplink,
+    defaultApprovalMode:
+      (process.env.AGENTDESK_APPROVAL_MODE as
+        | 'plan'
+        | 'read-only'
+        | 'auto-edit'
+        | 'full-access'
+        | undefined) ?? 'full-access',
     offline,
     onEvent: (sessionId, seq, ev) => {
       for (const win of BrowserWindow.getAllWindows()) {
@@ -117,10 +148,12 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     sessionManager,
     workspaces,
     providers,
+    approvals,
     kernel: { binary },
     dispose: async () => {
       await sessionManager.shutdownAll(5_000);
       pool.dispose();
+      await uplink.close();
       db.close();
       if (mockSetup) {
         await mockSetup.mock.close();

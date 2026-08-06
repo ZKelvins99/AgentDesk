@@ -43,6 +43,7 @@ describe('AgentDeskEvent 契约（README 8.1.4）', () => {
           steeringMode: 'all',
           followUpMode: 'all',
           autoCompactionEnabled: true,
+          approvalMode: 'full-access',
           messageCount: 1,
           pendingMessageCount: 0,
         },

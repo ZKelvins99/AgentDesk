@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentDeskEvent, SessionState } from '@agentdesk/ipc';
 import type { PiSessionState } from '@agentdesk/pi-protocol';
-import { AgentDeskError } from '@agentdesk/shared';
+import { AgentDeskError, type ApprovalMode } from '@agentdesk/shared';
+import type { ApprovalEngine, UplinkServer } from '../approval';
 import type { PiBridge, PiSidecar, PiSidecarOptions } from '../pi';
 import type { SessionRecord, SessionStore } from '../storage';
 
@@ -68,6 +69,13 @@ export interface SessionManagerOptions {
   resolveProviderEnv?: (provider: string | null) => Record<string, string>;
   agentDir?: string;
   offline?: boolean;
+  /** 审批引擎（M5，README 8.7） */
+  approvalEngine?: ApprovalEngine;
+  /** Uplink 控制通道（M5，README 8.2.2）；注入时扩展可请求审批 */
+  uplink?: UplinkServer;
+  /** Bridge Extension 路径（--extension，M5 起必须注入） */
+  extensionPath?: string;
+  defaultApprovalMode?: ApprovalMode;
   onEvent: (sessionId: string, seq: number, ev: AgentDeskEvent) => void;
 }
 
@@ -76,6 +84,7 @@ export interface CreateSessionOptions {
   provider?: string | undefined;
   model?: string | undefined;
   thinkingLevel?: string | undefined;
+  approvalMode?: ApprovalMode | undefined;
 }
 
 const EMPTY_STATE: SessionState = {
@@ -86,6 +95,7 @@ const EMPTY_STATE: SessionState = {
   steeringMode: 'all',
   followUpMode: 'all',
   autoCompactionEnabled: false,
+  approvalMode: 'full-access',
   messageCount: 0,
   pendingMessageCount: 0,
 };
@@ -97,7 +107,7 @@ interface PendingEvent {
   ev: AgentDeskEvent;
 }
 
-export function toSessionState(state: PiSessionState): SessionState {
+export function toSessionState(state: PiSessionState, approvalMode: ApprovalMode): SessionState {
   return {
     model: state.model?.id ?? null,
     thinkingLevel: state.thinkingLevel,
@@ -106,6 +116,7 @@ export function toSessionState(state: PiSessionState): SessionState {
     steeringMode: state.steeringMode,
     followUpMode: state.followUpMode,
     autoCompactionEnabled: state.autoCompactionEnabled,
+    approvalMode,
     messageCount: state.messageCount,
     pendingMessageCount: state.pendingMessageCount,
     ...(state.sessionFile !== undefined ? { sessionFile: state.sessionFile } : {}),
@@ -115,7 +126,7 @@ export function toSessionState(state: PiSessionState): SessionState {
 }
 
 /** 由 DB 记录重建的会话状态（重启后、sidecar 未拉起时，README 8.8.1 秒开）。 */
-export function stateFromRecord(record: SessionRecord): SessionState {
+export function stateFromRecord(record: SessionRecord, defaultMode: ApprovalMode): SessionState {
   return {
     model: record.model,
     thinkingLevel: null,
@@ -124,6 +135,7 @@ export function stateFromRecord(record: SessionRecord): SessionState {
     steeringMode: 'all',
     followUpMode: 'all',
     autoCompactionEnabled: false,
+    approvalMode: (record.approvalMode as ApprovalMode | undefined) ?? defaultMode,
     messageCount: record.messageCount,
     pendingMessageCount: 0,
     ...(record.sessionFile !== null ? { sessionFile: record.sessionFile } : {}),
@@ -250,6 +262,7 @@ class SessionRuntime {
 
 export class SessionManager {
   private readonly runtimes = new Map<string, SessionRuntime>();
+  private readonly approvalModes = new Map<string, ApprovalMode>();
 
   constructor(private readonly options: SessionManagerOptions) {
     this.options.bridge.pool.on('sidecar-created', (info: { sessionId: string }) => {
@@ -275,6 +288,15 @@ export class SessionManager {
     return this.options.store;
   }
 
+  /** 会话审批模式（M5，README 8.7.1 会话级 chip） */
+  approvalModeOf(sessionId: string): ApprovalMode {
+    return this.approvalModes.get(sessionId) ?? this.options.defaultApprovalMode ?? 'full-access';
+  }
+
+  workspacePathOf(sessionId: string): string {
+    return this.options.store.getSession(sessionId)?.workspacePath ?? this.options.workspacePath;
+  }
+
   /** 创建会话并拉起 sidecar；waitReady 失败不抛错，会话标记 degraded。 */
   async create(opts: CreateSessionOptions = {}): Promise<string> {
     const sessionId = randomUUID();
@@ -293,8 +315,11 @@ export class SessionManager {
     const thinking = opts.thinkingLevel ?? this.options.defaultThinkingLevel;
     if (thinking) sidecarOpts.thinkingLevel = thinking;
     if (this.options.agentDir) sidecarOpts.agentDir = this.options.agentDir;
+    if (this.options.extensionPath) sidecarOpts.extensionPath = this.options.extensionPath;
+    const approvalMode = opts.approvalMode ?? this.options.defaultApprovalMode ?? 'full-access';
+    this.approvalModes.set(sessionId, approvalMode);
     const providerEnv = this.options.resolveProviderEnv?.(provider ?? null) ?? {};
-    if (Object.keys(providerEnv).length > 0) sidecarOpts.env = providerEnv;
+    sidecarOpts.env = this.sessionEnv(sessionId, providerEnv);
 
     const workspace = this.options.store.upsertWorkspace(workspacePath).workspace;
     this.options.store.createSession({
@@ -303,6 +328,7 @@ export class SessionManager {
       ...(provider !== undefined ? { provider } : {}),
       ...(model !== undefined ? { model } : {}),
       ...(thinking !== undefined ? { thinkingLevel: thinking } : {}),
+      approvalMode,
     });
 
     let sidecar: PiSidecar;
@@ -323,7 +349,7 @@ export class SessionManager {
 
     try {
       const state = await sidecar.waitReady(15_000);
-      rt.setState(toSessionState(state));
+      rt.setState(toSessionState(state, approvalMode));
       this.syncSessionRow(sessionId, rt);
     } catch (err) {
       rt.markError(`内核就绪失败：${(err as Error).message}`);
@@ -357,7 +383,7 @@ export class SessionManager {
     }
     const events = this.options.store.getEventsSince(sessionId, sinceSeq);
     const seq = this.options.store.latestSeq(sessionId);
-    const state = stateFromRecord(record);
+    const state = stateFromRecord(record, this.approvalModeOf(sessionId));
     if (record.sessionFile && record.archivedAt === null) {
       void this.resume(sessionId, record);
     }
@@ -375,6 +401,11 @@ export class SessionManager {
     if (this.runtimes.has(sessionId)) return;
     const workspacePath = record.workspacePath ?? this.options.workspacePath;
     const trust = this.options.resolveTrust?.(workspacePath) ?? this.options.trust;
+    const approvalMode =
+      (record.approvalMode as ApprovalMode | undefined) ??
+      this.options.defaultApprovalMode ??
+      'full-access';
+    this.approvalModes.set(sessionId, approvalMode);
     const sidecarOpts: Omit<PiSidecarOptions, 'binary' | 'sessionId' | 'onExit'> = {
       cwd: workspacePath,
       sessionDir: this.options.sessionDir,
@@ -385,8 +416,9 @@ export class SessionManager {
     };
     if (this.options.offline) sidecarOpts.offline = true;
     if (this.options.agentDir) sidecarOpts.agentDir = this.options.agentDir;
+    if (this.options.extensionPath) sidecarOpts.extensionPath = this.options.extensionPath;
     const providerEnv = this.options.resolveProviderEnv?.(record.provider) ?? {};
-    if (Object.keys(providerEnv).length > 0) sidecarOpts.env = providerEnv;
+    sidecarOpts.env = this.sessionEnv(sessionId, providerEnv);
     try {
       const sidecar = this.options.bridge.createSessionSidecar(sessionId, sidecarOpts);
       const seqOffset = this.options.store.latestSeq(sessionId);
@@ -394,7 +426,7 @@ export class SessionManager {
       this.runtimes.set(sessionId, rt);
       sidecar.start();
       const state = await sidecar.waitReady(15_000);
-      rt.setState(toSessionState(state));
+      rt.setState(toSessionState(state, approvalMode));
       this.syncSessionRow(sessionId, rt);
     } catch (err) {
       const rt = this.runtimes.get(sessionId);
@@ -437,7 +469,7 @@ export class SessionManager {
       {},
       { timeoutMs: 5_000 },
     )) as PiSessionState;
-    rt.setState(toSessionState(state));
+    rt.setState(toSessionState(state, this.approvalModeOf(sessionId)));
   }
 
   /** get_available_models → 渲染层模型选择器（README 8.6.4） */
@@ -490,7 +522,17 @@ export class SessionManager {
       {},
       { timeoutMs: 5_000 },
     )) as PiSessionState;
-    rt.setState(toSessionState(state));
+    rt.setState(toSessionState(state, this.approvalModeOf(sessionId)));
+  }
+
+  /** 切换会话审批模式（M5，README 8.7.1：会话级 chip，写入会话记录可审计） */
+  setApprovalMode(sessionId: string, mode: ApprovalMode): void {
+    this.approvalModes.set(sessionId, mode);
+    this.options.store.updateSession(sessionId, { approvalMode: mode });
+    const rt = this.runtimes.get(sessionId);
+    if (rt) {
+      rt.setState({ ...rt.stateSnapshot, approvalMode: mode });
+    }
   }
 
   list(query: SessionListQuery = {}): SessionSummary[] {
@@ -542,6 +584,21 @@ export class SessionManager {
 
   export(sessionId: string, format: 'md' | 'json'): string {
     return this.options.store.exportSession(sessionId, format);
+  }
+
+  /** 会话 sidecar env：provider 密钥 + uplink 通道（M5，README 8.2.2）。 */
+  private sessionEnv(
+    sessionId: string,
+    providerEnv: Record<string, string>,
+  ): Record<string, string> {
+    const uplink = this.options.uplink;
+    if (!uplink) return providerEnv;
+    return {
+      ...providerEnv,
+      AGENTDESK_UPLINK: uplink.url,
+      AGENTDESK_TOKEN: uplink.token,
+      AGENTDESK_SESSION_ID: sessionId,
+    };
   }
 
   /** 事件合流后落库（渲染缓存 + 索引更新），再广播。 */

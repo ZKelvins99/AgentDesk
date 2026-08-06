@@ -23,6 +23,7 @@ if (!gotTheLock) {
       sessionManager: runtime.sessionManager,
       workspaces: runtime.workspaces,
       providers: runtime.providers,
+      approvals: runtime.approvals,
     });
     createMainWindow();
 

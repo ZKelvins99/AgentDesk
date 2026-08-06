@@ -42,7 +42,8 @@ export interface MockProvider {
 }
 
 export interface StartMockProviderOptions {
-  scenario?: MockScenario;
+  /** 单场景或按请求顺序的场景序列（最后一组重复使用）；README 14.2 集成测试用 */
+  scenario?: MockScenario | MockScenario[];
   /** 0 = 随机端口 */
   port?: number;
   model?: string;
@@ -176,9 +177,20 @@ export function mockModelsJson(baseUrl: string, model = 'mock-model'): string {
   );
 }
 
+/** 按请求顺序消费的场景序列；单个场景时重复使用，序列时最后一组重复使用。 */
+function normalizeScenarioList(
+  scenario: MockScenario | MockScenario[] | undefined,
+): Array<{ deltas: MockDelta[]; delayMs: number }> {
+  const list = Array.isArray(scenario) ? scenario : scenario ? [scenario] : [];
+  if (list.length === 0) {
+    return [normalizeScenario(undefined)];
+  }
+  return list.map(normalizeScenario);
+}
+
 export function startMockProvider(options: StartMockProviderOptions = {}): Promise<MockProvider> {
   const model = options.model ?? 'mock-model';
-  const { deltas, delayMs } = normalizeScenario(options.scenario);
+  const scripts = normalizeScenarioList(options.scenario);
   const calls: ChatCompletionRequest[] = [];
   const sockets = new Set<Socket>();
 
@@ -215,9 +227,13 @@ export function startMockProvider(options: StartMockProviderOptions = {}): Promi
           stream,
           raw: parsed,
         });
+        const script = scripts[Math.min(calls.length - 1, scripts.length - 1)] ?? {
+          deltas: [],
+          delayMs: 0,
+        };
 
         if (!stream) {
-          const content = deltas
+          const content = script.deltas
             .map((d) => (typeof d.content === 'string' ? d.content : ''))
             .join('');
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -230,7 +246,7 @@ export function startMockProvider(options: StartMockProviderOptions = {}): Promi
                 {
                   index: 0,
                   message: { role: 'assistant', content },
-                  finish_reason: deltas.some((d) => d.tool_calls) ? 'tool_calls' : 'stop',
+                  finish_reason: script.deltas.some((d) => d.tool_calls) ? 'tool_calls' : 'stop',
                 },
               ],
               usage: { prompt_tokens: 4, completion_tokens: 3, total_tokens: 7 },
@@ -247,13 +263,13 @@ export function startMockProvider(options: StartMockProviderOptions = {}): Promi
         let i = 0;
         const timer = setInterval(
           () => {
-            if (i < deltas.length) {
+            if (i < script.deltas.length) {
               res.write(
                 sse({
                   id: 'chatcmpl-mock',
                   object: 'chat.completion.chunk',
                   model,
-                  choices: [{ index: 0, delta: deltas[i], finish_reason: null }],
+                  choices: [{ index: 0, delta: script.deltas[i], finish_reason: null }],
                 }),
               );
               i += 1;
@@ -268,7 +284,9 @@ export function startMockProvider(options: StartMockProviderOptions = {}): Promi
                     {
                       index: 0,
                       delta: {},
-                      finish_reason: deltas.some((d) => d.tool_calls) ? 'tool_calls' : 'stop',
+                      finish_reason: script.deltas.some((d) => d.tool_calls)
+                        ? 'tool_calls'
+                        : 'stop',
                     },
                   ],
                 }),
@@ -277,7 +295,7 @@ export function startMockProvider(options: StartMockProviderOptions = {}): Promi
               res.end();
             }
           },
-          Math.max(delayMs, 0),
+          Math.max(script.delayMs, 0),
         );
       });
     });

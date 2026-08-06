@@ -1,4 +1,11 @@
 import {
+  type approvalAuditClearRequestSchema,
+  type approvalAuditExportRequestSchema,
+  type approvalAuditListRequestSchema,
+  type approvalRespondRequestSchema,
+  type approvalRuleDeleteRequestSchema,
+  type approvalRuleSaveRequestSchema,
+  type approvalRulesListRequestSchema,
   type authLaunchLoginRequestSchema,
   type InvokeChannel,
   IPC_CHANNELS,
@@ -17,6 +24,7 @@ import {
   type sessionListRequestSchema,
   type sessionRenameRequestSchema,
   type sessionSendRequestSchema,
+  type sessionSetApprovalModeRequestSchema,
   type sessionSetModelRequestSchema,
   type sessionSetThinkingLevelRequestSchema,
   type workspaceAddRequestSchema,
@@ -27,6 +35,7 @@ import {
 import { AgentDeskError } from '@agentdesk/shared';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
+import type { ApprovalEngine, AskResponse } from './approval';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { WorkspaceManager } from './storage';
@@ -50,6 +59,7 @@ export interface IpcHandlerDeps {
   sessionManager: SessionManager;
   workspaces: WorkspaceManager;
   providers: ProviderManager;
+  approvals: ApprovalEngine;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -181,6 +191,93 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       typeof sessionSetThinkingLevelRequestSchema
     >;
     await deps.sessionManager.setThinkingLevel(req.sessionId, req.level);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:set-approval-mode'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:set-approval-mode', raw) as z.infer<
+      typeof sessionSetApprovalModeRequestSchema
+    >;
+    deps.sessionManager.setApprovalMode(req.sessionId, req.mode);
+  });
+
+  // ---- 审批（README 8.7）：uplink /approval → 弹窗 → 决策回填 ----
+  const pendingApprovals = new Map<string, (res: AskResponse | 'timeout') => void>();
+  deps.approvals.setAskHandler(async (req) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win || win.isDestroyed()) return 'timeout';
+    return await new Promise<AskResponse | 'timeout'>((resolve) => {
+      pendingApprovals.set(req.id, resolve);
+      win.webContents.send('event:approval', req);
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:respond'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:respond', raw) as z.infer<
+      typeof approvalRespondRequestSchema
+    >;
+    const resolve = pendingApprovals.get(req.requestId);
+    if (!resolve) return;
+    pendingApprovals.delete(req.requestId);
+    resolve({
+      decision: req.decision,
+      ...(req.reason !== undefined ? { reason: req.reason } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:audit-list'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:audit-list', raw) as z.infer<
+      typeof approvalAuditListRequestSchema
+    >;
+    return {
+      entries: deps.approvals.store.listAudit({
+        ...(req.sessionId !== undefined ? { sessionId: req.sessionId } : {}),
+        ...(req.limit !== undefined ? { limit: req.limit } : {}),
+      }),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:audit-export'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:audit-export', raw) as z.infer<
+      typeof approvalAuditExportRequestSchema
+    >;
+    return { content: deps.approvals.store.exportAudit(req.format) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:audit-clear'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:audit-clear', raw) as z.infer<
+      typeof approvalAuditClearRequestSchema
+    >;
+    return {
+      cleared:
+        req.sessionId !== undefined
+          ? deps.approvals.store.clearAudit(req.sessionId)
+          : deps.approvals.store.clearAudit(),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:rules-list'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:rules-list', raw) as z.infer<
+      typeof approvalRulesListRequestSchema
+    >;
+    return {
+      rules: deps.approvals.store
+        .listRules(req.sessionId !== undefined ? { sessionId: req.sessionId } : {})
+        .map((r) => deps.approvals.store.toApiRule(r)),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:rules-save'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:rules-save', raw) as z.infer<
+      typeof approvalRuleSaveRequestSchema
+    >;
+    return deps.approvals.store.saveRule(req.rule);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['approval:rules-delete'], async (_event, raw: unknown) => {
+    const req = parseRequest('approval:rules-delete', raw) as z.infer<
+      typeof approvalRuleDeleteRequestSchema
+    >;
+    deps.approvals.store.deleteRule(req.id);
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

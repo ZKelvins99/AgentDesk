@@ -100,6 +100,38 @@ describe('mock-provider（README 14.2）', () => {
     }
   });
 
+  it('scenario 数组：按请求顺序消费，最后一组重复', async () => {
+    const m = await startMockProvider({
+      scenario: [
+        toolCallsScenario([{ id: 'seq_1', name: 'read', args: { path: 'a.ts' } }]),
+        textScenario(['第二轮文本']),
+      ],
+    });
+    try {
+      const call = async () => {
+        const res = await fetch(`${m.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'mock-model', messages: [], stream: true }),
+        });
+        return res.text();
+      };
+      const t1 = await call();
+      expect(t1).toContain('"tool_calls"');
+      expect(t1).toContain('seq_1');
+      expect(t1).toContain('"finish_reason":"tool_calls"');
+      const t2 = await call();
+      expect(t2).toContain('第二轮文本');
+      expect(t2).not.toContain('"tool_calls"');
+      expect(t2).toContain('"finish_reason":"stop"');
+      // 第三请求重复最后一组
+      const t3 = await call();
+      expect(t3).toContain('第二轮文本');
+    } finally {
+      await m.close();
+    }
+  });
+
   it('long-text：构造长输出供虚拟列表性能测试', async () => {
     const m = await startMockProvider({ scenario: longTextScenario(50, 100, 0) });
     try {

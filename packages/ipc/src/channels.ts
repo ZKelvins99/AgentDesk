@@ -35,6 +35,14 @@ export const IPC_CHANNELS = {
   'auth:launch-login': 'auth:launch-login',
   'session:get-models': 'session:get-models',
   'session:set-thinking-level': 'session:set-thinking-level',
+  'session:set-approval-mode': 'session:set-approval-mode',
+  'approval:respond': 'approval:respond',
+  'approval:audit-list': 'approval:audit-list',
+  'approval:audit-export': 'approval:audit-export',
+  'approval:audit-clear': 'approval:audit-clear',
+  'approval:rules-list': 'approval:rules-list',
+  'approval:rules-save': 'approval:rules-save',
+  'approval:rules-delete': 'approval:rules-delete',
 } as const;
 
 /** 请求/响应通道（invoke） */
@@ -43,6 +51,7 @@ export const INVOKE_CHANNELS = IPC_CHANNELS;
 /** 事件推送通道（主 → 渲染，单向 send） */
 export const EVENT_CHANNELS = {
   'event:session': 'event:session',
+  'event:approval': 'event:approval',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

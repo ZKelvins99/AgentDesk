@@ -55,6 +55,8 @@ const api = {
       safeInvoke(IPC_CHANNELS['session:get-models'], req),
     setThinkingLevel: (req: InvokeMap['session:set-thinking-level']['request']) =>
       safeInvoke(IPC_CHANNELS['session:set-thinking-level'], req),
+    setApprovalMode: (req: InvokeMap['session:set-approval-mode']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:set-approval-mode'], req),
     list: (req?: { search?: string; archived?: boolean; limit?: number; offset?: number }) =>
       safeInvoke(IPC_CHANNELS['session:list'], req ?? {}),
     rename: (req: { sessionId: string; title: string }) =>
@@ -82,6 +84,22 @@ const api = {
     launchLogin: (req?: { provider?: string }) =>
       safeInvoke(IPC_CHANNELS['auth:launch-login'], req ?? {}),
   },
+  approval: {
+    respond: (req: InvokeMap['approval:respond']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:respond'], req),
+    auditList: (req: InvokeMap['approval:audit-list']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:audit-list'], req),
+    auditExport: (req: InvokeMap['approval:audit-export']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:audit-export'], req),
+    auditClear: (req: InvokeMap['approval:audit-clear']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:audit-clear'], req),
+    rulesList: (req: InvokeMap['approval:rules-list']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:rules-list'], req),
+    rulesSave: (req: InvokeMap['approval:rules-save']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:rules-save'], req),
+    rulesDelete: (req: InvokeMap['approval:rules-delete']['request']) =>
+      safeInvoke(IPC_CHANNELS['approval:rules-delete'], req),
+  },
   workspace: {
     add: (req: { path: string }) => safeInvoke(IPC_CHANNELS['workspace:add'], req),
     remove: (req: { workspaceId: string }) => safeInvoke(IPC_CHANNELS['workspace:remove'], req),
@@ -93,6 +111,8 @@ const api = {
   },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
+  onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>
+    safeOn(EVENT_CHANNELS['event:approval'], cb),
   platform: process.platform,
 };
 
