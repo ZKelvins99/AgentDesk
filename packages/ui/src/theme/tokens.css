@@ -1,0 +1,68 @@
+/* AgentDesk 主题 token（README 9.1）：深色为默认，浅色/跟随系统可切。
+   主题即一组 CSS 变量；支持导入 pi theme 文件配色映射。 */
+
+:root {
+  color-scheme: dark;
+  --font-ui:
+    ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", Inter, "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-size-base: 13px;
+  --line-height-base: 1.6;
+  --radius-card: 10px;
+  --radius-chip: 8px;
+  --radius-bubble: 12px;
+  --titlebar-height: 32px;
+  --session-header-height: 44px;
+  --sidebar-width: 260px;
+  --msg-vspace: 12px;
+  --motion-in: 120ms;
+  --motion-out: 90ms;
+  --focus-ring: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+:root[data-theme="dark"] {
+  --bg-app: #0d0d0f;
+  --bg-sidebar: #131316;
+  --bg-surface: #1a1a1e;
+  --bg-elevated: #22222a;
+  --bg-input: #17171b;
+  --border-subtle: #26262d;
+  --border-strong: #34343d;
+  --fg-primary: #ececf1;
+  --fg-secondary: #a1a1aa;
+  --fg-muted: #6e6e78;
+  --accent: #4d9fff;
+  --accent-fg: #ffffff;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --danger: #f85149;
+  --thinking: #8b7fd4;
+  --diff-add-bg: #12261a;
+  --diff-del-bg: #2d1416;
+  --shiki-dark: #d4d4d8;
+  --shiki-dark-bg: transparent;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-app: #f7f7f8;
+  --bg-sidebar: #f0f0f2;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-input: #f2f2f4;
+  --border-subtle: #e4e4e9;
+  --border-strong: #d0d0d8;
+  --fg-primary: #1c1c22;
+  --fg-secondary: #55555f;
+  --fg-muted: #8a8a95;
+  --accent: #0a6ee8;
+  --accent-fg: #ffffff;
+  --ok: #1a7f37;
+  --warn: #9a6700;
+  --danger: #d1242f;
+  --thinking: #6f5fc2;
+  --diff-add-bg: #e6f4ea;
+  --diff-del-bg: #fdebec;
+  --shiki-light: #24292f;
+  --shiki-light-bg: transparent;
+}

@@ -1,0 +1,4 @@
+{
+  "extends": "@agentdesk/tsconfig/web.json",
+  "include": ["src"]
+}
