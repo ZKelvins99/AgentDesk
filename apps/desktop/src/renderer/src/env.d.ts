@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import type { AgentDeskEvent, SessionState } from '@agentdesk/ipc';
+import type { SessionSummary, WorkspaceRecord } from './types';
 
 declare global {
   interface Window {
@@ -18,7 +19,7 @@ declare global {
           model?: string;
           thinkingLevel?: string;
         }): Promise<{ sessionId: string; workspacePath: string }>;
-        attach(req: { sessionId: string }): Promise<{
+        attach(req: { sessionId: string; sinceSeq?: number }): Promise<{
           sessionId: string;
           workspacePath: string;
           history: AgentDeskEvent[];
@@ -31,6 +32,30 @@ declare global {
         }): Promise<{ accepted: boolean; mode: 'normal' | 'steer' | 'followUp' }>;
         abort(req: { sessionId: string }): Promise<void>;
         setModel(req: { sessionId: string; model: string }): Promise<void>;
+        list(req?: {
+          search?: string;
+          archived?: boolean;
+          limit?: number;
+          offset?: number;
+        }): Promise<{ sessions: SessionSummary[] }>;
+        rename(req: { sessionId: string; title: string }): Promise<void>;
+        archive(req: { sessionId: string }): Promise<void>;
+        delete(req: { sessionId: string }): Promise<void>;
+        export(req: {
+          sessionId: string;
+          format: 'md' | 'json';
+        }): Promise<{ path: string; format: 'md' | 'json' }>;
+      };
+      workspace: {
+        add(req: { path: string }): Promise<{ workspace: WorkspaceRecord; needsTrust: boolean }>;
+        remove(req: { workspaceId: string }): Promise<void>;
+        list(): Promise<{ workspaces: WorkspaceRecord[] }>;
+        open(req: { workspaceId: string }): Promise<{ workspace: WorkspaceRecord }>;
+        trust(req: {
+          workspaceId: string;
+          decision: 'once' | 'always' | 'alwaysParent' | 'never';
+        }): Promise<void>;
+        pickDirectory(): Promise<{ path: string | null }>;
       };
       onSessionEvent(
         cb: (payload: { sessionId: string; seq: number; ev: AgentDeskEvent }) => void,
@@ -38,3 +63,5 @@ declare global {
     };
   }
 }
+
+export type { SessionSummary, WorkspaceRecord };

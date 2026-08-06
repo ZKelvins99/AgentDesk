@@ -28,6 +28,7 @@ button {
   background: none;
   border: none;
   cursor: pointer;
+  padding: 0;
 }
 
 button:disabled {
@@ -234,6 +235,7 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
 }
 .project-trust {
   color: var(--warn);
@@ -245,6 +247,7 @@ button:disabled {
   color: var(--fg-muted);
   cursor: pointer;
   border-radius: var(--radius-chip);
+  text-align: left;
 }
 .sidebar-add:hover {
   color: var(--fg-secondary);
@@ -764,4 +767,167 @@ button:disabled {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ---- M3 workspace / trust / session actions ---- */
+.workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.project-remove {
+  flex: none;
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  border-radius: var(--radius-chip);
+  visibility: hidden;
+}
+.project-item:hover .project-remove {
+  visibility: visible;
+}
+.project-remove:hover {
+  color: var(--danger);
+  background: var(--bg-elevated);
+}
+.project-trust[data-trust="always"],
+.project-trust[data-trust="alwaysParent"] {
+  color: var(--ok);
+}
+.project-trust[data-trust="never"] {
+  color: var(--danger);
+}
+.project-trust[data-trust="once"] {
+  color: var(--warn);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+.modal-card {
+  width: min(520px, calc(100vw - 48px));
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  padding: 20px;
+}
+.trust-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.trust-path {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 10px;
+  overflow-wrap: anywhere;
+}
+.trust-body {
+  margin: 12px 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fg-secondary);
+}
+.trust-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.trust-option {
+  padding: 7px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--bg-surface);
+  color: var(--fg-primary);
+  font-size: 13px;
+}
+.trust-option:hover {
+  border-color: var(--accent);
+}
+.trust-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+.trust-danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.trust-cancel {
+  margin-left: auto;
+  color: var(--fg-muted);
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: var(--radius-chip);
+}
+.trust-cancel:hover {
+  color: var(--fg-primary);
+  background: var(--bg-elevated);
+}
+
+.panel-section-title {
+  margin: 16px 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-muted);
+}
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.session-action {
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  color: var(--fg-secondary);
+  background: var(--bg-surface);
+}
+.session-action:hover {
+  border-color: var(--accent);
+  color: var(--fg-primary);
+}
+.session-action-danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.rename-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--fg-primary);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.rename-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.exported-path {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
 }
