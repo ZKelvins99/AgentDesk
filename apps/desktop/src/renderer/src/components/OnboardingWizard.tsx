@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import type { OnboardingStatus } from '@agentdesk/ipc';
+import { useState } from 'react';
 import { t } from '../i18n';
 
 /**

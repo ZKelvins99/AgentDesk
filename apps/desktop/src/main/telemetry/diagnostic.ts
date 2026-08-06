@@ -4,17 +4,18 @@
  * - 导出诊断 zip：日志（main.log 最近 200 行 + 各 sidecar/mcp 日志）、配置快照、环境探测。
  * 默认不自动发送，仅在用户手动导出时生成。
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { homedir, release, type, platform, arch } from 'node:os';
+
+import { execFile } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { arch, homedir, platform, release, type } from 'node:os';
 import { dirname, join } from 'node:path';
+import { promisify } from 'node:util';
+import type { DiagnosticInfo } from '@agentdesk/ipc';
 import AdmZip from 'adm-zip';
 import { app } from 'electron';
-import type { DiagnosticInfo } from '@agentdesk/ipc';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import type { KernelManager } from '../kernel/kernel-manager';
 import { logDir, redactText } from '../logging/logger';
 import type { MetricsStore } from './metrics-store';
-import type { KernelManager } from '../kernel/kernel-manager';
 
 const execFileAsync = promisify(execFile);
 

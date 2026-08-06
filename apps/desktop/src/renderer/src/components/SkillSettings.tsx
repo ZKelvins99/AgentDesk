@@ -5,6 +5,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { Icon } from './Icon';
 
 const STATUS_LABEL: Record<SkillView['status'], string> = {
   active: '启用',
@@ -338,7 +339,7 @@ export function SkillSettings(): React.JSX.Element | null {
             + 新建
           </button>
           <button type="button" className="modal-close" onClick={close} aria-label="close">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
 
@@ -404,7 +405,9 @@ export function SkillSettings(): React.JSX.Element | null {
                       {view.warnings.length > 0 ? (
                         <div className="skill-warnings">
                           {view.warnings.map((w) => (
-                            <div key={w}>⚠ {w}</div>
+                            <div key={w} className="skill-warning-item">
+                              <Icon name="alert" size={12} /> {w}
+                            </div>
                           ))}
                         </div>
                       ) : null}
@@ -440,7 +443,7 @@ export function SkillSettings(): React.JSX.Element | null {
                 onClick={() => setWizardOpen(false)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
             <label className="mcp-field">
@@ -502,7 +505,7 @@ export function SkillSettings(): React.JSX.Element | null {
                 onClick={() => setEditing(null)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
             <CodeMirror
@@ -526,7 +529,7 @@ export function SkillSettings(): React.JSX.Element | null {
               ))}
               {editorValidation.warnings.map((w) => (
                 <div key={w} className="skill-validation-warning">
-                  ⚠ {w}
+                  <Icon name="alert" size={12} /> {w}
                 </div>
               ))}
               {editorValidation.infos.map((i) => (
@@ -564,7 +567,7 @@ export function SkillSettings(): React.JSX.Element | null {
                 onClick={() => setInstallOpen(false)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
             <label className="mcp-field">

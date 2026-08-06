@@ -36,7 +36,21 @@ export type IconName =
   | 'refresh'
   | 'message'
   | 'file'
-  | 'trash';
+  | 'trash'
+  // ---- 新增图标 ----
+  | 'shieldCheck'
+  | 'shieldOff'
+  | 'chevronsUpDown'
+  | 'copy'
+  | 'externalLink'
+  | 'arrowLeft'
+  | 'arrowRight'
+  | 'download'
+  | 'upload'
+  | 'folder'
+  | 'moreHorizontal'
+  | 'settings'
+  | 'tool';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   search: (
@@ -132,6 +146,123 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   trash: <path d="M4.5 7.5h15M9.5 7.5V5h5v2.5M6.5 7.5l1 12.5h9l1-12.5" />,
+
+  // ---- 新增图标 ----
+
+  /**
+   * shieldCheck：盾牌内有对勾——「始终信任」工作区状态。
+   * 比单独用 shield + check 更语义化，一眼识别安全已授权。
+   */
+  shieldCheck: (
+    <>
+      <path d="M12 2.5 20 6v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" />
+      <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+    </>
+  ),
+
+  /**
+   * shieldOff：盾牌带斜线——「从不信任」工作区状态。
+   * 视觉上是盾牌缺口 + 斜线，与 shieldCheck 形成明确对比。
+   */
+  shieldOff: (
+    <>
+      <path d="M19.7 14A8.9 8.9 0 0 0 20 12V6l-8-3.5-4.1 1.8M4.3 5.3 4 6v6c0 5 3.5 8.5 8 10a13.6 13.6 0 0 0 3.9-2.3" />
+      <path d="M3 3l18 18" />
+    </>
+  ),
+
+  /**
+   * chevronsUpDown：上下双箭头——折叠/展开切换控件（ThinkingBlock、树节点）。
+   * 比实心三角 ▸▾ 更轻、与整套线性风格一致。
+   */
+  chevronsUpDown: <path d="M8 9l4-4.5L16 9M8 15l4 4.5 4-4.5" />,
+
+  /**
+   * copy：两个层叠矩形——复制到剪贴板（代码块、会话导出）。
+   */
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M15 9V6.5A2.5 2.5 0 0 0 12.5 4H6.5A2.5 2.5 0 0 0 4 6.5V13a2.5 2.5 0 0 0 2.5 2.5H9" />
+    </>
+  ),
+
+  /**
+   * externalLink：方框右上角带箭头——在浏览器打开外部链接。
+   */
+  externalLink: (
+    <>
+      <path d="M18 13v5.5A2.5 2.5 0 0 1 15.5 21h-10A2.5 2.5 0 0 1 3 18.5v-10A2.5 2.5 0 0 1 5.5 6H11" />
+      <path d="M15 3h6v6M10 14 21 3" />
+    </>
+  ),
+
+  /**
+   * arrowLeft：向左箭头——历史后退、会话切换。
+   */
+  arrowLeft: <path d="M19.5 12H5M11.5 5.5 5 12l6.5 6.5" />,
+
+  /**
+   * arrowRight：向右箭头——历史前进、展开导航。
+   */
+  arrowRight: <path d="M4.5 12H19M12.5 5.5 19 12l-6.5 6.5" />,
+
+  /**
+   * download：向下箭头 + 托盘——下载文件、内核更新。
+   */
+  download: (
+    <>
+      <path d="M12 3v12.5M7.5 11 12 15.5 16.5 11" />
+      <path d="M3.5 18.5h17" />
+    </>
+  ),
+
+  /**
+   * upload：向上箭头 + 托盘——上传文件、导入配置。
+   */
+  upload: (
+    <>
+      <path d="M12 15.5V3M7.5 7l4.5-4.5L16.5 7" />
+      <path d="M3.5 18.5h17" />
+    </>
+  ),
+
+  /**
+   * folder：文件夹——工作区路径、文件树节点。
+   */
+  folder: (
+    <path d="M3 6.5A2 2 0 0 1 5 4.5h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5z" />
+  ),
+
+  /**
+   * moreHorizontal：三个横向圆点——溢出菜单、更多操作。
+   */
+  moreHorizontal: (
+    <>
+      <circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+
+  /**
+   * settings：齿轮——通用设置入口。
+   */
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2M12 19.5v2M4.4 4.4l1.4 1.4M18.2 18.2l1.4 1.4M2.5 12h2M19.5 12h2M4.4 19.6l1.4-1.4M18.2 5.8l1.4-1.4" />
+    </>
+  ),
+
+  /**
+   * tool：扫手工具调用标识。两个交叉的开口扫手键，直观表达「工具/扫手」语义。
+   */
+  tool: (
+    <>
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </>
+  ),
 };
 
 /** 线性单色图标；size 同时决定描边视觉粗细的相对比例。 */

@@ -8,6 +8,7 @@ import type {
 } from '@agentdesk/ipc';
 import { useCallback, useEffect, useState } from 'react';
 import { useUiStore } from '../stores/ui-store';
+import { Icon } from './Icon';
 
 type Transport = 'stdio' | 'sse' | 'http';
 
@@ -451,7 +452,7 @@ export function McpSettings(): React.JSX.Element | null {
             + 新增
           </button>
           <button type="button" className="modal-close" onClick={close} aria-label="close">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
 
@@ -613,7 +614,7 @@ export function McpSettings(): React.JSX.Element | null {
                 onClick={() => setEditor(null)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
             {formError ? <div className="mcp-error">{formError}</div> : null}
@@ -794,7 +795,7 @@ export function McpSettings(): React.JSX.Element | null {
                 onClick={() => setImportOpen(false)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
             <textarea

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { OnboardingStatus } from '@agentdesk/ipc';
+import { useEffect, useState } from 'react';
 import { ApprovalModal } from './components/ApprovalModal';
 import { AuditPanel } from './components/AuditPanel';
 import { CommandPalette } from './components/CommandPalette';

@@ -109,7 +109,9 @@ function versionSatisfies(actual, required) {
 }
 
 async function main() {
-  const cliBin = process.argv.includes('--bin') ? process.argv[process.argv.indexOf('--bin') + 1] : null;
+  const cliBin = process.argv.includes('--bin')
+    ? process.argv[process.argv.indexOf('--bin') + 1]
+    : null;
   const binary = resolveBinary(cliBin);
 
   console.log('── verify:pi-facts（README 第 4 章事实回归）──');
@@ -171,11 +173,7 @@ async function main() {
   if (existsSync(manifest)) {
     try {
       const m = JSON.parse(readFileSync(manifest, 'utf8'));
-      check(
-        typeof m.version === 'string',
-        'MANIFEST.json version 存在',
-        `version=${m.version}`,
-      );
+      check(typeof m.version === 'string', 'MANIFEST.json version 存在', `version=${m.version}`);
     } catch {
       check(false, 'MANIFEST.json 可解析');
     }
@@ -185,7 +183,9 @@ async function main() {
 
   console.log('');
   if (FAILURES.length > 0) {
-    console.error(`❌ 事实回归失败 ${FAILURES.length} 项；按 README 16.5 先改 README 再改适配代码。`);
+    console.error(
+      `❌ 事实回归失败 ${FAILURES.length} 项；按 README 16.5 先改 README 再改适配代码。`,
+    );
     process.exit(1);
   }
   if (SKIPS.length > 0) {

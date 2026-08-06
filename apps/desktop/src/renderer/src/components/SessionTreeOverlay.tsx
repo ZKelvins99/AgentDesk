@@ -6,6 +6,7 @@
 import type { SessionTreeNode } from '@agentdesk/ipc';
 import { useCallback, useEffect, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
+import { Icon } from './Icon';
 
 interface SessionTreeOverlayProps {
   sessionId: string;
@@ -131,7 +132,7 @@ export function SessionTreeOverlay({
             ↺
           </button>
           <button type="button" className="session-tree-close" onClick={onClose} aria-label="关闭">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
         <div className="session-tree-body">

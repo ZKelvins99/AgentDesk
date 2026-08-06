@@ -14,16 +14,16 @@ import {
   createWriteStream,
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   renameSync,
   writeFileSync,
 } from 'node:fs';
-import { chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -216,9 +216,7 @@ export class KernelManager {
       activePath: active.path,
       latestKnown,
       canUpdate:
-        latestKnown !== null &&
-        latestKnown !== active.version &&
-        latestKnown !== bundledVersion,
+        latestKnown !== null && latestKnown !== active.version && latestKnown !== bundledVersion,
     };
   }
 
@@ -298,7 +296,9 @@ export class KernelManager {
     }
   }
 
-  private async getRelease(version: string): Promise<{ tag_name: string; assets: { name: string; url: string }[] }> {
+  private async getRelease(
+    version: string,
+  ): Promise<{ tag_name: string; assets: { name: string; url: string }[] }> {
     const url = `${API_BASE}/releases/tags/v${version.replace(/^v/, '')}`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'agentdesk-kernel-manager', Accept: 'application/vnd.github+json' },

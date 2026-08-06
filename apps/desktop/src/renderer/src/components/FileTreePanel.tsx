@@ -1,6 +1,7 @@
 import type { FileTreeEntry } from '@agentdesk/ipc';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUiStore } from '../stores/ui-store';
+import { Icon } from './Icon';
 
 /** 文件树（README 8.9 / M8）：懒加载、尊重 .gitignore、rg 文件名搜索。 */
 export function FileTreePanel({ root }: { root: string }): React.JSX.Element | null {
@@ -98,8 +99,8 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
           }}
           title={entry.path}
         >
-          <span className="file-tree-caret">{isDir ? (open ? '▾' : '▸') : ''}</span>
-          <span className="file-tree-icon">{isDir ? '📁' : '📄'}</span>
+          <Icon name="chevronsUpDown" size={12} className="file-tree-caret" />
+          <Icon name={isDir ? 'folder' : 'file'} size={13} className="file-tree-icon" />
           <span className="file-tree-name">{entry.name}</span>
           {entry.size !== null ? (
             <span className="file-tree-size">{formatSize(entry.size)}</span>
@@ -154,7 +155,7 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
           ) : (
             (matches ?? []).map((m) => (
               <div key={m.path} className="file-tree-row" title={m.path}>
-                <span className="file-tree-icon">📄</span>
+                <Icon name="file" size={13} className="file-tree-icon" />
                 <span className="file-tree-name">{rootName(m.path)}</span>
                 <span className="file-tree-size">{relativeTo(root, m.path)}</span>
               </div>

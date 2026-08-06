@@ -17,9 +17,7 @@ export class MetricsStore {
   private readonly inc;
 
   constructor(private readonly db: AppDatabase) {
-    this.inc = this.db.sqlite.prepare(
-      'INSERT INTO metrics (name, value, at) VALUES (?, ?, ?)',
-    );
+    this.inc = this.db.sqlite.prepare('INSERT INTO metrics (name, value, at) VALUES (?, ?, ?)');
   }
 
   record(name: MetricName | string, value = 1, at = Date.now()): void {
@@ -33,7 +31,9 @@ export class MetricsStore {
   /** 聚合窗口内指标：返回 name → { count, sum, lastAt }。 */
   summary(since: number): Record<string, { count: number; sum: number; lastAt: number }> {
     const rows = this.db.sqlite
-      .prepare('SELECT name, COUNT(*) as count, COALESCE(SUM(value),0) as sum, MAX(at) as lastAt FROM metrics WHERE at >= ? GROUP BY name')
+      .prepare(
+        'SELECT name, COUNT(*) as count, COALESCE(SUM(value),0) as sum, MAX(at) as lastAt FROM metrics WHERE at >= ? GROUP BY name',
+      )
       .all(since) as Array<{ name: string; count: number; sum: number; lastAt: number }>;
     const out: Record<string, { count: number; sum: number; lastAt: number }> = {};
     for (const r of rows) out[r.name] = { count: r.count, sum: r.sum, lastAt: r.lastAt };

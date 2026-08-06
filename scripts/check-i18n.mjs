@@ -9,13 +9,22 @@
  *
  * 用法：node scripts/check-i18n.mjs
  */
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
-const I18N_FILE = path.join(REPO_ROOT, 'apps', 'desktop', 'src', 'renderer', 'src', 'i18n', 'index.ts');
+const I18N_FILE = path.join(
+  REPO_ROOT,
+  'apps',
+  'desktop',
+  'src',
+  'renderer',
+  'src',
+  'i18n',
+  'index.ts',
+);
 
 const FAILURES = [];
 
@@ -32,7 +41,6 @@ function extractKeys(text) {
   // 取 zhCN = { ... } as const; 与 en: Record<I18nKey, string> = { ... }
   const keys = new Set();
   const objRe = /=\s*\{([\s\S]*?)\}\s*as\s*const/;
-  const enRe = /=\s*\{([\s\S]*?)\};/;
   const m = text.match(objRe);
   const body = m ? m[1] : '';
   for (const line of body.split(/\r?\n/)) {
@@ -118,7 +126,9 @@ function main() {
     });
   }
   if (bareStrings.length > 0) {
-    console.log(`  ⚠️  发现 ${bareStrings.length} 处疑似裸中文（历史遗留，README 9.9 逐步迁移到 t()）`);
+    console.log(
+      `  ⚠️  发现 ${bareStrings.length} 处疑似裸中文（历史遗留，README 9.9 逐步迁移到 t()）`,
+    );
     console.log(`  ${bareStrings.slice(0, 8).join('\n  ')}`);
   } else {
     pass('JSX 无裸硬编码中文');

@@ -5,6 +5,7 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
+import { Icon } from './Icon';
 import '@xterm/xterm/css/xterm.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -149,7 +150,7 @@ export function TerminalPanel({ cwd, onClose }: TerminalPanelProps): React.JSX.E
   if (unavailable) {
     return (
       <div className="terminal-panel terminal-unavailable">
-        <span className="terminal-unavailable-icon">⚠</span>
+        <Icon name="alert" size={18} className="terminal-unavailable-icon" />
         <span>终端不可用：node-pty 未能加载（ABI 不匹配）。</span>
         <button type="button" className="terminal-close-btn" onClick={onClose}>
           关闭
@@ -181,7 +182,7 @@ export function TerminalPanel({ cwd, onClose }: TerminalPanelProps): React.JSX.E
                 closeTab(tab.id);
               }}
             >
-              ×
+              <Icon name="close" size={12} />
             </button>
           </button>
         ))}
@@ -201,7 +202,7 @@ export function TerminalPanel({ cwd, onClose }: TerminalPanelProps): React.JSX.E
           aria-label="关闭终端面板"
           onClick={onClose}
         >
-          ×
+          <Icon name="close" size={14} />
         </button>
       </div>
       {/* xterm 容器 */}

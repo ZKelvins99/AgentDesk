@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { UpdateStatus } from '@agentdesk/ipc';
+import { useEffect, useState } from 'react';
 import { t } from '../i18n';
 
 /**
@@ -53,7 +53,10 @@ export function UpdateBanner(): React.JSX.Element | null {
           disabled={busy}
           onClick={() => {
             setBusy(true);
-            void window.agentdesk.update.check().then(setStatus).finally(() => setBusy(false));
+            void window.agentdesk.update
+              .check()
+              .then(setStatus)
+              .finally(() => setBusy(false));
           }}
         >
           {t('update.check')}

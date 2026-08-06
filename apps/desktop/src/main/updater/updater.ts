@@ -3,9 +3,10 @@
  * - 启动后 30s + 每 6h 检查一次。
  * - 下载完成后不强制重启，侧栏提示；有会话运行时绝不自动重启。
  */
-import { autoUpdater } from 'electron-updater';
-import { app } from 'electron';
+
 import type { UpdateStatus } from '@agentdesk/ipc';
+import { app } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import { getLogger } from '../logging/logger';
 
 export interface UpdateManagerOptions {

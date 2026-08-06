@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icon } from '../../components/Icon';
 import { t } from '../../i18n';
 
 /** 思考块（README 9.4.2 #3）：折叠条，--thinking 色左边框、斜体；流式时自动展开。 */
@@ -23,7 +24,7 @@ export function ThinkingBlock({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="thinking-caret">{open ? '▾' : '▸'}</span>
+        <Icon name="chevronsUpDown" size={13} />
         <span className="thinking-label">
           {t('session.thinking')} · {text.length} 字符
         </span>

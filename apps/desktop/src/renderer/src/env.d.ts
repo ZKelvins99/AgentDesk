@@ -403,11 +403,7 @@ declare global {
       // M9: 首次启动引导页
       onboarding: {
         status(): Promise<OnboardingStatus>;
-        complete(req: {
-          provider?: string;
-          apiKey?: string;
-          kernel?: string;
-        }): Promise<void>;
+        complete(req: { provider?: string; apiKey?: string; kernel?: string }): Promise<void>;
       };
       // M9: 自动更新
       update: {

@@ -5,6 +5,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { Icon } from './Icon';
 
 const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'max'] as const;
 
@@ -796,7 +797,7 @@ export function SettingsPanel(): React.JSX.Element | null {
         <div className="provider-settings-header">
           <h2 className="model-picker-title">设置</h2>
           <button type="button" className="modal-close" onClick={close} aria-label="close">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
         <div className="settings-body">

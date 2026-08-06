@@ -4,9 +4,9 @@
  */
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { app } from 'electron';
 import pino, { type Logger, type LoggerOptions } from 'pino';
 import createRoll from 'pino-roll';
-import { app } from 'electron';
 
 export type { Logger };
 

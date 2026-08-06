@@ -235,11 +235,11 @@ function trustIcon(trust: WorkspaceRecord['trust']): IconName {
   switch (trust) {
     case 'always':
     case 'alwaysParent':
-      return 'check';
+      return 'shieldCheck';
     case 'once':
       return 'shield';
     case 'never':
-      return 'close';
+      return 'shieldOff';
     default:
       return 'alert';
   }

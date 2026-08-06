@@ -3,6 +3,7 @@ import { MergeView, unifiedMergeView } from '@codemirror/merge';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Icon } from './Icon';
 
 type DiffMode = 'unified' | 'split';
 
@@ -115,7 +116,7 @@ export function DiffPanel({
           刷新
         </button>
         <button type="button" className="modal-close" onClick={onClose} aria-label="close">
-          ×
+          <Icon name="close" size={14} />
         </button>
       </div>
 

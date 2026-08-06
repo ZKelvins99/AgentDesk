@@ -1,5 +1,6 @@
 import type { ExtensionRuntimeNote, ExtensionView } from '@agentdesk/ipc';
 import { useCallback, useEffect, useState } from 'react';
+import { Icon } from './Icon';
 
 const SOURCE_LABEL: Record<ExtensionView['source'], string> = {
   global: '全局目录',
@@ -54,7 +55,7 @@ export function ExtensionCompatPanel({
             刷新
           </button>
           <button type="button" className="modal-close" onClick={onClose} aria-label="close">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
 

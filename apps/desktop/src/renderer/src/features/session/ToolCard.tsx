@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Icon } from '../../components/Icon';
 import { t } from '../../i18n';
 import type { UiMessage } from './message-model';
 
@@ -28,8 +29,8 @@ export function ToolCard({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="tool-caret">{open ? '▾' : '▸'}</span>
-        <span className="tool-icon">⌗</span>
+        <Icon name="chevronsUpDown" size={13} />
+        <Icon name="tool" size={13} className="tool-icon" />
         <span className="tool-name">{message.toolName}</span>
         <span className="tool-summary">{summarizeArgs(message.args)}</span>
         <span className="tool-status" data-status={message.status}>

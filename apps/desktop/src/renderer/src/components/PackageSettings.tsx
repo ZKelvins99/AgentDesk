@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
 import { ExtensionCompatPanel } from './ExtensionCompatPanel';
+import { Icon } from './Icon';
 
 const SOURCE_LABEL: Record<PackageView['sourceType'], string> = {
   npm: 'npm',
@@ -358,7 +359,7 @@ export function PackageSettings(): React.JSX.Element | null {
             扩展兼容性
           </button>
           <button type="button" className="modal-close" onClick={close} aria-label="close">
-            ×
+            <Icon name="close" size={14} />
           </button>
         </div>
 
@@ -411,7 +412,7 @@ export function PackageSettings(): React.JSX.Element | null {
                   {view.conflict ? ` · ${CONFLICT_LABEL[view.conflict]}` : ''}
                   {!view.installed ? ' · 未安装' : ''}
                 </span>
-                <span className="skill-detail-arrow">{expanded.has(view.id) ? '▾' : '▸'}</span>
+                <Icon name="chevronsUpDown" size={12} className="skill-detail-arrow" />
               </button>
 
               {expanded.has(view.id) ? (
@@ -546,7 +547,7 @@ export function PackageSettings(): React.JSX.Element | null {
                 onClick={() => setInstallOpen(false)}
                 aria-label="close"
               >
-                ×
+                <Icon name="close" size={14} />
               </button>
             </div>
 
@@ -659,7 +660,8 @@ export function PackageSettings(): React.JSX.Element | null {
 
             <div className="skill-install-row package-install-footer">
               <div className="package-warning">
-                ⚠ 安装插件 = 执行第三方代码，拥有完整系统权限（pi install 会跑 npm install）。
+                <Icon name="alert" size={13} /> 安装插件 = 执行第三方代码，拥有完整系统权限（pi
+                install 会跑 npm install）。
               </div>
               <button
                 type="button"
@@ -691,7 +693,9 @@ export function PackageSettings(): React.JSX.Element | null {
                 {inspection.warnings.length > 0 ? (
                   <div className="package-review-warning">
                     {inspection.warnings.map((w) => (
-                      <div key={w}>⚠ {w}</div>
+                      <div key={w} className="package-warning-item">
+                        <Icon name="alert" size={12} /> {w}
+                      </div>
                     ))}
                   </div>
                 ) : null}
