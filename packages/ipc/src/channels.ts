@@ -8,12 +8,30 @@ export const IPC_CHANNELS = {
   'window:minimize': 'window:minimize',
   'window:maximize': 'window:maximize',
   'window:close': 'window:close',
+  'session:create': 'session:create',
+  'session:attach': 'session:attach',
+  'session:send': 'session:send',
+  'session:abort': 'session:abort',
+  'session:set-model': 'session:set-model',
+} as const;
+
+/** 请求/响应通道（invoke） */
+export const INVOKE_CHANNELS = IPC_CHANNELS;
+
+/** 事件推送通道（主 → 渲染，单向 send） */
+export const EVENT_CHANNELS = {
+  'event:session': 'event:session',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
+export type InvokeChannel = keyof typeof INVOKE_CHANNELS;
+export type EventChannel = keyof typeof EVENT_CHANNELS;
 
-export const ALL_IPC_CHANNELS = Object.values(IPC_CHANNELS);
+export const ALL_IPC_CHANNELS = [
+  ...Object.values(IPC_CHANNELS),
+  ...Object.values(EVENT_CHANNELS),
+] as const;
 
-export function isIpcChannel(channel: string): channel is IpcChannel {
+export function isIpcChannel(channel: string): channel is IpcChannel | EventChannel {
   return (ALL_IPC_CHANNELS as readonly string[]).includes(channel);
 }
