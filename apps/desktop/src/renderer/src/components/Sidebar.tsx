@@ -25,6 +25,7 @@ export function Sidebar(): React.JSX.Element {
   const openProviderSettings = useUiStore((s) => s.openProviderSettings);
   const openMcpSettings = useUiStore((s) => s.openMcpSettings);
   const openSkillSettings = useUiStore((s) => s.openSkillSettings);
+  const openPackageSettings = useUiStore((s) => s.openPackageSettings);
 
   const recent = summaries.slice(0, 8);
   const activeWorkspacePath = activeId ? (sessions[activeId]?.workspacePath ?? '') : '';
@@ -163,6 +164,15 @@ export function Sidebar(): React.JSX.Element {
           onClick={openSkillSettings}
         >
           📚
+        </button>
+        <button
+          type="button"
+          className="icon-btn footer-settings"
+          title="插件（Pi Package）管理"
+          aria-label="插件（Pi Package）管理"
+          onClick={openPackageSettings}
+        >
+          ⧩
         </button>
       </div>
     </aside>

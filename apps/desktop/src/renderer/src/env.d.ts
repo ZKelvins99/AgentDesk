@@ -9,6 +9,7 @@ import type {
   McpServerView,
   McpSnapshot,
   McpToolView,
+  PackageView,
   ProviderPreset,
   ProviderView,
   SecretsStatusResponse,
@@ -207,6 +208,45 @@ declare global {
           added: string[];
           skipped: string[];
         }>;
+      };
+      packages: {
+        list(req?: { workspacePath?: string }): Promise<{ packages: PackageView[] }>;
+        install(req: {
+          source:
+            | { type: 'npm'; name: string; version?: string }
+            | { type: 'git'; url: string; ref?: string }
+            | { type: 'local'; path: string };
+          scope: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{
+          ok: boolean;
+          log: string;
+          command: string;
+          package?: PackageView;
+        }>;
+        uninstall(req: {
+          source: string;
+          scope: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{ ok: boolean; log: string; command: string }>;
+        update(req: {
+          source?: string;
+          extensions?: boolean;
+          scope: 'global' | 'project';
+          workspacePath?: string;
+        }): Promise<{ ok: boolean; log: string; command: string; note?: string }>;
+        setFilter(req: {
+          source: string;
+          scope: 'global' | 'project';
+          filter: {
+            extensions?: string[];
+            skills?: string[];
+            prompts?: string[];
+            themes?: string[];
+            autoload?: boolean;
+          };
+          workspacePath?: string;
+        }): Promise<{ package: PackageView }>;
       };
       approval: {
         respond(req: {

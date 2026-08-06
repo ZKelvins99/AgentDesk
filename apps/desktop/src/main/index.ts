@@ -27,6 +27,7 @@ if (!gotTheLock) {
       mcp: runtime.mcp,
       mcpHost: runtime.mcpHost,
       skills: runtime.skills,
+      packages: runtime.packages,
       uplink: runtime.uplink,
     });
     createMainWindow();

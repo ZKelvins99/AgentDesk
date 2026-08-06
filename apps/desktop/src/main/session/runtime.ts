@@ -11,6 +11,7 @@ import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { McpConfigStore } from '../mcp/mcp-config';
 import { McpConnectionManager } from '../mcp/mcp-manager';
+import { PackageManager } from '../packages/package-manager';
 import { PiBridge, SidecarPool } from '../pi';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { SkillManager } from '../skills/skill-manager';
@@ -33,6 +34,7 @@ export interface SessionRuntimeHandle {
   mcp: McpConfigStore;
   mcpHost: McpConnectionManager;
   skills: SkillManager;
+  packages: PackageManager;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -103,6 +105,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
 
   const mcpStore = new McpConfigStore();
   const skillManager = new SkillManager();
+  const packageManager = new PackageManager(binary ? { binary } : {});
   let sessionManager: SessionManager;
   const approvalStore = new ApprovalStore(db);
   const approvals = new ApprovalEngine({
@@ -174,6 +177,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     mcp: mcpStore,
     mcpHost,
     skills: skillManager,
+    packages: packageManager,
     uplink,
     kernel: { binary },
     dispose: async () => {

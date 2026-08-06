@@ -19,6 +19,11 @@ import {
   type mcpSnapshotsRequestSchema,
   type mcpTestRequestSchema,
   type mcpToolsRequestSchema,
+  type packagesInstallRequestSchema,
+  type packagesListRequestSchema,
+  type packagesSetFilterRequestSchema,
+  type packagesUninstallRequestSchema,
+  type packagesUpdateRequestSchema,
   type providerDeleteRequestSchema,
   type providerDiscoverModelsRequestSchema,
   type providerSaveRequestSchema,
@@ -55,6 +60,7 @@ import type { z } from 'zod';
 import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
+import type { PackageManager, PackageResourceFilter } from './packages/package-manager';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
@@ -84,6 +90,8 @@ export interface IpcHandlerDeps {
   mcpHost: McpConnectionManager;
   /** M7：Skill 浏览/详情/启停（README 8.4.1）。 */
   skills: SkillManager;
+  /** M7：Pi Package 管理（README 8.5.1）。 */
+  packages: PackageManager;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
   uplink: UplinkServer;
 }
@@ -448,6 +456,78 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       typeof skillsImportHarnessRequestSchema
     >;
     return deps.skills.importOtherHarness(req.harness);
+  });
+
+  // ---- Pi Package 管理（README 8.5.1，M7 第五步）----
+
+  ipcMain.handle(IPC_CHANNELS['packages:list'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:list', raw) as z.infer<typeof packagesListRequestSchema>;
+    return { packages: await deps.packages.list(req.workspacePath) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['packages:install'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:install', raw) as z.infer<
+      typeof packagesInstallRequestSchema
+    >;
+    const source =
+      req.source.type === 'npm'
+        ? {
+            type: 'npm' as const,
+            name: req.source.name,
+            ...(req.source.version !== undefined ? { version: req.source.version } : {}),
+          }
+        : req.source.type === 'git'
+          ? {
+              type: 'git' as const,
+              url: req.source.url,
+              ...(req.source.ref !== undefined ? { ref: req.source.ref } : {}),
+            }
+          : req.source;
+    return deps.packages.install({
+      source,
+      scope: req.scope,
+      ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['packages:uninstall'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:uninstall', raw) as z.infer<
+      typeof packagesUninstallRequestSchema
+    >;
+    return deps.packages.uninstall({
+      source: req.source,
+      scope: req.scope,
+      ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['packages:update'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:update', raw) as z.infer<typeof packagesUpdateRequestSchema>;
+    return deps.packages.update({
+      scope: req.scope,
+      ...(req.source !== undefined ? { source: req.source } : {}),
+      ...(req.extensions !== undefined ? { extensions: req.extensions } : {}),
+      ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+    });
+  });
+
+  ipcMain.handle(IPC_CHANNELS['packages:set-filter'], async (_event, raw: unknown) => {
+    const req = parseRequest('packages:set-filter', raw) as z.infer<
+      typeof packagesSetFilterRequestSchema
+    >;
+    const filter: PackageResourceFilter = {};
+    for (const key of ['extensions', 'skills', 'prompts', 'themes'] as const) {
+      if (req.filter[key] !== undefined) filter[key] = req.filter[key];
+    }
+    if (req.filter.autoload !== undefined) filter.autoload = req.filter.autoload;
+    return {
+      package: await deps.packages.setFilter({
+        source: req.source,
+        scope: req.scope,
+        filter,
+        ...(req.workspacePath !== undefined ? { workspacePath: req.workspacePath } : {}),
+      }),
+    };
   });
 
   // ---- Provider / Model / 密钥（README 8.6）----

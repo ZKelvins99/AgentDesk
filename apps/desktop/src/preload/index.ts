@@ -118,6 +118,18 @@ const api = {
     importHarness: (req: InvokeMap['skills:import-harness']['request']) =>
       safeInvoke(IPC_CHANNELS['skills:import-harness'], req),
   },
+  packages: {
+    list: (req?: { workspacePath?: string }) =>
+      safeInvoke(IPC_CHANNELS['packages:list'], req ?? {}),
+    install: (req: InvokeMap['packages:install']['request']) =>
+      safeInvoke(IPC_CHANNELS['packages:install'], req),
+    uninstall: (req: InvokeMap['packages:uninstall']['request']) =>
+      safeInvoke(IPC_CHANNELS['packages:uninstall'], req),
+    update: (req: InvokeMap['packages:update']['request']) =>
+      safeInvoke(IPC_CHANNELS['packages:update'], req),
+    setFilter: (req: InvokeMap['packages:set-filter']['request']) =>
+      safeInvoke(IPC_CHANNELS['packages:set-filter'], req),
+  },
   approval: {
     respond: (req: InvokeMap['approval:respond']['request']) =>
       safeInvoke(IPC_CHANNELS['approval:respond'], req),

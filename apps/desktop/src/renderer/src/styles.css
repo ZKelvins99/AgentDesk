@@ -1994,3 +1994,101 @@ button:disabled {
   border-radius: 8px;
   background: color-mix(in srgb, #27ae60 10%, transparent);
 }
+
+/* ---- Pi Package 管理（M7 第五步，README 8.5.1）---- */
+.package-settings {
+  width: min(880px, calc(100vw - 48px));
+}
+.package-scope-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+.package-scope-tab {
+  flex: 1;
+  background: var(--bg);
+  color: var(--fg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.package-scope-tab.active {
+  border-color: var(--accent, #3b82f6);
+  color: var(--fg-primary);
+  background: color-mix(in srgb, var(--accent, #3b82f6) 12%, var(--bg));
+}
+.package-source-chip {
+  font-size: 10px;
+}
+.package-conflict {
+  color: #e67e22;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.package-filter {
+  margin-top: 8px;
+}
+.package-category {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.package-cat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+}
+.package-patterns {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--fg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  resize: vertical;
+}
+.package-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.package-log {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  max-height: 160px;
+  overflow: auto;
+}
+.package-source-type {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+}
+.package-install-footer {
+  margin-top: 10px;
+}
+.package-warning {
+  flex: 1;
+  font-size: 11px;
+  color: #e67e22;
+}
+.skill-detail-arrow {
+  flex: none;
+  color: var(--fg-muted);
+  font-size: 12px;
+}

@@ -682,6 +682,95 @@ export const skillsImportHarnessResponseSchema = z.object({
   skipped: z.array(z.string()),
 });
 
+/** Pi Package 管理（README 8.5.1 / 4.13，M7 第五步）。 */
+export const packageScopeSchema = z.enum(['global', 'project']);
+export type PackageScope = z.infer<typeof packageScopeSchema>;
+
+export const packageResourceFilterSchema = z.object({
+  extensions: z.array(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
+  prompts: z.array(z.string()).optional(),
+  themes: z.array(z.string()).optional(),
+  autoload: z.boolean().optional(),
+});
+export type PackageResourceFilter = z.infer<typeof packageResourceFilterSchema>;
+
+export const packageViewSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  sourceType: z.enum(['npm', 'git', 'local']),
+  name: z.string(),
+  scope: packageScopeSchema,
+  version: z.string().optional(),
+  ref: z.string().optional(),
+  installed: z.boolean(),
+  installPath: z.string().optional(),
+  resources: z.object({
+    extensions: z.number().int().nonnegative(),
+    skills: z.number().int().nonnegative(),
+    prompts: z.number().int().nonnegative(),
+    themes: z.number().int().nonnegative(),
+  }),
+  filter: packageResourceFilterSchema.optional(),
+  autoload: z.boolean(),
+  conflict: z.enum(['project-overrides', 'delta-overlay', 'overridden-by-project']).nullable(),
+});
+export type PackageView = z.infer<typeof packageViewSchema>;
+
+export const packagesListRequestSchema = z.object({ workspacePath: z.string().optional() });
+export const packagesListResponseSchema = z.object({ packages: z.array(packageViewSchema) });
+
+export const packageInstallSourceSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('npm'), name: z.string().min(1), version: z.string().optional() }),
+  z.object({ type: z.literal('git'), url: z.string().min(1), ref: z.string().optional() }),
+  z.object({ type: z.literal('local'), path: z.string().min(1) }),
+]);
+export type PackageInstallSource = z.infer<typeof packageInstallSourceSchema>;
+
+export const packagesInstallRequestSchema = z.object({
+  source: packageInstallSourceSchema,
+  scope: packageScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const packagesInstallResponseSchema = z.object({
+  ok: z.boolean(),
+  log: z.string(),
+  command: z.string(),
+  package: packageViewSchema.optional(),
+});
+
+export const packagesUninstallRequestSchema = z.object({
+  source: z.string().min(1),
+  scope: packageScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const packagesUninstallResponseSchema = z.object({
+  ok: z.boolean(),
+  log: z.string(),
+  command: z.string(),
+});
+
+export const packagesUpdateRequestSchema = z.object({
+  source: z.string().optional(),
+  extensions: z.boolean().optional(),
+  scope: packageScopeSchema,
+  workspacePath: z.string().optional(),
+});
+export const packagesUpdateResponseSchema = z.object({
+  ok: z.boolean(),
+  log: z.string(),
+  command: z.string(),
+  note: z.string().optional(),
+});
+
+export const packagesSetFilterRequestSchema = z.object({
+  source: z.string().min(1),
+  scope: packageScopeSchema,
+  filter: packageResourceFilterSchema,
+  workspacePath: z.string().optional(),
+});
+export const packagesSetFilterResponseSchema = z.object({ package: packageViewSchema });
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -908,6 +997,26 @@ export interface InvokeMap {
     request: z.infer<typeof skillsImportHarnessRequestSchema>;
     response: z.infer<typeof skillsImportHarnessResponseSchema>;
   };
+  'packages:list': {
+    request: z.infer<typeof packagesListRequestSchema>;
+    response: z.infer<typeof packagesListResponseSchema>;
+  };
+  'packages:install': {
+    request: z.infer<typeof packagesInstallRequestSchema>;
+    response: z.infer<typeof packagesInstallResponseSchema>;
+  };
+  'packages:uninstall': {
+    request: z.infer<typeof packagesUninstallRequestSchema>;
+    response: z.infer<typeof packagesUninstallResponseSchema>;
+  };
+  'packages:update': {
+    request: z.infer<typeof packagesUpdateRequestSchema>;
+    response: z.infer<typeof packagesUpdateResponseSchema>;
+  };
+  'packages:set-filter': {
+    request: z.infer<typeof packagesSetFilterRequestSchema>;
+    response: z.infer<typeof packagesSetFilterResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -978,6 +1087,11 @@ export const invokeRequestSchemas = {
   'skills:recommended': z.undefined(),
   'skills:harness-status': z.undefined(),
   'skills:import-harness': skillsImportHarnessRequestSchema,
+  'packages:list': packagesListRequestSchema,
+  'packages:install': packagesInstallRequestSchema,
+  'packages:uninstall': packagesUninstallRequestSchema,
+  'packages:update': packagesUpdateRequestSchema,
+  'packages:set-filter': packagesSetFilterRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];
