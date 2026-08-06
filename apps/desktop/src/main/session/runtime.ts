@@ -9,17 +9,20 @@ import {
 } from '@agentdesk/mock-provider';
 import { app, BrowserWindow } from 'electron';
 import { PiBridge, SidecarPool } from '../pi';
+import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
 import { SessionManager } from './session-manager';
 
 /**
  * 会话运行时装配（README 5.1/5.4）：
  * - 解析 pi 二进制（resources/bin/<platform>-<arch>）
  * - AGENTDESK_MOCK_PROVIDER=1 时启动本地 mock provider（README 14.2，E2E 不花真钱）
+ * - SQLite（userData/agentdesk.db）+ WorkspaceManager（信任）
  * - 事件经 16ms 合流后广播到所有窗口（event:session）
  */
 
 export interface SessionRuntimeHandle {
   sessionManager: SessionManager;
+  workspaces: WorkspaceManager;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
 }
@@ -56,8 +59,15 @@ async function setupMockProvider(): Promise<MockSetup> {
 
 export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const binary = resolvePiBinary(app.getAppPath());
-  const sessionDir = path.join(app.getPath('userData'), 'sessions');
+  const userData = app.getPath('userData');
+  const sessionDir = path.join(userData, 'sessions');
   mkdirSync(sessionDir, { recursive: true });
+
+  const db = openDatabase(path.join(userData, 'agentdesk.db'));
+  const store = new SessionStore(db, path.join(userData, 'exports'));
+  // 「本次信任」不跨重启：启动时重置为未知，下次打开重新询问（README 8.9）
+  store.resetOnceTrust();
+  const workspaces = new WorkspaceManager({ store });
 
   let mockSetup: MockSetup | null = null;
   if (process.env.AGENTDESK_MOCK_PROVIDER === '1') {
@@ -78,10 +88,12 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     bridge,
     workspacePath,
     sessionDir,
+    store,
     defaultProvider,
     defaultModel,
     defaultThinkingLevel: process.env.AGENTDESK_THINKING_LEVEL,
     trust,
+    resolveTrust: (p: string) => workspaces.resolveTrustForSpawn(p),
     ...(mockSetup?.agentDir ? { agentDir: mockSetup.agentDir } : {}),
     offline,
     onEvent: (sessionId, seq, ev) => {
@@ -93,10 +105,12 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
 
   return {
     sessionManager,
+    workspaces,
     kernel: { binary },
     dispose: async () => {
       await sessionManager.shutdownAll(5_000);
       pool.dispose();
+      db.close();
       if (mockSetup) {
         await mockSetup.mock.close();
         rmSync(mockSetup.agentDir, { recursive: true, force: true });

@@ -3,15 +3,25 @@ import {
   IPC_CHANNELS,
   invokeRequestSchemas,
   type sessionAbortRequestSchema,
+  type sessionArchiveRequestSchema,
   type sessionAttachRequestSchema,
   type sessionCreateRequestSchema,
+  type sessionDeleteRequestSchema,
+  type sessionExportRequestSchema,
+  type sessionListRequestSchema,
+  type sessionRenameRequestSchema,
   type sessionSendRequestSchema,
   type sessionSetModelRequestSchema,
+  type workspaceAddRequestSchema,
+  type workspaceOpenRequestSchema,
+  type workspaceRemoveRequestSchema,
+  type workspaceTrustRequestSchema,
 } from '@agentdesk/ipc';
 import { AgentDeskError } from '@agentdesk/shared';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
 import type { SessionManager } from './session/session-manager';
+import type { WorkspaceManager } from './storage';
 
 /** 边界数据必须过 zod 校验后才进入 handler（README 16.1）。 */
 function parseRequest(channel: InvokeChannel, raw: unknown): unknown {
@@ -30,6 +40,7 @@ function parseRequest(channel: InvokeChannel, raw: unknown): unknown {
 
 export interface IpcHandlerDeps {
   sessionManager: SessionManager;
+  workspaces: WorkspaceManager;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -67,7 +78,7 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
 
   ipcMain.handle(IPC_CHANNELS['session:attach'], async (_event, raw: unknown) => {
     const req = parseRequest('session:attach', raw) as z.infer<typeof sessionAttachRequestSchema>;
-    return deps.sessionManager.attach(req.sessionId);
+    return deps.sessionManager.attach(req.sessionId, req.sinceSeq ?? 0);
   });
 
   ipcMain.handle(IPC_CHANNELS['session:send'], async (_event, raw: unknown) => {
@@ -85,5 +96,78 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       typeof sessionSetModelRequestSchema
     >;
     await deps.sessionManager.setModel(req.sessionId, req.model);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:list'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:list', raw) as z.infer<typeof sessionListRequestSchema>;
+    return { sessions: deps.sessionManager.list(req) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:rename'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:rename', raw) as z.infer<typeof sessionRenameRequestSchema>;
+    deps.sessionManager.rename(req.sessionId, req.title);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:archive'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:archive', raw) as z.infer<typeof sessionArchiveRequestSchema>;
+    deps.sessionManager.archive(req.sessionId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:delete'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:delete', raw) as z.infer<typeof sessionDeleteRequestSchema>;
+    await deps.sessionManager.delete(req.sessionId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:export'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:export', raw) as z.infer<typeof sessionExportRequestSchema>;
+    const filePath = deps.sessionManager.export(req.sessionId, req.format);
+    return { path: filePath, format: req.format };
+  });
+
+  // ---- Workspace（README 10.2 workspace:*）----
+
+  ipcMain.handle(IPC_CHANNELS['workspace:add'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:add', raw) as z.infer<typeof workspaceAddRequestSchema>;
+    return deps.workspaces.add(req.path);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:remove'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:remove', raw) as z.infer<
+      typeof workspaceRemoveRequestSchema
+    >;
+    deps.workspaces.remove(req.workspaceId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:list'], async () => {
+    return { workspaces: deps.workspaces.list() };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:open'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:open', raw) as z.infer<typeof workspaceOpenRequestSchema>;
+    const workspace = deps.workspaces.open(req.workspaceId);
+    if (!workspace) {
+      throw new AgentDeskError({
+        code: 'WORKSPACE_NOT_FOUND',
+        scope: 'workspace',
+        userMessage: '工作区不存在',
+      });
+    }
+    return { workspace };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:trust'], async (_event, raw: unknown) => {
+    const req = parseRequest('workspace:trust', raw) as z.infer<typeof workspaceTrustRequestSchema>;
+    deps.workspaces.trust(req.workspaceId, req.decision);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['workspace:pick-directory'], async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const pick: Electron.OpenDialogOptions = {
+      title: '选择工作区目录',
+      properties: ['openDirectory', 'createDirectory'],
+    };
+    const result = win ? await dialog.showOpenDialog(win, pick) : await dialog.showOpenDialog(pick);
+    if (result.canceled || result.filePaths.length === 0) return { path: null };
+    return { path: result.filePaths[0] };
   });
 }

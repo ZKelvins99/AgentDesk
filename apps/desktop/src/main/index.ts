@@ -19,7 +19,10 @@ if (!gotTheLock) {
 
   void app.whenReady().then(async () => {
     const runtime = await createSessionRuntime();
-    registerIpcHandlers({ sessionManager: runtime.sessionManager });
+    registerIpcHandlers({
+      sessionManager: runtime.sessionManager,
+      workspaces: runtime.workspaces,
+    });
     createMainWindow();
 
     app.on('activate', () => {

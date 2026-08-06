@@ -44,12 +44,30 @@ const api = {
   session: {
     create: (req: { workspacePath?: string; model?: string; thinkingLevel?: ThinkingLevel }) =>
       safeInvoke(IPC_CHANNELS['session:create'], req),
-    attach: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:attach'], req),
+    attach: (req: { sessionId: string; sinceSeq?: number }) =>
+      safeInvoke(IPC_CHANNELS['session:attach'], req),
     send: (req: { sessionId: string; text: string }) =>
       safeInvoke(IPC_CHANNELS['session:send'], req),
     abort: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:abort'], req),
     setModel: (req: { sessionId: string; model: string }) =>
       safeInvoke(IPC_CHANNELS['session:set-model'], req),
+    list: (req?: { search?: string; archived?: boolean; limit?: number; offset?: number }) =>
+      safeInvoke(IPC_CHANNELS['session:list'], req ?? {}),
+    rename: (req: { sessionId: string; title: string }) =>
+      safeInvoke(IPC_CHANNELS['session:rename'], req),
+    archive: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:archive'], req),
+    delete: (req: { sessionId: string }) => safeInvoke(IPC_CHANNELS['session:delete'], req),
+    export: (req: { sessionId: string; format: 'md' | 'json' }) =>
+      safeInvoke(IPC_CHANNELS['session:export'], req),
+  },
+  workspace: {
+    add: (req: { path: string }) => safeInvoke(IPC_CHANNELS['workspace:add'], req),
+    remove: (req: { workspaceId: string }) => safeInvoke(IPC_CHANNELS['workspace:remove'], req),
+    list: () => safeInvoke(IPC_CHANNELS['workspace:list'], undefined),
+    open: (req: { workspaceId: string }) => safeInvoke(IPC_CHANNELS['workspace:open'], req),
+    trust: (req: { workspaceId: string; decision: 'once' | 'always' | 'alwaysParent' | 'never' }) =>
+      safeInvoke(IPC_CHANNELS['workspace:trust'], req),
+    pickDirectory: () => safeInvoke(IPC_CHANNELS['workspace:pick-directory'], undefined),
   },
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
