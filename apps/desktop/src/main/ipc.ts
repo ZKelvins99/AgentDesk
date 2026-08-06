@@ -39,7 +39,7 @@ import {
 import { AgentDeskError } from '@agentdesk/shared';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { z } from 'zod';
-import type { ApprovalEngine, AskResponse } from './approval';
+import type { ApprovalEngine, AskResponse, UplinkServer } from './approval';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { ProviderManager } from './providers';
 import type { SessionManager } from './session/session-manager';
@@ -66,6 +66,8 @@ export interface IpcHandlerDeps {
   providers: ProviderManager;
   approvals: ApprovalEngine;
   mcp: McpConfigStore;
+  /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
+  uplink: UplinkServer;
 }
 
 export function registerIpcHandlers(deps: IpcHandlerDeps): void {
@@ -303,16 +305,19 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
       }),
     };
   });
+  deps.uplink.broadcast({ type: 'mcp:changed' });
 
   ipcMain.handle(IPC_CHANNELS['mcp:delete'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:delete', raw) as z.infer<typeof mcpDeleteRequestSchema>;
     return { deleted: deps.mcp.remove(req.name, req.scope, req.workspacePath) };
   });
+  deps.uplink.broadcast({ type: 'mcp:changed' });
 
   ipcMain.handle(IPC_CHANNELS['mcp:import'], async (_event, raw: unknown) => {
     const req = parseRequest('mcp:import', raw) as z.infer<typeof mcpImportRequestSchema>;
     return deps.mcp.importClaude(req.json, req.scope, req.workspacePath);
   });
+  deps.uplink.broadcast({ type: 'mcp:changed' });
 
   // ---- Provider / Model / 密钥（README 8.6）----
 

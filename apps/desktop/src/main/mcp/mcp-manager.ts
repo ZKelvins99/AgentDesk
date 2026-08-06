@@ -14,6 +14,7 @@ import type {
   McpCallResult,
   McpClientFactory,
   McpClientLike,
+  McpServerDiscovery,
   McpServerInfo,
   McpServerSnapshot,
   McpToolView,
@@ -53,6 +54,22 @@ export function wildcardMatch(name: string, pattern: string): boolean {
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 export class McpConnectionManager extends EventEmitter {
@@ -198,6 +215,49 @@ export class McpConnectionManager extends EventEmitter {
   async listTools(name: string, workspacePath?: string): Promise<McpToolView[]> {
     const snapshot = await this.ensureReady(name, workspacePath);
     return snapshot.tools;
+  }
+
+  /** 聚合发现：并行连接各 server 并返回工具清单（uplink GET /mcp/tools 数据源）。 */
+  async discoverTools(workspacePath?: string): Promise<McpServerDiscovery[]> {
+    const views = this.options.store.list(workspacePath);
+    const results = await Promise.all(
+      views.map(async (view): Promise<McpServerDiscovery> => {
+        const entry: McpServerDiscovery = {
+          name: view.name,
+          status: 'disconnected',
+          error: null,
+          tools: [],
+        };
+        if (view.config.enabled === false) {
+          entry.error = 'server 已禁用';
+          return entry;
+        }
+        let resolved: ResolvedServer;
+        try {
+          resolved = this.resolveServer(view.name, workspacePath);
+        } catch (error) {
+          entry.status = 'failed';
+          entry.error = errorMessage(error);
+          return entry;
+        }
+        const startupTimeoutMs = resolved.config.startupTimeoutMs ?? 15_000;
+        try {
+          const snapshot = await withTimeout(
+            this.ensureReady(view.name, workspacePath),
+            startupTimeoutMs,
+            `MCP server ${view.name} 连接超时（${startupTimeoutMs}ms）`,
+          );
+          entry.status = snapshot.status;
+          entry.tools = snapshot.tools;
+          entry.error = snapshot.lastError;
+        } catch (error) {
+          entry.status = 'failed';
+          entry.error = errorMessage(error);
+        }
+        return entry;
+      }),
+    );
+    return results;
   }
 
   /** 重新发现工具（tools/list_changed 热更新，README 8.3.2）。 */

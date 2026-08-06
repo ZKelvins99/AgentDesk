@@ -36,6 +36,14 @@ export interface McpServerSnapshot {
   reconnectAttempts: number;
 }
 
+/** discoverTools 的单个 server 聚合结果（uplink GET /mcp/tools）。 */
+export interface McpServerDiscovery {
+  name: string;
+  status: McpServerStatus;
+  error: string | null;
+  tools: McpToolView[];
+}
+
 export interface McpCallRequest {
   /** serverId（配置里的 server 名） */
   server: string;

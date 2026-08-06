@@ -10,6 +10,7 @@ import {
 import { app, BrowserWindow } from 'electron';
 import { ApprovalEngine, ApprovalStore, UplinkServer } from '../approval';
 import { McpConfigStore } from '../mcp/mcp-config';
+import { McpConnectionManager } from '../mcp/mcp-manager';
 import { PiBridge, SidecarPool } from '../pi';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
@@ -29,6 +30,8 @@ export interface SessionRuntimeHandle {
   providers: ProviderManager;
   approvals: ApprovalEngine;
   mcp: McpConfigStore;
+  mcpHost: McpConnectionManager;
+  uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
 }
@@ -96,6 +99,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const pool = new SidecarPool({ idleTimeoutMs: 15 * 60 * 1000 });
   const bridge = new PiBridge({ binary: binary ?? '', pool });
 
+  const mcpStore = new McpConfigStore();
   let sessionManager: SessionManager;
   const approvalStore = new ApprovalStore(db);
   const approvals = new ApprovalEngine({
@@ -104,8 +108,19 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     getWorkspacePath: (sessionId) => sessionManager.workspacePathOf(sessionId),
     ask: async () => 'timeout',
   });
-  const uplink = new UplinkServer({ engine: approvals });
+  const mcpHost = new McpConnectionManager({ store: mcpStore });
+  const uplink = new UplinkServer({
+    engine: approvals,
+    mcp: {
+      discoverTools: (workspacePath?: string) => mcpHost.discoverTools(workspacePath),
+      callTool: (request, options) => mcpHost.callTool(request, options),
+    },
+    resolveWorkspacePath: (sessionId: string) => sessionManager.workspacePathOf(sessionId),
+    attachmentsDir: () => path.join(sessionDir, 'attachments'),
+  });
   await uplink.listen();
+  // MCP 工具清单变化 → 通知 Bridge Extension 重注册（README 8.2.2 /events 热更新）
+  mcpHost.on('tools', () => uplink.broadcast({ type: 'mcp:changed' }));
 
   const bridgeExt = path.join(
     app.getAppPath(),
@@ -151,10 +166,13 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     workspaces,
     providers,
     approvals,
-    mcp: new McpConfigStore(),
+    mcp: mcpStore,
+    mcpHost,
+    uplink,
     kernel: { binary },
     dispose: async () => {
       await sessionManager.shutdownAll(5_000);
+      await mcpHost.disposeAll();
       pool.dispose();
       await uplink.close();
       db.close();

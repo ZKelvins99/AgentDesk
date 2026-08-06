@@ -1,6 +1,6 @@
-import { Value } from '@sinclair/typebox/value';
+import { Value } from 'typebox/value';
 import { describe, expect, it } from 'vitest';
-import { jsonSchemaToTypeBox } from './schema-to-typebox';
+import { jsonSchemaToTypeBox } from '../../../resources/pi-ext/agentdesk-bridge/schema-to-typebox';
 
 describe('jsonSchemaToTypeBox（README 8.3.3）', () => {
   it('object：required 与 optional、additionalProperties: false', () => {

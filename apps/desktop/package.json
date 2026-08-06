@@ -23,6 +23,7 @@
     "drizzle-orm": "^0.45.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "typebox": "npm:@sinclair/typebox@0.34.52",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },

@@ -25,6 +25,7 @@ if (!gotTheLock) {
       providers: runtime.providers,
       approvals: runtime.approvals,
       mcp: runtime.mcp,
+      uplink: runtime.uplink,
     });
     createMainWindow();
 

@@ -1,9 +1,11 @@
 /**
  * JSON Schema → TypeBox 运行时转换（README 8.3.3）：
- * MCP tools/list 的 inputSchema（JSON Schema）转成 pi registerTool 需要的 TSchema。
+ * MCP tools/list 的 inputSchema（JSON Schema）转成 pi registerTool 需要的 parameters（TSchema）。
  * 不支持的构造降级为 Type.Any() 并记录 warning，不影响其余字段。
+ * 运行环境：pi 扩展（README 4.12 可用导入含 typebox）；测试环境通过 pnpm alias
+ * typebox → @sinclair/typebox 解析，逻辑与主进程保持一致。
  */
-import { type TSchema, Type } from '@sinclair/typebox';
+import { type TSchema, Type } from 'typebox';
 
 export interface SchemaConversionResult {
   schema: TSchema;
