@@ -24,6 +24,17 @@ export const IPC_CHANNELS = {
   'workspace:open': 'workspace:open',
   'workspace:trust': 'workspace:trust',
   'workspace:pick-directory': 'workspace:pick-directory',
+  'provider:list': 'provider:list',
+  'provider:save': 'provider:save',
+  'provider:delete': 'provider:delete',
+  'provider:presets': 'provider:presets',
+  'provider:discover-models': 'provider:discover-models',
+  'provider:test': 'provider:test',
+  'secrets:status': 'secrets:status',
+  'auth:status': 'auth:status',
+  'auth:launch-login': 'auth:launch-login',
+  'session:get-models': 'session:get-models',
+  'session:set-thinking-level': 'session:set-thinking-level',
 } as const;
 
 /** 请求/响应通道（invoke） */

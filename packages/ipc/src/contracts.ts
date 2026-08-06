@@ -103,6 +103,185 @@ export const sessionExportResponseSchema = z.object({
   format: z.enum(['md', 'json']),
 });
 
+/** Provider / Model / 密钥（README 4.4 / 8.6） */
+export type ProviderApi = z.infer<typeof providerApiSchema>;
+export type ProviderAuthMethod = z.infer<typeof providerAuthMethodSchema>;
+export type ProviderCompat = z.infer<typeof providerCompatSchema>;
+export type ProviderView = z.infer<typeof providerViewSchema>;
+export type SecretEntry = z.infer<typeof secretEntrySchema>;
+export type AuthProviderStatus = z.infer<typeof authProviderStatusSchema>;
+export type ProviderPreset = z.infer<typeof providerPresetSchema>;
+export type PiModelView = z.infer<typeof piModelViewSchema>;
+export type SecretsStatusResponse = z.infer<typeof secretsStatusResponseSchema>;
+export type ProviderTestResult = z.infer<typeof providerTestResponseSchema>;
+export type DiscoveredModel = z.infer<
+  typeof providerDiscoverModelsResponseSchema
+>['models'][number];
+
+export const providerApiSchema = z.enum([
+  'openai-completions',
+  'openai-responses',
+  'anthropic-messages',
+  'google-generative-ai',
+  'azure-openai-responses',
+  'openai-codex-responses',
+  'bedrock-converse-stream',
+  'google-vertex',
+  'mistral-conversations',
+  'pi-messages',
+]);
+export const providerAuthMethodSchema = z.enum(['api-key', 'env', 'shell', 'none', 'oauth']);
+
+export const providerCompatSchema = z.object({
+  supportsDeveloperRole: z.boolean().optional(),
+  supportsReasoningEffort: z.boolean().optional(),
+});
+
+export const modelCostSchema = z.object({
+  input: z.number().optional(),
+  output: z.number().optional(),
+  cacheRead: z.number().optional(),
+  cacheWrite: z.number().optional(),
+});
+
+export const modelConfigSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  api: providerApiSchema.optional(),
+  reasoning: z.boolean().optional(),
+  input: z.array(z.enum(['text', 'image'])).optional(),
+  contextWindow: z.number().int().positive().optional(),
+  maxTokens: z.number().int().positive().optional(),
+  cost: modelCostSchema.optional(),
+  thinkingLevelMap: z.record(z.string(), z.string().nullable()).optional(),
+  compat: providerCompatSchema.optional(),
+});
+export type ModelConfig = z.infer<typeof modelConfigSchema>;
+
+export const providerConfigInputSchema = z.object({
+  name: z.string().min(1).max(100),
+  baseUrl: z.string().optional(),
+  api: providerApiSchema.optional(),
+  authMethod: providerAuthMethodSchema,
+  /** env / shell 形式的值：如 "$MY_KEY" 或 "!op read ..."（写入 models.json 原样保留） */
+  apiKeyRef: z.string().optional(),
+  authHeader: z.boolean().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  compat: providerCompatSchema.optional(),
+  models: z.array(modelConfigSchema).optional(),
+});
+export type ProviderConfigInput = z.infer<typeof providerConfigInputSchema>;
+
+export const providerViewSchema = z.object({
+  name: z.string(),
+  builtin: z.boolean(),
+  configured: z.boolean(),
+  baseUrl: z.string().nullable(),
+  api: providerApiSchema.nullable(),
+  authMethod: providerAuthMethodSchema,
+  apiKeyRef: z.string().nullable(),
+  hasSecret: z.boolean(),
+  authHeader: z.boolean(),
+  headers: z.record(z.string(), z.string()),
+  compat: providerCompatSchema,
+  models: z.array(modelConfigSchema),
+});
+export const providerListResponseSchema = z.object({
+  providers: z.array(providerViewSchema),
+});
+
+export const providerSaveRequestSchema = z.object({
+  config: providerConfigInputSchema,
+  /** api-key 方式：保存即 safeStorage 加密，绝不明文落盘（README 8.6.2） */
+  apiKey: z.string().optional(),
+});
+export const providerSaveResponseSchema = z.object({ name: z.string() });
+
+export const providerDeleteRequestSchema = z.object({ name: z.string().min(1) });
+
+export const providerPresetSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  description: z.string().optional(),
+  config: providerConfigInputSchema,
+});
+export const providerPresetsResponseSchema = z.object({
+  presets: z.array(providerPresetSchema),
+});
+
+export const providerDiscoverModelsRequestSchema = z.object({
+  baseUrl: z.string().min(1),
+  api: providerApiSchema.optional(),
+  apiKey: z.string().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
+export const providerDiscoverModelsResponseSchema = z.object({
+  models: z.array(z.object({ id: z.string(), name: z.string().nullable() })),
+});
+
+export const providerTestRequestSchema = z.object({
+  name: z.string().min(1),
+  model: z.string().optional(),
+});
+export const providerTestResponseSchema = z.object({
+  ok: z.boolean(),
+  status: z.number().nullable(),
+  latencyMs: z.number().nullable(),
+  snippet: z.string().nullable(),
+  error: z.string().nullable(),
+});
+
+export const secretEntrySchema = z.object({
+  provider: z.string(),
+  createdAt: z.number(),
+  lastUsedAt: z.number().nullable(),
+});
+export const secretsStatusResponseSchema = z.object({
+  available: z.boolean(),
+  storagePath: z.string().nullable(),
+  entries: z.array(secretEntrySchema),
+});
+
+export const authProviderStatusSchema = z.object({
+  name: z.string(),
+  type: z.enum(['api_key', 'oauth', 'none']),
+  configured: z.boolean(),
+  via: z.enum(['agentdesk', 'pi-auth']),
+});
+export const authStatusResponseSchema = z.object({
+  providers: z.array(authProviderStatusSchema),
+});
+export const authLaunchLoginRequestSchema = z.object({
+  provider: z.string().optional(),
+});
+export const authLaunchLoginResponseSchema = z.object({
+  launched: z.boolean(),
+  terminal: z.string(),
+});
+
+/** 会话级模型操作（README 8.6.4 对接 RPC） */
+export const piModelViewSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  provider: z.string().nullable(),
+  api: z.string().nullable(),
+  reasoning: z.boolean(),
+  input: z.array(z.string()),
+  contextWindow: z.number().nullable(),
+  maxTokens: z.number().nullable(),
+  cost: modelCostSchema.nullable(),
+});
+export const sessionGetModelsRequestSchema = z.object({
+  sessionId: z.string().min(1),
+});
+export const sessionGetModelsResponseSchema = z.object({
+  models: z.array(piModelViewSchema),
+});
+export const sessionSetThinkingLevelRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  level: thinkingLevelSchema,
+});
+
 /** Workspace（README 8.9 / 10.2） */
 export const trustDecisionSchema = z.enum(['once', 'always', 'alwaysParent', 'never']);
 
@@ -216,6 +395,50 @@ export interface InvokeMap {
     request: undefined;
     response: z.infer<typeof workspacePickDirectoryResponseSchema>;
   };
+  'provider:list': {
+    request: undefined;
+    response: z.infer<typeof providerListResponseSchema>;
+  };
+  'provider:save': {
+    request: z.infer<typeof providerSaveRequestSchema>;
+    response: z.infer<typeof providerSaveResponseSchema>;
+  };
+  'provider:delete': {
+    request: z.infer<typeof providerDeleteRequestSchema>;
+    response: undefined;
+  };
+  'provider:presets': {
+    request: undefined;
+    response: z.infer<typeof providerPresetsResponseSchema>;
+  };
+  'provider:discover-models': {
+    request: z.infer<typeof providerDiscoverModelsRequestSchema>;
+    response: z.infer<typeof providerDiscoverModelsResponseSchema>;
+  };
+  'provider:test': {
+    request: z.infer<typeof providerTestRequestSchema>;
+    response: z.infer<typeof providerTestResponseSchema>;
+  };
+  'secrets:status': {
+    request: undefined;
+    response: z.infer<typeof secretsStatusResponseSchema>;
+  };
+  'auth:status': {
+    request: undefined;
+    response: z.infer<typeof authStatusResponseSchema>;
+  };
+  'auth:launch-login': {
+    request: z.infer<typeof authLaunchLoginRequestSchema>;
+    response: z.infer<typeof authLaunchLoginResponseSchema>;
+  };
+  'session:get-models': {
+    request: z.infer<typeof sessionGetModelsRequestSchema>;
+    response: z.infer<typeof sessionGetModelsResponseSchema>;
+  };
+  'session:set-thinking-level': {
+    request: z.infer<typeof sessionSetThinkingLevelRequestSchema>;
+    response: undefined;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -246,6 +469,17 @@ export const invokeRequestSchemas = {
   'workspace:open': workspaceOpenRequestSchema,
   'workspace:trust': workspaceTrustRequestSchema,
   'workspace:pick-directory': z.undefined(),
+  'provider:list': z.undefined(),
+  'provider:save': providerSaveRequestSchema,
+  'provider:delete': providerDeleteRequestSchema,
+  'provider:presets': z.undefined(),
+  'provider:discover-models': providerDiscoverModelsRequestSchema,
+  'provider:test': providerTestRequestSchema,
+  'secrets:status': z.undefined(),
+  'auth:status': z.undefined(),
+  'auth:launch-login': authLaunchLoginRequestSchema,
+  'session:get-models': sessionGetModelsRequestSchema,
+  'session:set-thinking-level': sessionSetThinkingLevelRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];
