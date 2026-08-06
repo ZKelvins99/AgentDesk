@@ -396,4 +396,19 @@ describe('McpConnectionManager（README 8.3.2 连接管理）', () => {
     expect(FakeMcpClient.all).toHaveLength(2);
     await manager.disposeAll();
   });
+
+  it('markToolConflict 将工具标红并发出 status 事件', async () => {
+    store.save({ name: 'fs', scope: 'global', config: stdioConfig() });
+    const manager = makeManager({ fs: {} });
+    const listener = vi.fn();
+    manager.on('status', listener);
+    await manager.ensureReady('fs');
+    listener.mockClear();
+    manager.markToolConflict('fs', 'read_file', true);
+    expect(manager.getSnapshot('fs')?.tools[0]?.conflict).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    manager.markToolConflict('fs', 'read_file', false);
+    expect(manager.getSnapshot('fs')?.tools[0]?.conflict).toBeUndefined();
+    await manager.disposeAll();
+  });
 });

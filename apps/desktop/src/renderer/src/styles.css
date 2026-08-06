@@ -1638,6 +1638,18 @@ button:disabled {
 .mcp-tool-name {
   font-family: var(--font-mono);
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mcp-conflict-badge {
+  font-family: var(--font-ui, sans-serif);
+  font-size: 10px;
+  line-height: 1;
+  color: #fff;
+  background: #e74c3c;
+  border-radius: 999px;
+  padding: 2px 6px;
 }
 .mcp-tool-pi {
   font-family: var(--font-mono);

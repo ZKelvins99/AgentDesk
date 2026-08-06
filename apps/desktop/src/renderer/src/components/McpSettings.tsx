@@ -522,6 +522,9 @@ export function McpSettings(): React.JSX.Element | null {
                           <div className="mcp-tool-row" key={tool.piName}>
                             <span className="mcp-tool-name" title={tool.description}>
                               {tool.name}
+                              {tool.conflict ? (
+                                <span className="mcp-conflict-badge">重名让位</span>
+                              ) : null}
                             </span>
                             <span className="mcp-tool-pi">{tool.piName}</span>
                             <label className="mcp-toggle">

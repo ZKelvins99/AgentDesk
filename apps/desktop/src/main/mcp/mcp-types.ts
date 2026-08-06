@@ -19,6 +19,8 @@ export interface McpToolView extends McpToolInfo {
   piName: string;
   enabled: boolean;
   autoApprove: boolean;
+  /** 与 pi 内置/其他扩展工具重名时 MCP 让位，UI 标红（README 8.3.3）。 */
+  conflict?: boolean;
 }
 
 export interface McpServerInfo {

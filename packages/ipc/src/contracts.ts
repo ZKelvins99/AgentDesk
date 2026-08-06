@@ -502,6 +502,7 @@ export const mcpToolViewSchema = z.object({
   piName: z.string().min(1),
   enabled: z.boolean(),
   autoApprove: z.boolean(),
+  conflict: z.boolean().optional(),
 });
 export type McpToolView = z.infer<typeof mcpToolViewSchema>;
 

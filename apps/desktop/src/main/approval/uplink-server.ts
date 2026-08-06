@@ -14,6 +14,13 @@ import type { ApprovalEngine } from './approval-engine';
 export interface UplinkMcpHost {
   discoverTools(workspacePath?: string): Promise<McpServerDiscovery[]>;
   callTool(request: McpCallRequest, options: McpCallOptions): Promise<McpCallResult>;
+  /** 命名冲突让位上报：pi 侧与内置/其他扩展工具重名时标红（README 8.3.3）。 */
+  markToolConflict?(request: {
+    server: string;
+    tool: string;
+    piName?: string;
+    conflict: boolean;
+  }): Promise<void> | void;
 }
 
 export interface UplinkServerOptions {
@@ -151,6 +158,10 @@ export class UplinkServer {
       await this.handleMcpCancel(req, res);
       return;
     }
+    if (req.method === 'POST' && url.pathname === '/mcp/conflict') {
+      await this.handleMcpConflict(req, res);
+      return;
+    }
     if (req.method === 'GET' && url.pathname === '/events') {
       this.handleEvents(res);
       return;
@@ -280,6 +291,30 @@ export class UplinkServer {
       return;
     }
     this.activeCalls.get(callId)?.abort();
+    res.writeHead(204);
+    res.end();
+  }
+
+  private async handleMcpConflict(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (!this.options.mcp?.markToolConflict) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'conflict reporting not supported' }));
+      return;
+    }
+    const body = (await readJsonBody(req, 100_000)) ?? {};
+    const server = typeof body.server === 'string' ? body.server : '';
+    const tool = typeof body.tool === 'string' ? body.tool : '';
+    if (!server || !tool) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'server and tool required' }));
+      return;
+    }
+    await this.options.mcp.markToolConflict({
+      server,
+      tool,
+      conflict: body.conflict !== false,
+      ...(typeof body.piName === 'string' ? { piName: body.piName } : {}),
+    });
     res.writeHead(204);
     res.end();
   }

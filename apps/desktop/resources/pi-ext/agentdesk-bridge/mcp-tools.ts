@@ -13,6 +13,7 @@ export interface McpToolView {
   inputSchema: Record<string, unknown>;
   enabled: boolean;
   autoApprove: boolean;
+  conflict?: boolean;
 }
 
 interface McpToolsResponse {
@@ -45,6 +46,8 @@ export interface PiToolApi {
       ctx: unknown,
     ) => Promise<unknown>;
   }): void;
+  /** pi 已注册工具清单（docs/extensions.md getAllTools），用于命名冲突让位检测。 */
+  getAllTools?: () => Array<{ name: string }>;
 }
 
 const CALL_SLACK_MS = 10_000;
@@ -69,10 +72,25 @@ export async function registerMcpTools(
       console.warn(`[agentdesk] mcp/tools 拉取失败：${(error as Error).message}`);
       return;
     }
+    const existingNames = new Set((pi.getAllTools?.() ?? []).map((t) => t.name));
     for (const server of response.servers ?? []) {
       if (server.status !== 'ready') continue;
       for (const tool of server.tools ?? []) {
         if (!tool.enabled || registered.has(tool.piName)) continue;
+        if (existingNames.has(tool.piName)) {
+          // MCP 让位：与 pi 内置/其他扩展工具重名时跳过注册并上报标红（README 8.3.3）
+          console.warn(`[agentdesk] ${tool.piName} 与 pi 已有工具重名，MCP 让位`);
+          void uplink
+            .post('/mcp/conflict', {
+              sessionId,
+              server: server.name,
+              tool: tool.name,
+              piName: tool.piName,
+              conflict: true,
+            })
+            .catch(() => {});
+          continue;
+        }
         registered.add(tool.piName);
         const converted = jsonSchemaToTypeBox(tool.inputSchema ?? {});
         if (converted.warnings.length > 0) {

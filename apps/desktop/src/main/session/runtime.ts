@@ -114,6 +114,8 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     mcp: {
       discoverTools: (workspacePath?: string) => mcpHost.discoverTools(workspacePath),
       callTool: (request, options) => mcpHost.callTool(request, options),
+      markToolConflict: (request) =>
+        mcpHost.markToolConflict(request.server, request.tool, request.conflict),
     },
     resolveWorkspacePath: (sessionId: string) => sessionManager.workspacePathOf(sessionId),
     attachmentsDir: () => path.join(sessionDir, 'attachments'),

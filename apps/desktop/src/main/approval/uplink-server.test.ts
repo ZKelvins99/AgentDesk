@@ -111,6 +111,7 @@ describe('UplinkServer MCP 端点（M6 第三步：/mcp/tools /mcp/call /mcp/can
     | { workspacePath?: string; timeoutMs?: number; signal?: AbortSignal }
     | undefined;
   let callMode: 'resolve' | 'hang' = 'resolve';
+  let conflictReports: Array<{ server: string; tool: string; conflict: boolean }> = [];
 
   const host: UplinkMcpHost = {
     async discoverTools(workspacePath) {
@@ -144,6 +145,13 @@ describe('UplinkServer MCP 端点（M6 第三步：/mcp/tools /mcp/call /mcp/can
         });
       });
     },
+    async markToolConflict(request) {
+      conflictReports.push({
+        server: request.server,
+        tool: request.tool,
+        conflict: request.conflict,
+      });
+    },
   };
 
   beforeEach(async () => {
@@ -151,6 +159,7 @@ describe('UplinkServer MCP 端点（M6 第三步：/mcp/tools /mcp/call /mcp/can
     calledRequest = undefined;
     calledOptions = undefined;
     callMode = 'resolve';
+    conflictReports = [];
     db = openDatabase(':memory:');
     store = new ApprovalStore(db);
     engine = new ApprovalEngine({
@@ -275,5 +284,35 @@ describe('UplinkServer MCP 端点（M6 第三步：/mcp/tools /mcp/call /mcp/can
     }
     expect(received).toContain('mcp:changed');
     await reader.cancel();
+  });
+
+  it('POST /mcp/conflict 上报命名冲突并转交 host 标红', async () => {
+    const res = await fetch(`${server.url}/mcp/conflict`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${server.token}`,
+      },
+      body: JSON.stringify({
+        server: 'sv',
+        tool: 'tool1',
+        piName: 'mcp__sv__tool1',
+        conflict: true,
+      }),
+    });
+    expect(res.status).toBe(204);
+    expect(conflictReports).toEqual([{ server: 'sv', tool: 'tool1', conflict: true }]);
+  });
+
+  it('POST /mcp/conflict 缺 server/tool 返回 400', async () => {
+    const res = await fetch(`${server.url}/mcp/conflict`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${server.token}`,
+      },
+      body: JSON.stringify({ server: 'sv' }),
+    });
+    expect(res.status).toBe(400);
   });
 });

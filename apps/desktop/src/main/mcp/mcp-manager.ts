@@ -258,6 +258,16 @@ export class McpConnectionManager extends EventEmitter {
     return this.logBuffer.slice(-count);
   }
 
+  /** 命名冲突让位：pi 侧上报重名后把该工具标红（README 8.3.3）。 */
+  markToolConflict(server: string, toolName: string, conflict: boolean): void {
+    const snapshot = this.snapshots.get(server);
+    const view = snapshot?.tools.find((t) => t.name === toolName);
+    if (!snapshot || !view) return;
+    if (conflict) view.conflict = true;
+    else delete view.conflict;
+    this.emit('status', { name: server, snapshot });
+  }
+
   /** 工具清单（uplink GET /mcp/tools 数据源）。 */
   async listTools(name: string, workspacePath?: string): Promise<McpToolView[]> {
     const snapshot = await this.ensureReady(name, workspacePath);
