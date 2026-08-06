@@ -638,6 +638,104 @@ export class SessionManager {
     }
   }
 
+  /** 射出会话 token 用量（README 9.4.1 token 徽标） */
+  getContextUsage(sessionId: string): {
+    used: number;
+    limit: number;
+    compactionThreshold: number;
+    breakdown: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  } {
+    const rt = this.get(sessionId);
+    const record = this.options.store.getSession(sessionId);
+    const state = rt.stateSnapshot;
+    // used = pi 上一次回发的 contextTokenCount；没有时用 DB 浏誈输入 token
+    const used =
+      ((state as Record<string, unknown>).contextTokenCount as number | undefined) ??
+      record?.inputTokens ??
+      0;
+    const limit =
+      ((state as Record<string, unknown>).contextWindow as number | undefined) ?? 128_000;
+    // pi 默认在余量 < reserveTokens + keepRecentTokens 时压缩，卸个限 80%
+    const compactionThreshold = Math.floor(limit * 0.8);
+    return {
+      used,
+      limit,
+      compactionThreshold,
+      breakdown: {
+        input: record?.inputTokens ?? 0,
+        output: record?.outputTokens ?? 0,
+        cacheRead: record?.cacheReadTokens ?? 0,
+        cacheWrite: record?.cacheWriteTokens ?? 0,
+      },
+    };
+  }
+
+  /** 获取会话分支树（README 9.4.1，对接 pi get_tree） */
+  async getTree(sessionId: string): Promise<
+    Array<{
+      id: string;
+      parentId: string | null;
+      label: string;
+      isActive: boolean;
+      messageCount: number;
+      createdAt: number;
+    }>
+  > {
+    const rt = this.get(sessionId);
+    const raw = (await rt.sidecar.command('get_tree', {}, { timeoutMs: 10_000 })) as {
+      tree?: Array<{
+        id: string;
+        parentId?: string | null;
+        name?: string;
+        label?: string;
+        isCurrent?: boolean;
+        isActive?: boolean;
+        messageCount?: number;
+        createdAt?: number;
+      }>;
+    };
+    return (raw.tree ?? []).map((n) => ({
+      id: n.id,
+      parentId: n.parentId ?? null,
+      label: n.label ?? n.name ?? n.id,
+      isActive: n.isActive ?? n.isCurrent ?? false,
+      messageCount: n.messageCount ?? 0,
+      createdAt: n.createdAt ?? Date.now(),
+    }));
+  }
+
+  /** fork 一个分支（README 9 fork，对接 pi fork_session） */
+  async fork(sessionId: string, fromMessageId: string): Promise<{ newSessionId: string }> {
+    const rt = this.get(sessionId);
+    const raw = (await rt.sidecar.command(
+      'fork_session',
+      { messageId: fromMessageId },
+      { timeoutMs: 15_000 },
+    )) as { sessionId?: string; id?: string };
+    const piSessionId = raw.sessionId ?? raw.id ?? undefined;
+    // 在 DB 创建一个关联会话记录与修复状态
+    const existing = this.options.store.getSession(sessionId);
+    const newId = randomUUID();
+    this.options.store.createSession({
+      id: newId,
+      ...(existing?.workspaceId != null ? { workspaceId: existing.workspaceId } : {}),
+      title: `${existing?.title ?? '新对话'} (fork)`,
+      ...(existing?.provider != null ? { provider: existing.provider } : {}),
+      ...(existing?.model != null ? { model: existing.model } : {}),
+      approvalMode: existing?.approvalMode ?? 'auto-edit',
+    });
+    if (piSessionId) {
+      this.options.store.updateSession(newId, { piSessionId });
+    }
+    return { newSessionId: newId };
+  }
+
+  /** navigate_tree 切换到特定节点（README，对接 pi navigate_tree） */
+  async navigateTree(sessionId: string, nodeId: string): Promise<void> {
+    const rt = this.get(sessionId);
+    await rt.sidecar.command('navigate_tree', { id: nodeId }, { timeoutMs: 10_000 });
+  }
+
   async shutdownAll(timeoutMs = 8_000): Promise<void> {
     await this.options.bridge.shutdownAll(timeoutMs);
     for (const rt of this.runtimes.values()) rt.flushNow();

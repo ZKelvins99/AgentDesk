@@ -32,6 +32,8 @@ export function SessionHeader({
   const toggleFileTree = useUiStore((s) => s.toggleFileTree);
   const toggleRightPanel = useUiStore((s) => s.toggleRightPanel);
   const openAudit = useUiStore((s) => s.openAudit);
+  const openContextUsageDrawer = useUiStore((s) => s.openContextUsageDrawer);
+  const openSessionTree = useUiStore((s) => s.openSessionTree);
   const workspaceName = workspaceNameOf(workspacePath);
   const sessionTitle = title || t('session.emptyTitle');
 
@@ -43,9 +45,15 @@ export function SessionHeader({
         <span className="breadcrumb-session">{sessionTitle}</span>
       </div>
       <div className="session-header-right">
-        <span className="token-badge" title={t('panel.messages')}>
+        <button
+          type="button"
+          className="token-badge"
+          title="查看上下文用量"
+          aria-label="查看上下文用量"
+          onClick={openContextUsageDrawer}
+        >
           {messageCount} msgs
-        </span>
+        </button>
         <span className="model-chip" title={model ?? ''}>
           {model ?? t('composer.model')}
         </span>
@@ -66,6 +74,15 @@ export function SessionHeader({
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          className="header-btn"
+          onClick={openSessionTree}
+          title="会话树 (Ctrl+Shift+T)"
+          aria-label="会话树"
+        >
+          ⎇
+        </button>
         <button
           type="button"
           className="header-btn"

@@ -1,5 +1,6 @@
 import { FileTreePanel } from '../../components/FileTreePanel';
 import { RightPanel } from '../../components/RightPanel';
+import { TerminalPanel } from '../../components/TerminalPanel';
 import { t } from '../../i18n';
 import { useSessionStore } from '../../stores/session-store';
 import { useUiStore } from '../../stores/ui-store';
@@ -15,6 +16,8 @@ export function SessionView(): React.JSX.Element {
   );
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
   const fileTreeOpen = useUiStore((s) => s.fileTreeOpen);
+  const terminalOpen = useUiStore((s) => s.terminalOpen);
+  const toggleTerminal = useUiStore((s) => s.toggleTerminal);
 
   if (!activeId || !session) {
     return (
@@ -44,6 +47,7 @@ export function SessionView(): React.JSX.Element {
         />
       </div>
       {rightPanelOpen ? <RightPanel /> : null}
+      {terminalOpen ? <TerminalPanel cwd={session.workspacePath} onClose={toggleTerminal} /> : null}
     </div>
   );
 }

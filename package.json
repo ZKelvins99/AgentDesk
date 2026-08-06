@@ -22,12 +22,5 @@
     "turbo": "^2.10.8",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild",
-      "better-sqlite3"
-    ]
   }
 }

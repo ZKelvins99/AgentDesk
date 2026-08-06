@@ -1,13 +1,21 @@
 import type { ApprovalDecisionKind, ApprovalRequestView } from '@agentdesk/ipc';
+import type { ApprovalMode } from '@agentdesk/shared';
 import { create } from 'zustand';
 
 export type Theme = 'dark' | 'light' | 'system';
+
+const APPROVAL_MODES: ApprovalMode[] = ['plan', 'read-only', 'auto-edit', 'full-access'];
 
 interface UiStore {
   theme: Theme;
   sidebarCollapsed: boolean;
   fileTreeOpen: boolean;
   rightPanelOpen: boolean;
+  terminalOpen: boolean;
+  sessionTreeOpen: boolean;
+  globalSearchOpen: boolean;
+  commandPaletteOpen: boolean;
+  hideThinking: boolean;
   modelPickerOpen: boolean;
   providerSettingsOpen: boolean;
   mcpSettingsOpen: boolean;
@@ -17,10 +25,19 @@ interface UiStore {
   diffFile: string | null;
   approvals: ApprovalRequestView[];
   auditOpen: boolean;
+  contextUsageDrawerOpen: boolean;
   setTheme: (theme: Theme) => void;
   toggleSidebar: () => void;
   toggleFileTree: () => void;
   toggleRightPanel: () => void;
+  toggleTerminal: () => void;
+  openSessionTree: () => void;
+  closeSessionTree: () => void;
+  openGlobalSearch: () => void;
+  closeGlobalSearch: () => void;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
+  toggleHideThinking: () => void;
   openModelPicker: () => void;
   closeModelPicker: () => void;
   openProviderSettings: () => void;
@@ -39,6 +56,13 @@ interface UiStore {
   resolveApproval: (id: string, decision: ApprovalDecisionKind, reason?: string) => void;
   openAudit: () => void;
   closeAudit: () => void;
+  openContextUsageDrawer: () => void;
+  closeContextUsageDrawer: () => void;
+  /** 会话内循环切换审批模式 */
+  cycleApprovalMode: (sessionId?: string) => void;
+  /** 激活会话的审批模式（为快捷键提供当前状态） */
+  activeApprovalMode: ApprovalMode | null;
+  setActiveApprovalMode: (mode: ApprovalMode | null) => void;
 }
 
 function initialTheme(): Theme {
@@ -51,11 +75,16 @@ function initialTheme(): Theme {
   return 'dark';
 }
 
-export const useUiStore = create<UiStore>()((set) => ({
+export const useUiStore = create<UiStore>()((set, get) => ({
   theme: initialTheme(),
   sidebarCollapsed: false,
   fileTreeOpen: false,
   rightPanelOpen: false,
+  terminalOpen: false,
+  sessionTreeOpen: false,
+  globalSearchOpen: false,
+  commandPaletteOpen: false,
+  hideThinking: false,
   modelPickerOpen: false,
   providerSettingsOpen: false,
   mcpSettingsOpen: false,
@@ -65,6 +94,8 @@ export const useUiStore = create<UiStore>()((set) => ({
   diffFile: null,
   approvals: [],
   auditOpen: false,
+  contextUsageDrawerOpen: false,
+  activeApprovalMode: null,
   setTheme: (theme) => {
     try {
       localStorage.setItem('agentdesk-theme', theme);
@@ -76,6 +107,14 @@ export const useUiStore = create<UiStore>()((set) => ({
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   toggleFileTree: () => set((s) => ({ fileTreeOpen: !s.fileTreeOpen })),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
+  toggleTerminal: () => set((s) => ({ terminalOpen: !s.terminalOpen })),
+  openSessionTree: () => set({ sessionTreeOpen: true }),
+  closeSessionTree: () => set({ sessionTreeOpen: false }),
+  openGlobalSearch: () => set({ globalSearchOpen: true }),
+  closeGlobalSearch: () => set({ globalSearchOpen: false }),
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  toggleHideThinking: () => set((s) => ({ hideThinking: !s.hideThinking })),
   openModelPicker: () => set({ modelPickerOpen: true }),
   closeModelPicker: () => set({ modelPickerOpen: false }),
   openProviderSettings: () => set({ providerSettingsOpen: true }),
@@ -104,6 +143,19 @@ export const useUiStore = create<UiStore>()((set) => ({
   },
   openAudit: () => set({ auditOpen: true }),
   closeAudit: () => set({ auditOpen: false }),
+  openContextUsageDrawer: () => set({ contextUsageDrawerOpen: true }),
+  closeContextUsageDrawer: () => set({ contextUsageDrawerOpen: false }),
+  setActiveApprovalMode: (mode) => set({ activeApprovalMode: mode }),
+  cycleApprovalMode: (sessionId) => {
+    const current = get().activeApprovalMode;
+    const idx = current ? APPROVAL_MODES.indexOf(current) : -1;
+    const next = APPROVAL_MODES[(idx + 1) % APPROVAL_MODES.length] as ApprovalMode;
+    set({ activeApprovalMode: next });
+    // 通知 session store 更新会话审批模式（需要调用方传入 sessionId）
+    if (sessionId) {
+      void window.agentdesk.session.setApprovalMode({ sessionId, mode: next });
+    }
+  },
 }));
 
 /** 解析 theme → data-theme（system 跟随 matchMedia），README 9.1 主题切换。 */

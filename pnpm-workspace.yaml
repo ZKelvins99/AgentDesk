@@ -2,3 +2,9 @@ packages:
   - apps/*
   - packages/*
   - packages/testing/*
+
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - better-sqlite3
+  - node-pty

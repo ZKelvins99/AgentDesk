@@ -19,6 +19,7 @@ import { PackageSecurityInspector } from '../packages/package-security';
 import { PiBridge, SidecarPool } from '../pi';
 import { DEFAULT_PROFILE_ID, ProfileManager } from '../profile/profile-manager';
 import { electronSecretEncryptor, ProviderManager, SecretsStore } from '../providers';
+import { PtyService } from '../pty/pty-service';
 import { SkillManager } from '../skills/skill-manager';
 import { openDatabase, SessionStore, WorkspaceManager } from '../storage';
 import { FileAuditStore } from '../storage/file-audit-store';
@@ -48,6 +49,7 @@ export interface SessionRuntimeHandle {
   extensions: ExtensionCompatService;
   fileTree: FileTreeService;
   diff: DiffEngine;
+  pty: PtyService;
   uplink: UplinkServer;
   kernel: { binary: string | null };
   dispose: () => Promise<void>;
@@ -109,6 +111,7 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
   const extensionCompat = new ExtensionCompatService(agentDir);
   const fileTree = new FileTreeService(agentDir);
   const diff = new DiffEngine(new FileAuditStore(db));
+  const ptyService = new PtyService();
 
   const providers = new ProviderManager({ modelsDir: agentDir, secrets, binary });
 
@@ -242,9 +245,11 @@ export async function createSessionRuntime(): Promise<SessionRuntimeHandle> {
     extensions: extensionCompat,
     fileTree,
     diff,
+    pty: ptyService,
     uplink,
     kernel: { binary },
     dispose: async () => {
+      ptyService.killAll();
       await sessionManager.shutdownAll(5_000);
       await mcpHost.disposeAll();
       pool.dispose();

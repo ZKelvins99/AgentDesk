@@ -36,14 +36,22 @@ import {
   type providerDiscoverModelsRequestSchema,
   type providerSaveRequestSchema,
   type providerTestRequestSchema,
+  type ptyCreateRequestSchema,
+  type ptyKillRequestSchema,
+  type ptyResizeRequestSchema,
+  type ptyWriteRequestSchema,
   type sessionAbortRequestSchema,
   type sessionArchiveRequestSchema,
   type sessionAttachRequestSchema,
+  type sessionContextUsageRequestSchema,
   type sessionCreateRequestSchema,
   type sessionDeleteRequestSchema,
   type sessionExportRequestSchema,
+  type sessionForkRequestSchema,
   type sessionGetModelsRequestSchema,
+  type sessionGetTreeRequestSchema,
   type sessionListRequestSchema,
+  type sessionNavigateTreeRequestSchema,
   type sessionRenameRequestSchema,
   type sessionSendRequestSchema,
   type sessionSetApprovalModeRequestSchema,
@@ -83,6 +91,7 @@ import type {
 import type { PackageSecurityInspector } from './packages/package-security';
 import type { ProfileManager } from './profile/profile-manager';
 import type { ProviderManager } from './providers';
+import type { PtyService } from './pty/pty-service';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
 import type { WorkspaceManager } from './storage';
@@ -150,6 +159,8 @@ export interface IpcHandlerDeps {
   fileTree: FileTreeService;
   /** M8：Diff 面板（逐块接受/回滚 + 审计，README 8.9）。 */
   diff: DiffEngine;
+  /** M8：PTY 终端面板（xterm.js + node-pty，README 9.6）。 */
+  pty: PtyService;
   /** 内核二进制路径（设置页 2 健康状态展示）。 */
   kernelBinary: string | null;
   /** M6：MCP 配置变更后向 Bridge Extension 广播热更新。 */
@@ -745,5 +756,55 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
     const result = win ? await dialog.showOpenDialog(win, pick) : await dialog.showOpenDialog(pick);
     if (result.canceled || result.filePaths.length === 0) return { path: null };
     return { path: result.filePaths[0] };
+  });
+
+  // ── M8: PTY 终端面板（README 9.6） ────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS['pty:create'], async (_event, raw: unknown) => {
+    const req = parseRequest('pty:create', raw) as z.infer<typeof ptyCreateRequestSchema>;
+    return deps.pty.create(req.cwd, req.cols, req.rows);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['pty:write'], (_event, raw: unknown) => {
+    const req = parseRequest('pty:write', raw) as z.infer<typeof ptyWriteRequestSchema>;
+    deps.pty.write(req.ptyId, req.data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['pty:resize'], (_event, raw: unknown) => {
+    const req = parseRequest('pty:resize', raw) as z.infer<typeof ptyResizeRequestSchema>;
+    deps.pty.resize(req.ptyId, req.cols, req.rows);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['pty:kill'], (_event, raw: unknown) => {
+    const req = parseRequest('pty:kill', raw) as z.infer<typeof ptyKillRequestSchema>;
+    deps.pty.kill(req.ptyId);
+  });
+
+  // ── M8: 会话树 / fork（README 9.4.1） ────────────────────────────────
+  ipcMain.handle(IPC_CHANNELS['session:get-tree'], async (_event, raw: unknown) => {
+    const { sessionId } = parseRequest('session:get-tree', raw) as z.infer<
+      typeof sessionGetTreeRequestSchema
+    >;
+    const nodes = await deps.sessionManager.getTree(sessionId);
+    return { nodes };
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:fork'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:fork', raw) as z.infer<typeof sessionForkRequestSchema>;
+    return deps.sessionManager.fork(req.sessionId, req.fromMessageId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS['session:navigate-tree'], async (_event, raw: unknown) => {
+    const req = parseRequest('session:navigate-tree', raw) as z.infer<
+      typeof sessionNavigateTreeRequestSchema
+    >;
+    await deps.sessionManager.navigateTree(req.sessionId, req.nodeId);
+  });
+
+  // ── M8: 上下文用量（README 9.4.1 token 徽标） ────────────────────────
+  ipcMain.handle(IPC_CHANNELS['session:context-usage'], (_event, raw: unknown) => {
+    const { sessionId } = parseRequest('session:context-usage', raw) as z.infer<
+      typeof sessionContextUsageRequestSchema
+    >;
+    return deps.sessionManager.getContextUsage(sessionId);
   });
 }

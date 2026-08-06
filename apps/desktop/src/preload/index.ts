@@ -191,12 +191,36 @@ const api = {
     applyHunk: (req: InvokeMap['diff:apply-hunk']['request']) =>
       safeInvoke(IPC_CHANNELS['diff:apply-hunk'], req),
   },
+  // M8: 终端面板
+  pty: {
+    create: (req: InvokeMap['pty:create']['request']) =>
+      safeInvoke(IPC_CHANNELS['pty:create'], req),
+    write: (req: InvokeMap['pty:write']['request']) => safeInvoke(IPC_CHANNELS['pty:write'], req),
+    resize: (req: InvokeMap['pty:resize']['request']) =>
+      safeInvoke(IPC_CHANNELS['pty:resize'], req),
+    kill: (req: InvokeMap['pty:kill']['request']) => safeInvoke(IPC_CHANNELS['pty:kill'], req),
+  },
+  // M8: 会话树 / fork
+  session_tree: {
+    getTree: (req: InvokeMap['session:get-tree']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:get-tree'], req),
+    fork: (req: InvokeMap['session:fork']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:fork'], req),
+    navigateTree: (req: InvokeMap['session:navigate-tree']['request']) =>
+      safeInvoke(IPC_CHANNELS['session:navigate-tree'], req),
+  },
+  // M8: 上下文用量
+  contextUsage: (req: InvokeMap['session:context-usage']['request']) =>
+    safeInvoke(IPC_CHANNELS['session:context-usage'], req),
   onSessionEvent: (cb: (payload: EventMap['event:session']) => void) =>
     safeOn(EVENT_CHANNELS['event:session'], cb),
   onApprovalEvent: (cb: (payload: EventMap['event:approval']) => void) =>
     safeOn(EVENT_CHANNELS['event:approval'], cb),
   onResourcesEvent: (cb: (payload: EventMap['event:resources']) => void) =>
     safeOn(EVENT_CHANNELS['event:resources'], cb),
+  // M8: 终端输出
+  onPtyEvent: (cb: (payload: EventMap['event:pty']) => void) =>
+    safeOn(EVENT_CHANNELS['event:pty'], cb),
   platform: process.platform,
 };
 

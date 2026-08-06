@@ -82,6 +82,17 @@ export const IPC_CHANNELS = {
   'profile:switch': 'profile:switch',
   'profile:delete': 'profile:delete',
   'extensions:list': 'extensions:list',
+  // M8: 终端面板（README 9.6）
+  'pty:create': 'pty:create',
+  'pty:write': 'pty:write',
+  'pty:resize': 'pty:resize',
+  'pty:kill': 'pty:kill',
+  // M8: 会话树/fork（README 9.4 会话头）
+  'session:get-tree': 'session:get-tree',
+  'session:fork': 'session:fork',
+  'session:navigate-tree': 'session:navigate-tree',
+  // M8: 上下文用量（README 9.4.1 token 徽标）
+  'session:context-usage': 'session:context-usage',
 } as const;
 
 /** 请求/响应通道（invoke） */
@@ -92,6 +103,8 @@ export const EVENT_CHANNELS = {
   'event:session': 'event:session',
   'event:approval': 'event:approval',
   'event:resources': 'event:resources',
+  // M8: 终端输出流（README 9.6）
+  'event:pty': 'event:pty',
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

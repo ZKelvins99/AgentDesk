@@ -34,6 +34,7 @@ if (!gotTheLock) {
       extensions: runtime.extensions,
       fileTree: runtime.fileTree,
       diff: runtime.diff,
+      pty: runtime.pty,
       kernelBinary: runtime.kernel.binary,
       uplink: runtime.uplink,
     });

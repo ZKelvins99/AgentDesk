@@ -1017,6 +1017,96 @@ export const resourcesEventSchema = z.object({
 });
 export type ResourcesEvent = z.infer<typeof resourcesEventSchema>;
 
+/** M8: PTY 终端（README 9.6） */
+export const ptyCreateRequestSchema = z.object({
+  /** 终端工作目录（workspace cwd） */
+  cwd: z.string(),
+  /** 初始列数 */
+  cols: z.number().int().positive().default(80),
+  /** 初始行数 */
+  rows: z.number().int().positive().default(24),
+});
+export const ptyCreateResponseSchema = z.object({
+  ptyId: z.string(),
+  /** false = node-pty ABI 失败，终端面板应降级为禁用 */
+  available: z.boolean(),
+});
+
+export const ptyWriteRequestSchema = z.object({
+  ptyId: z.string(),
+  data: z.string(),
+});
+
+export const ptyResizeRequestSchema = z.object({
+  ptyId: z.string(),
+  cols: z.number().int().positive(),
+  rows: z.number().int().positive(),
+});
+
+export const ptyKillRequestSchema = z.object({
+  ptyId: z.string(),
+});
+
+/** PTY 输出事件 */
+export const ptyEventSchema = z.object({
+  ptyId: z.string(),
+  data: z.string(),
+});
+export type PtyEvent = z.infer<typeof ptyEventSchema>;
+
+/** M8: 会话树 / fork（README 9 会话头） */
+export const sessionTreeNodeSchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  label: z.string(),
+  isActive: z.boolean(),
+  messageCount: z.number().int().nonnegative(),
+  createdAt: z.number(),
+});
+export type SessionTreeNode = z.infer<typeof sessionTreeNodeSchema>;
+
+export const sessionGetTreeRequestSchema = z.object({
+  sessionId: z.string().min(1),
+});
+export const sessionGetTreeResponseSchema = z.object({
+  nodes: z.array(sessionTreeNodeSchema),
+});
+
+export const sessionForkRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  /** 从哪个消息 ID 开始 fork */
+  fromMessageId: z.string().min(1),
+});
+export const sessionForkResponseSchema = z.object({
+  newSessionId: z.string(),
+});
+
+export const sessionNavigateTreeRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  /** 目标节点 ID */
+  nodeId: z.string().min(1),
+});
+
+/** M8: 上下文用量（README 9.4.1 token 徽标） */
+export const sessionContextUsageRequestSchema = z.object({
+  sessionId: z.string().min(1),
+});
+export const sessionContextUsageResponseSchema = z.object({
+  /** 已用 token */
+  used: z.number().int().nonnegative(),
+  /** 模型上限 */
+  limit: z.number().int().positive(),
+  /** 压缩阈值（超过即发起压缩） */
+  compactionThreshold: z.number().int().positive(),
+  /** 当前回合的输入/输出 token 分拆 */
+  breakdown: z.object({
+    input: z.number().int().nonnegative(),
+    output: z.number().int().nonnegative(),
+    cacheRead: z.number().int().nonnegative(),
+    cacheWrite: z.number().int().nonnegative(),
+  }),
+});
+
 export interface InvokeMap {
   'app:ping': {
     request: z.infer<typeof pingRequestSchema>;
@@ -1319,6 +1409,41 @@ export interface InvokeMap {
     request: z.infer<typeof extensionsListRequestSchema>;
     response: z.infer<typeof extensionsListResponseSchema>;
   };
+  // M8: 终端面板
+  'pty:create': {
+    request: z.infer<typeof ptyCreateRequestSchema>;
+    response: z.infer<typeof ptyCreateResponseSchema>;
+  };
+  'pty:write': {
+    request: z.infer<typeof ptyWriteRequestSchema>;
+    response: undefined;
+  };
+  'pty:resize': {
+    request: z.infer<typeof ptyResizeRequestSchema>;
+    response: undefined;
+  };
+  'pty:kill': {
+    request: z.infer<typeof ptyKillRequestSchema>;
+    response: undefined;
+  };
+  // M8: 会话树 / fork
+  'session:get-tree': {
+    request: z.infer<typeof sessionGetTreeRequestSchema>;
+    response: z.infer<typeof sessionGetTreeResponseSchema>;
+  };
+  'session:fork': {
+    request: z.infer<typeof sessionForkRequestSchema>;
+    response: z.infer<typeof sessionForkResponseSchema>;
+  };
+  'session:navigate-tree': {
+    request: z.infer<typeof sessionNavigateTreeRequestSchema>;
+    response: undefined;
+  };
+  // M8: 上下文用量
+  'session:context-usage': {
+    request: z.infer<typeof sessionContextUsageRequestSchema>;
+    response: z.infer<typeof sessionContextUsageResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -1326,6 +1451,8 @@ export interface EventMap {
   'event:session': z.infer<typeof sessionEventSchema>;
   'event:approval': z.infer<typeof approvalRequestViewSchema>;
   'event:resources': z.infer<typeof resourcesEventSchema>;
+  // M8: 终端输出
+  'event:pty': z.infer<typeof ptyEventSchema>;
 }
 
 /** 运行时请求校验表：main 侧 handler 执行前必须过 zod（README 16.1）。 */
@@ -1409,6 +1536,17 @@ export const invokeRequestSchemas = {
   'profile:switch': profileSwitchRequestSchema,
   'profile:delete': profileDeleteRequestSchema,
   'extensions:list': extensionsListRequestSchema,
+  // M8: 终端
+  'pty:create': ptyCreateRequestSchema,
+  'pty:write': ptyWriteRequestSchema,
+  'pty:resize': ptyResizeRequestSchema,
+  'pty:kill': ptyKillRequestSchema,
+  // M8: 会话树
+  'session:get-tree': sessionGetTreeRequestSchema,
+  'session:fork': sessionForkRequestSchema,
+  'session:navigate-tree': sessionNavigateTreeRequestSchema,
+  // M8: 上下文用量
+  'session:context-usage': sessionContextUsageRequestSchema,
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

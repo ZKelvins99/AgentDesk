@@ -369,6 +369,33 @@ declare global {
       onResourcesEvent(
         cb: (payload: { sessionId?: string; resources: ResourceSnapshot }) => void,
       ): () => void;
+      // M8: 终端面板
+      pty: {
+        create(req: {
+          cwd: string;
+          cols?: number;
+          rows?: number;
+        }): Promise<{ ptyId: string; available: boolean }>;
+        write(req: { ptyId: string; data: string }): Promise<void>;
+        resize(req: { ptyId: string; cols: number; rows: number }): Promise<void>;
+        kill(req: { ptyId: string }): Promise<void>;
+      };
+      // M8: 会话树 / fork
+      session_tree: {
+        getTree(req: {
+          sessionId: string;
+        }): Promise<{ nodes: import('@agentdesk/ipc').SessionTreeNode[] }>;
+        fork(req: { sessionId: string; fromMessageId: string }): Promise<{ newSessionId: string }>;
+        navigateTree(req: { sessionId: string; nodeId: string }): Promise<void>;
+      };
+      // M8: 上下文用量
+      contextUsage(req: { sessionId: string }): Promise<{
+        used: number;
+        limit: number;
+        compactionThreshold: number;
+        breakdown: { input: number; output: number; cacheRead: number; cacheWrite: number };
+      }>;
+      onPtyEvent(cb: (payload: { ptyId: string; data: string }) => void): () => void;
     };
   }
 }
