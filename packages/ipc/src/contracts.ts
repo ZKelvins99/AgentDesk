@@ -27,7 +27,11 @@ export const sessionCreateResponseSchema = z.object({
   workspacePath: z.string(),
 });
 
-export const sessionAttachRequestSchema = z.object({ sessionId: z.string().min(1) });
+export const sessionAttachRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  /** 断点重传：只返回 seq 之后的事件（README 8.8.1 / M3） */
+  sinceSeq: z.number().int().nonnegative().optional(),
+});
 export const sessionAttachResponseSchema = z.object({
   sessionId: z.string(),
   workspacePath: z.string(),
@@ -50,6 +54,89 @@ export const sessionAbortRequestSchema = z.object({ sessionId: z.string().min(1)
 export const sessionSetModelRequestSchema = z.object({
   sessionId: z.string().min(1),
   model: z.string().min(1),
+});
+
+export const sessionSummarySchema = z.object({
+  id: z.string(),
+  workspaceId: z.string().nullable(),
+  workspacePath: z.string().nullable(),
+  title: z.string(),
+  provider: z.string().nullable(),
+  model: z.string().nullable(),
+  status: z.enum(['idle', 'streaming', 'degraded', 'error']),
+  messageCount: z.number().int().nonnegative(),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cacheReadTokens: z.number().int().nonnegative(),
+  cacheWriteTokens: z.number().int().nonnegative(),
+  costUsd: z.number().nonnegative(),
+  seq: z.number().int().nonnegative(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  archivedAt: z.number().nullable(),
+});
+export const sessionListRequestSchema = z.object({
+  search: z.string().optional(),
+  archived: z.boolean().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().nonnegative().optional(),
+});
+export const sessionListResponseSchema = z.object({
+  sessions: z.array(sessionSummarySchema),
+});
+
+export const sessionRenameRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  title: z.string().min(1).max(200),
+});
+
+export const sessionArchiveRequestSchema = z.object({ sessionId: z.string().min(1) });
+
+export const sessionDeleteRequestSchema = z.object({ sessionId: z.string().min(1) });
+
+export const sessionExportRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  format: z.enum(['md', 'json']),
+});
+export const sessionExportResponseSchema = z.object({
+  path: z.string(),
+  format: z.enum(['md', 'json']),
+});
+
+/** Workspace（README 8.9 / 10.2） */
+export const trustDecisionSchema = z.enum(['once', 'always', 'alwaysParent', 'never']);
+
+export const workspaceTrustSchema = z.enum(['unknown', 'once', 'always', 'alwaysParent', 'never']);
+
+export const workspaceRecordSchema = z.object({
+  id: z.string(),
+  path: z.string(),
+  name: z.string(),
+  icon: z.string().nullable(),
+  trust: workspaceTrustSchema,
+  lastOpenedAt: z.number().nullable(),
+  createdAt: z.number(),
+});
+
+export const workspaceAddRequestSchema = z.object({ path: z.string().min(1) });
+export const workspaceAddResponseSchema = z.object({
+  workspace: workspaceRecordSchema,
+  needsTrust: z.boolean(),
+});
+export const workspaceRemoveRequestSchema = z.object({ workspaceId: z.string().min(1) });
+export const workspaceListResponseSchema = z.object({
+  workspaces: z.array(workspaceRecordSchema),
+});
+export const workspaceOpenRequestSchema = z.object({ workspaceId: z.string().min(1) });
+export const workspaceOpenResponseSchema = z.object({
+  workspace: workspaceRecordSchema,
+});
+export const workspaceTrustRequestSchema = z.object({
+  workspaceId: z.string().min(1),
+  decision: trustDecisionSchema,
+});
+export const workspacePickDirectoryResponseSchema = z.object({
+  path: z.string().nullable(),
 });
 
 /** 事件推送负载：{ sessionId, seq, ev }（README 10.2 event:session） */
@@ -88,6 +175,47 @@ export interface InvokeMap {
     request: z.infer<typeof sessionSetModelRequestSchema>;
     response: undefined;
   };
+  'session:list': {
+    request: z.infer<typeof sessionListRequestSchema>;
+    response: z.infer<typeof sessionListResponseSchema>;
+  };
+  'session:rename': {
+    request: z.infer<typeof sessionRenameRequestSchema>;
+    response: undefined;
+  };
+  'session:archive': {
+    request: z.infer<typeof sessionArchiveRequestSchema>;
+    response: undefined;
+  };
+  'session:delete': {
+    request: z.infer<typeof sessionDeleteRequestSchema>;
+    response: undefined;
+  };
+  'session:export': {
+    request: z.infer<typeof sessionExportRequestSchema>;
+    response: z.infer<typeof sessionExportResponseSchema>;
+  };
+  'workspace:add': {
+    request: z.infer<typeof workspaceAddRequestSchema>;
+    response: z.infer<typeof workspaceAddResponseSchema>;
+  };
+  'workspace:remove': {
+    request: z.infer<typeof workspaceRemoveRequestSchema>;
+    response: undefined;
+  };
+  'workspace:list': { request: undefined; response: z.infer<typeof workspaceListResponseSchema> };
+  'workspace:open': {
+    request: z.infer<typeof workspaceOpenRequestSchema>;
+    response: z.infer<typeof workspaceOpenResponseSchema>;
+  };
+  'workspace:trust': {
+    request: z.infer<typeof workspaceTrustRequestSchema>;
+    response: undefined;
+  };
+  'workspace:pick-directory': {
+    request: undefined;
+    response: z.infer<typeof workspacePickDirectoryResponseSchema>;
+  };
 }
 
 /** 事件推送映射（主 → 渲染，单向 send）。 */
@@ -107,6 +235,17 @@ export const invokeRequestSchemas = {
   'session:send': sessionSendRequestSchema,
   'session:abort': sessionAbortRequestSchema,
   'session:set-model': sessionSetModelRequestSchema,
+  'session:list': sessionListRequestSchema,
+  'session:rename': sessionRenameRequestSchema,
+  'session:archive': sessionArchiveRequestSchema,
+  'session:delete': sessionDeleteRequestSchema,
+  'session:export': sessionExportRequestSchema,
+  'workspace:add': workspaceAddRequestSchema,
+  'workspace:remove': workspaceRemoveRequestSchema,
+  'workspace:list': z.undefined(),
+  'workspace:open': workspaceOpenRequestSchema,
+  'workspace:trust': workspaceTrustRequestSchema,
+  'workspace:pick-directory': z.undefined(),
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export type InvokeRequest<C extends keyof InvokeMap> = InvokeMap[C]['request'];

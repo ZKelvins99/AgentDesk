@@ -13,6 +13,17 @@ export const IPC_CHANNELS = {
   'session:send': 'session:send',
   'session:abort': 'session:abort',
   'session:set-model': 'session:set-model',
+  'session:list': 'session:list',
+  'session:rename': 'session:rename',
+  'session:archive': 'session:archive',
+  'session:delete': 'session:delete',
+  'session:export': 'session:export',
+  'workspace:add': 'workspace:add',
+  'workspace:remove': 'workspace:remove',
+  'workspace:list': 'workspace:list',
+  'workspace:open': 'workspace:open',
+  'workspace:trust': 'workspace:trust',
+  'workspace:pick-directory': 'workspace:pick-directory',
 } as const;
 
 /** 请求/响应通道（invoke） */
