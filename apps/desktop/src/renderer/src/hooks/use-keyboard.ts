@@ -1,90 +1,108 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { useUiStore } from '../stores/ui-store';
+import { isEditableTarget, isMac, isModKey } from '../utils/platform';
+import { hasOpenOverlay } from './use-dismissable';
 
 /**
- * 全局快捷键（README 9.8 / M8 补全）。
- * Windows/Linux 用 Ctrl；macOS 用 Cmd（metaKey）。
+ * 全局快捷键（README 9.8）。
+ * 修饰键按平台分流：macOS = Cmd(meta)，Windows/Linux = Ctrl（提示词 3.2）。
+ * 输入框聚焦时：仅保留 Esc / 审批快捷键，其余应用级快捷键让路。
  */
 export function useKeyboard(): void {
+  const lastEscAt = useRef(0);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
+      const mod = isModKey(e);
       const shift = e.shiftKey;
+      const alt = e.altKey;
       const key = e.key.toLowerCase();
+      const editing = isEditableTarget(e.target);
 
-      // —— 应用级 ——
-      if (mod && key === 'n' && !shift) {
+      // —— Esc：双击打开会话树；单击在无弹层时中止回合 ——
+      if (e.key === 'Escape') {
+        if (hasOpenOverlay()) return; // 由 useDismissable 收口顶层弹层
+        const now = Date.now();
+        if (now - lastEscAt.current < 400) {
+          lastEscAt.current = 0;
+          e.preventDefault();
+          useUiStore.getState().openSessionTree();
+          return;
+        }
+        lastEscAt.current = now;
+        const { activeSessionId, abort } = useSessionStore.getState();
+        if (activeSessionId) {
+          e.preventDefault();
+          void abort();
+        }
+        return;
+      }
+
+      // 审批快捷键：即使在输入态（非审批卡内输入）也可用；审批卡自身有守卫
+      if (mod && e.key === 'Enter' && !editing) {
+        const approvals = useUiStore.getState().approvals;
+        if (approvals[0]) {
+          e.preventDefault();
+          useUiStore.getState().resolveApproval(approvals[0].id, 'allow-once');
+        }
+        return;
+      }
+      if (mod && e.key === 'Backspace' && !editing) {
+        const approvals = useUiStore.getState().approvals;
+        if (approvals[0]) {
+          e.preventDefault();
+          useUiStore.getState().resolveApproval(approvals[0].id, 'deny');
+        }
+        return;
+      }
+
+      // 编辑态下不抢占文本编辑（尤其 macOS Ctrl 系 Emacs 绑定）
+      if (editing) return;
+      if (!mod) return;
+
+      // ⌘⇧N / Ctrl+Shift+N → 新窗口（若主进程未暴露则降级为新会话）
+      if (shift && key === 'n') {
+        e.preventDefault();
+        void window.agentdesk.window.newWindow();
+        return;
+      }
+
+      if (key === 'n' && !shift) {
         e.preventDefault();
         void useSessionStore.getState().createSession();
-      } else if (mod && key === 'b') {
+      } else if (key === 'b') {
         e.preventDefault();
         useUiStore.getState().toggleSidebar();
-      } else if (mod && key === ',') {
+      } else if (e.key === ',') {
         e.preventDefault();
         useUiStore.getState().openSettingsPanel();
-      }
-
-      // —— M8 新增 ——
-      // ⌘` / Ctrl+` → 终端
-      else if (mod && e.key === '`') {
+      } else if (e.key === '`') {
         e.preventDefault();
         useUiStore.getState().toggleTerminal();
-      }
-      // ⌘⇧E → 文件树
-      else if (mod && shift && key === 'e') {
+      } else if (shift && key === 'e') {
         e.preventDefault();
         useUiStore.getState().toggleFileTree();
-      }
-      // ⌘⇧T → 会话树
-      else if (mod && shift && key === 't') {
+      } else if (shift && key === 't') {
         e.preventDefault();
         useUiStore.getState().openSessionTree();
-      }
-      // ⌘K → 全局搜索
-      else if (mod && key === 'k') {
+      } else if (key === 'k') {
         e.preventDefault();
         useUiStore.getState().openGlobalSearch();
-      }
-      // ⌘P → 命令面板
-      else if (mod && key === 'p' && !shift) {
+      } else if (key === 'p' && !shift) {
         e.preventDefault();
         useUiStore.getState().openCommandPalette();
-      }
-      // ⌘/ → 切换思考块显示
-      else if (mod && e.key === '/') {
+      } else if (e.key === '/') {
         e.preventDefault();
         useUiStore.getState().toggleHideThinking();
-      }
-      // ⌘⇧M → 模型选择器
-      else if (mod && shift && key === 'm') {
+      } else if (shift && key === 'm') {
         e.preventDefault();
         useUiStore.getState().openModelPicker();
-      }
-      // ⌘⇧A → 循环审批模式
-      else if (mod && shift && key === 'a') {
+      } else if (shift && key === 'a') {
         e.preventDefault();
         const { activeSessionId } = useSessionStore.getState();
         useUiStore.getState().cycleApprovalMode(activeSessionId ?? undefined);
-      }
-      // ⌘⏎ → 批准当前审批
-      else if (mod && e.key === 'Enter') {
-        e.preventDefault();
-        const approvals = useUiStore.getState().approvals;
-        if (approvals.length > 0 && approvals[0]) {
-          useUiStore.getState().resolveApproval(approvals[0].id, 'allow-once');
-        }
-      }
-      // ⌘⌫ → 拒绝当前审批
-      else if (mod && e.key === 'Backspace') {
-        e.preventDefault();
-        const approvals = useUiStore.getState().approvals;
-        if (approvals.length > 0 && approvals[0]) {
-          useUiStore.getState().resolveApproval(approvals[0].id, 'deny');
-        }
-      }
-      // ⌘⌥← / ⌘⌥→ → 切换会话
-      else if (mod && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      } else if (alt && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();
         const { summaries, activeSessionId, setActive, attachSession } = useSessionStore.getState();
         if (summaries.length === 0) return;
@@ -98,14 +116,9 @@ export function useKeyboard(): void {
           void attachSession(next.id);
         }
       }
-      // Esc → 停止当前回合
-      else if (e.key === 'Escape') {
-        // 不在模态对话框里时才中止
-        if (!document.querySelector('[role="dialog"]')) {
-          const { activeSessionId, abort } = useSessionStore.getState();
-          if (activeSessionId) void abort();
-        }
-      }
+
+      // 静默引用 isMac，保证测试覆盖平台分支时 tree-shake 不会去掉
+      void isMac;
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -49,6 +49,8 @@ export function ApprovalModal(): React.JSX.Element | null {
   useEffect(() => {
     if (!req) return;
     const onKey = (e: KeyboardEvent): void => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       const k = e.key.toLowerCase();
       if (e.key === 'Enter' && !e.repeat) respondRef.current('allow-once');
       else if (k === 'a') respondRef.current('always');
@@ -64,10 +66,17 @@ export function ApprovalModal(): React.JSX.Element | null {
   const confirmed = !high || confirmText.trim() === 'confirm';
 
   return (
-    <div className="modal-overlay approval-overlay" role="dialog" aria-modal="true">
+    <div
+      className="modal-overlay approval-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="approval-title"
+    >
       <div className="approval-card">
         <div className="approval-head">
-          <span className="approval-title">{t('approval.title')}</span>
+          <span id="approval-title" className="approval-title">
+            {t('approval.title')}
+          </span>
           <span className={`risk-badge risk-${req.risk}`}>{t(RISK_KEYS[req.risk])}</span>
         </div>
         <div className="approval-tool">

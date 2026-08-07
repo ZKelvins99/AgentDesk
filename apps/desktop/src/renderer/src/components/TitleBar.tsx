@@ -1,5 +1,6 @@
 import { t } from '../i18n';
 import { type Theme, useUiStore } from '../stores/ui-store';
+import { isMac as detectMac } from '../utils/platform';
 import { Icon, type IconName } from './Icon';
 
 const THEME_ICON: Record<Theme, IconName> = {
@@ -10,11 +11,11 @@ const THEME_ICON: Record<Theme, IconName> = {
 
 const THEME_ORDER: Theme[] = ['dark', 'light', 'system'];
 
-/** 自绘标题栏（README 9.1）：32px 拖拽区；macOS 让位交通灯，其他平台自绘窗口控制。 */
+/** 自绘标题栏（README 9.1）：36px 拖拽区；macOS 让位交通灯，其他平台自绘窗口控制。 */
 export function TitleBar(): React.JSX.Element {
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
-  const isMac = window.agentdesk.platform === 'darwin';
+  const isMac = detectMac();
 
   const cycleTheme = () => {
     const idx = THEME_ORDER.indexOf(theme);

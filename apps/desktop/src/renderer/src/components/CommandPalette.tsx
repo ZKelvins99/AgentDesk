@@ -160,14 +160,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.JSX.Elem
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const execute = (cmd: Command) => {
     cmd.action();
     onClose();
@@ -196,7 +188,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps): React.JSX.Elem
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        // Esc 由 useDismissable 统一收口；Enter 点击遮罩等同关闭
+        if (e.key === 'Enter' && e.target === e.currentTarget) onClose();
       }}
     >
       <div className="command-palette-panel">

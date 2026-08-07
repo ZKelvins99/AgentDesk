@@ -40,15 +40,6 @@ export function SessionTreeOverlay({
     void load();
   }, [load]);
 
-  /** Esc 关闭浮层 */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const handleNavigate = async (nodeId: string) => {
     try {
       await window.agentdesk.session_tree.navigateTree({ sessionId, nodeId });
@@ -107,7 +98,6 @@ export function SessionTreeOverlay({
   const roots = nodes.filter((n) => n.parentId === null);
 
   return (
-    /* eslint-disable jsx-a11y/click-events-have-key-events */
     <div
       className="session-tree-overlay"
       role="dialog"
@@ -117,7 +107,7 @@ export function SessionTreeOverlay({
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && e.target === e.currentTarget) onClose();
       }}
     >
       <div className="session-tree-panel">

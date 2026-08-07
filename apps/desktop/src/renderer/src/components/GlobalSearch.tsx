@@ -40,15 +40,6 @@ export function GlobalSearch({ onClose }: GlobalSearchProps): React.JSX.Element 
     inputRef.current?.focus();
   }, []);
 
-  /** Esc 关闭 */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   /** 搜索逻辑 */
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -134,7 +125,7 @@ export function GlobalSearch({ onClose }: GlobalSearchProps): React.JSX.Element 
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && e.target === e.currentTarget) onClose();
       }}
     >
       <div className="global-search-panel">

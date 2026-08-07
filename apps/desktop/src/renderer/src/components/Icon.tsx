@@ -1,10 +1,8 @@
 /**
- * 统一图标组件。
- *
- * 原先各处直接用 emoji / 生僻字符（🔍 🔔 ⎇ ⧉ ⧩ …），在 Windows 上会退化成
- * 彩色 emoji 或缺字方框，且无法跟随文字颜色。这里改为单色线性 SVG：
- * 统一 24 视窗、currentColor 描边，视觉与 codex 一致。
+ * 统一图标组件（Windows Fluent / macOS SF Symbols 双套）。
+ * 语义名完全相同；缺省套回退到默认 path，不允许渲染空白。
  */
+import { isMac } from '../utils/platform';
 
 export type IconName =
   | 'search'
@@ -52,7 +50,8 @@ export type IconName =
   | 'settings'
   | 'tool';
 
-const PATHS: Record<IconName, React.ReactNode> = {
+/** 默认 / macOS（SF Symbols 取向：圆润末端） */
+const PATHS_MAC: Record<IconName, React.ReactNode> = {
   search: (
     <>
       <circle cx="11" cy="11" r="7" />
@@ -265,16 +264,58 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
 };
 
-/** 线性单色图标；size 同时决定描边视觉粗细的相对比例。 */
+/**
+ * Windows Fluent 取向覆盖：几何更方正；未列出的名称回退 PATHS_MAC。
+ * 线宽 / 线帽在组件层按平台统一调整。
+ */
+const PATHS_WIN: Partial<Record<IconName, React.ReactNode>> = {
+  maximize: <rect x="5" y="5" width="14" height="14" rx="0.5" />,
+  minimize: <path d="M4 12h16" />,
+  close: <path d="M6 6l12 12M18 6 6 18" />,
+  stop: <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none" />,
+  panelLeft: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <path d="M9 3v18" />
+    </>
+  ),
+  panelRight: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <path d="M15 3v18" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M16 16l5 5" />
+    </>
+  ),
+};
+
+function resolvePath(name: IconName): React.ReactNode {
+  const mac = PATHS_MAC[name];
+  if (isMac()) return mac;
+  return PATHS_WIN[name] ?? mac;
+}
+
+/** 图标尺寸档位：与控件 sm/md/lg 对齐，调用方可仍传数字。 */
+export type IconSize = 12 | 14 | 16 | number;
+
+/** 线性单色图标；线宽随尺寸与平台微调以保证光学一致。 */
 export function Icon({
   name,
-  size = 16,
+  size = 14,
   className,
 }: {
   name: IconName;
-  size?: number;
+  size?: IconSize;
   className?: string;
 }): React.JSX.Element {
+  const mac = isMac();
+  const strokeWidth =
+    size <= 12 ? (mac ? 1.6 : 1.85) : size <= 14 ? (mac ? 1.7 : 1.95) : mac ? 1.75 : 2;
+  const path = resolvePath(name);
   return (
     <svg
       className={className ? `icon ${className}` : 'icon'}
@@ -283,13 +324,14 @@ export function Icon({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth={strokeWidth}
+      strokeLinecap={mac ? 'round' : 'square'}
+      strokeLinejoin={mac ? 'round' : 'miter'}
       aria-hidden="true"
       focusable="false"
+      data-icon-set={mac ? 'sf' : 'fluent'}
     >
-      {PATHS[name]}
+      {path}
     </svg>
   );
 }

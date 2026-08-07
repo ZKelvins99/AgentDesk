@@ -42,15 +42,6 @@ export function ContextUsageDrawer({
     void load();
   }, [load]);
 
-  /** Esc 关闭 */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const pct = usage ? Math.min(Math.round((usage.used / usage.limit) * 100), 100) : 0;
   const nearLimit = usage ? usage.used >= usage.compactionThreshold : false;
 
@@ -63,7 +54,7 @@ export function ContextUsageDrawer({
         if (e.target === e.currentTarget) onClose();
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && e.target === e.currentTarget) onClose();
       }}
     >
       <div className="context-drawer-panel">

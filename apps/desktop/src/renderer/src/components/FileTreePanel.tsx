@@ -13,11 +13,17 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
   const [searching, setSearching] = useState(false);
   const [matches, setMatches] = useState<Array<{ path: string }> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 用 ref 做去重守卫，避免 loadDir 因 entries/loading 变化而重建，
+  // 进而触发「重置 → 加载 → 再重置」的刷新闪烁死循环。
+  const entriesRef = useRef(entries);
+  const loadingRef = useRef(loading);
+  entriesRef.current = entries;
+  loadingRef.current = loading;
   const openDiff = useUiStore((s) => s.openDiff);
 
   const loadDir = useCallback(
     async (dir: string): Promise<void> => {
-      if (entries[dir] !== undefined || loading[dir]) return;
+      if (entriesRef.current[dir] !== undefined || loadingRef.current[dir]) return;
       setLoading((s) => ({ ...s, [dir]: true }));
       setError('');
       try {
@@ -29,13 +35,15 @@ export function FileTreePanel({ root }: { root: string }): React.JSX.Element | n
         setLoading((s) => ({ ...s, [dir]: false }));
       }
     },
-    [entries, loading, root],
+    [root],
   );
 
   useEffect(() => {
     setEntries({});
+    setLoading({});
     setExpanded(new Set([root]));
     setMatches(null);
+    setError('');
     void loadDir(root);
   }, [root, loadDir]);
 

@@ -19,6 +19,7 @@ import { TrustDialog } from './components/TrustDialog';
 import { UpdateBanner } from './components/UpdateBanner';
 import { SessionView } from './features/session/SessionView';
 import { useApprovalEvents } from './hooks/use-approval-events';
+import { useDismissable } from './hooks/use-dismissable';
 import { useKeyboard } from './hooks/use-keyboard';
 import { useSessionEvents } from './hooks/use-session-events';
 import { useTheme } from './hooks/use-theme';
@@ -31,6 +32,7 @@ export default function App(): React.JSX.Element {
   useSessionEvents();
   useApprovalEvents();
   useKeyboard();
+  useDismissable();
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
 
   // M9：首次启动引导页（README 9.11 / 15）
