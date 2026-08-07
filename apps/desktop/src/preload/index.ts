@@ -40,6 +40,7 @@ const api = {
     minimize: () => safeInvoke(IPC_CHANNELS['window:minimize'], undefined),
     maximize: () => safeInvoke(IPC_CHANNELS['window:maximize'], undefined),
     close: () => safeInvoke(IPC_CHANNELS['window:close'], undefined),
+    newWindow: () => safeInvoke(IPC_CHANNELS['window:new'], undefined),
   },
   session: {
     create: (req: { workspacePath?: string; model?: string; thinkingLevel?: ThinkingLevel }) =>

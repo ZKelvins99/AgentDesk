@@ -86,6 +86,7 @@ import type { ExtensionCompatService } from './extensions/extension-compat';
 import type { KernelManager } from './kernel/kernel-manager';
 import type { McpConfigStore } from './mcp/mcp-config';
 import type { McpConnectionManager } from './mcp/mcp-manager';
+import type { OnboardingStore } from './onboarding/onboarding-store';
 import type {
   PackageInstallSource,
   PackageManager,
@@ -95,7 +96,6 @@ import type { PackageSecurityInspector } from './packages/package-security';
 import type { ProfileManager } from './profile/profile-manager';
 import type { ProviderManager } from './providers';
 import type { PtyService } from './pty/pty-service';
-import type { OnboardingStore } from './onboarding/onboarding-store';
 import type { SessionManager } from './session/session-manager';
 import type { SkillManager } from './skills/skill-manager';
 import type { WorkspaceManager } from './storage';
@@ -207,6 +207,11 @@ export function registerIpcHandlers(deps: IpcHandlerDeps): void {
 
   ipcMain.handle(IPC_CHANNELS['window:close'], (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS['window:new'], async () => {
+    const { createMainWindow } = await import('./windows');
+    createMainWindow();
   });
 
   // ---- 会话（README 10.2 session:*）----

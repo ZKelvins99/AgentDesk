@@ -1217,6 +1217,7 @@ export interface InvokeMap {
   'window:minimize': { request: undefined; response: undefined };
   'window:maximize': { request: undefined; response: undefined };
   'window:close': { request: undefined; response: undefined };
+  'window:new': { request: undefined; response: undefined };
   'session:create': {
     request: z.infer<typeof sessionCreateRequestSchema>;
     response: z.infer<typeof sessionCreateResponseSchema>;
@@ -1575,6 +1576,7 @@ export const invokeRequestSchemas = {
   'window:minimize': z.undefined(),
   'window:maximize': z.undefined(),
   'window:close': z.undefined(),
+  'window:new': z.undefined(),
   'session:create': sessionCreateRequestSchema,
   'session:attach': sessionAttachRequestSchema,
   'session:send': sessionSendRequestSchema,

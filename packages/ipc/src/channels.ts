@@ -19,6 +19,7 @@ export const IPC_CHANNELS = {
   'window:minimize': 'window:minimize',
   'window:maximize': 'window:maximize',
   'window:close': 'window:close',
+  'window:new': 'window:new',
   'session:create': 'session:create',
   'session:attach': 'session:attach',
   'session:send': 'session:send',
