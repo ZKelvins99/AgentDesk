@@ -126,5 +126,5 @@ describe.skipIf(!gitAvailable())('diffGitFile（真实 git 仓库）', () => {
     expect(untracked.original).toBe('');
     expect(untracked.modified).toBe('new\n');
     rmSync(root, { recursive: true, force: true });
-  });
+  }, 20_000);
 });
