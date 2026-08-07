@@ -17,6 +17,7 @@
     "kernel:fetch": "node scripts/fetch-pi-binary.mjs",
     "verify:pi-facts": "node scripts/verify-pi-facts.mjs",
     "verify:i18n": "node scripts/check-i18n.mjs",
+    "verify:tokens": "node scripts/check-tokens.mjs",
     "dist": "turbo run dist --filter=@agentdesk/desktop"
   },
   "devDependencies": {

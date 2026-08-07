@@ -14,7 +14,7 @@ export function createMainWindow(): BrowserWindow {
     title: 'AgentDesk',
     frame: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
-    backgroundColor: '#0d0d0f',
+    backgroundColor: '#212121',
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -34,10 +34,16 @@ export function createMainWindow(): BrowserWindow {
     return { action: 'deny' };
   });
 
+  const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'));
+  }
+
+  // 开发模式自动打开 DevTools，便于排查启动黑屏 / 渲染崩溃
+  if (isDev || process.env.AGENTDESK_DEVTOOLS === '1') {
+    win.webContents.openDevTools({ mode: 'detach' });
   }
 
   return win;

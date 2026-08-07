@@ -1,30 +1,90 @@
-/* AgentDesk 主题 token（README 9.1）：深色为默认，浅色/跟随系统可切。
-   主题即一组 CSS 变量；支持导入 pi theme 文件配色映射。 */
+/* AgentDesk 主题 token（README 9.1，以 e8acffb 后实现为准）。
+   唯一色彩 / 字号 / 间距 / 圆角 / 层级来源。禁止在 styles.css 硬编码这些值。 */
 
 :root {
   color-scheme: dark;
+
+  /* —— 字体族：各平台系统 CJK 置于 sans-serif 之前，避免中英混排基线跳动 —— */
   --font-ui:
-    ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", Inter, "Noto Sans SC", sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC",
+    sans-serif;
+  --font-mono:
+    ui-monospace, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas, "Sarasa Mono SC",
+    "Noto Sans Mono CJK SC", monospace;
+
+  /* —— 字号阶梯（6 级，全部整数 px） —— */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
   --font-size-base: 14px;
-  --font-size-sm: 12.5px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+
+  /* —— 行高阶梯 —— */
+  --line-height-tight: 1.25;
   --line-height-base: 1.65;
+  --line-height-relaxed: 1.75;
+
+  /* —— 间距阶梯（4px 基准） —— */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* —— 圆角 —— */
   --radius-sm: 6px;
   --radius-card: 12px;
-  /* 列表项 / 普通按钮 */
   --radius-chip: 8px;
-  /* 徽标类胶囊（模型、审批模式） */
   --radius-pill: 999px;
   --radius-bubble: 18px;
   --radius-lg: 16px;
+
+  /* —— 控件尺寸档位 —— */
+  --control-h-sm: 28px;
+  --control-h-md: 32px;
+  --control-h-lg: 36px;
+  --icon-sm: 12px;
+  --icon-md: 14px;
+  --icon-lg: 16px;
+
+  /* —— 布局常量 —— */
   --titlebar-height: 36px;
   --session-header-height: 48px;
   --sidebar-width: 264px;
   --msg-vspace: 18px;
+  --msg-max-width: 76ch;
+  --overlay-max-width: 560px;
+  --overlay-max-height: min(80vh, 720px);
+
+  /* —— 动效 —— */
   --motion-in: 140ms;
   --motion-out: 100ms;
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* —— 层级 —— */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+
   --focus-ring: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  --overlay-scrim: color-mix(in srgb, #000 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-in: 0ms;
+    --motion-out: 0ms;
+  }
 }
 
 :root[data-theme="dark"] {
@@ -33,22 +93,28 @@
   --bg-surface: #2a2a2a;
   --bg-elevated: #303030;
   --bg-input: #2f2f2f;
+  --bg-code: #1c1c1c;
   --bg-hover: rgb(255 255 255 / 6%);
   --bg-active: rgb(255 255 255 / 10%);
   --border-subtle: rgb(255 255 255 / 8%);
   --border-strong: rgb(255 255 255 / 16%);
+  --border-focus: var(--accent);
   --fg-primary: #ececec;
   --fg-secondary: #b4b4b4;
   --fg-muted: #8f8f8f;
+  --fg-on-accent: #ffffff;
   --accent: #6ea8fe;
   --accent-fg: #1a1a1a;
-  /* 主操作按钮（发送）：codex 风格反色实心 */
   --btn-primary-bg: #ececec;
   --btn-primary-fg: #1a1a1a;
   --ok: #5cc873;
+  --ok-bg: color-mix(in srgb, var(--ok) 12%, transparent);
   --warn: #e3b341;
+  --warn-bg: color-mix(in srgb, var(--warn) 12%, transparent);
   --danger: #f8776b;
   --danger-bg: rgb(248 119 107 / 12%);
+  --info: #6ea8fe;
+  --info-bg: color-mix(in srgb, var(--info) 12%, transparent);
   --thinking: #a99cea;
   --diff-add-bg: #12261a;
   --diff-del-bg: #2d1416;
@@ -57,6 +123,8 @@
   --shadow-lg: 0 16px 48px rgb(0 0 0 / 50%);
   --shiki-dark: #d4d4d8;
   --shiki-dark-bg: transparent;
+  --shiki-light: #d4d4d8;
+  --shiki-light-bg: transparent;
 }
 
 :root[data-theme="light"] {
@@ -66,21 +134,28 @@
   --bg-surface: #ffffff;
   --bg-elevated: #ffffff;
   --bg-input: #f4f4f4;
+  --bg-code: #f6f8fa;
   --bg-hover: rgb(0 0 0 / 4%);
   --bg-active: rgb(0 0 0 / 7%);
   --border-subtle: rgb(0 0 0 / 8%);
   --border-strong: rgb(0 0 0 / 15%);
+  --border-focus: var(--accent);
   --fg-primary: #0d0d0d;
   --fg-secondary: #5d5d5d;
   --fg-muted: #8f8f8f;
+  --fg-on-accent: #ffffff;
   --accent: #0b6ee8;
   --accent-fg: #ffffff;
   --btn-primary-bg: #0d0d0d;
   --btn-primary-fg: #ffffff;
   --ok: #1a7f37;
+  --ok-bg: color-mix(in srgb, var(--ok) 10%, transparent);
   --warn: #9a6700;
+  --warn-bg: color-mix(in srgb, var(--warn) 10%, transparent);
   --danger: #d1242f;
   --danger-bg: rgb(209 36 47 / 8%);
+  --info: #0b6ee8;
+  --info-bg: color-mix(in srgb, var(--info) 10%, transparent);
   --thinking: #6f5fc2;
   --diff-add-bg: #e6f4ea;
   --diff-del-bg: #fdebec;
@@ -89,4 +164,6 @@
   --shadow-lg: 0 16px 48px rgb(0 0 0 / 14%);
   --shiki-light: #24292f;
   --shiki-light-bg: transparent;
+  --shiki-dark: #24292f;
+  --shiki-dark-bg: transparent;
 }
