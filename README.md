@@ -1157,35 +1157,35 @@ migrations        (id, appliedAt)
 
 | 维度 | 规格 |
 |---|---|
-| 窗口 | 无系统标题栏（`titleBarStyle: 'hidden'` + `titleBarOverlay`），自绘菜单栏「文件 / 编辑 / 视图 / 帮助」；macOS 用 `trafficLightPosition` 对齐 |
-| 主题 | 深色为默认，浅色/跟随系统可切；主题即一组 CSS 变量，支持导入 pi theme 文件的配色映射 |
-| 字体 | UI：`ui-sans-serif, -apple-system, "Segoe UI Variable", "Segoe UI", Inter, "Noto Sans SC"`；等宽：`ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas` |
-| 字号 | 基准 13px（可在设置里 12/13/14/15 四档），行高 1.6，正文最大宽度 76ch |
-| 圆角 | 卡片/输入 10px，chip/按钮 8px，气泡 12px |
-| 密度 | 紧凑：侧栏行高 28px，消息块垂直间距 12px |
-| 动效 | Motion 驱动；进入 120ms `ease-out`，退出 90ms；`prefers-reduced-motion` 时全部降级为 0ms |
-| 焦点 | 全键盘可达，焦点环 2px 高对比，不使用 `outline: none` |
+| 窗口 | 无系统标题栏（`frame: false` + `titleBarStyle: 'hidden'/'hiddenInset'`），**无经典「文件/编辑/视图/帮助」菜单栏**；能力由命令面板 / 全局快捷键覆盖。macOS 让位原生交通灯（标题栏 `padding-left: 78px`），Windows/Linux 自绘窗口控件 |
+| 主题 | 深色为默认，浅色/跟随系统可切；主题即一组 CSS 变量（`packages/ui/src/theme/tokens.css`） |
+| 字体 | UI：Segoe UI / PingFang SC / Microsoft YaHei UI 等系统栈（中英混排有确定 CJK 归属）；等宽：Cascadia Code / JetBrains Mono / Sarasa Mono SC |
+| 字号 | 基准 **14px**；阶梯 `--font-size-xs…xl`（6 级，整数 px）；行高 `--line-height-base: 1.65`；正文最大宽度 76ch |
+| 圆角 | 卡片 12px，chip 8px，气泡 18px |
+| 密度 | 标题栏 36px；侧栏宽 264px；消息块垂直间距约 18px；间距走 `--space-*`（4px 基准） |
+| 动效 | `--motion-in: 140ms` / `--motion-out: 100ms` + `--ease`；`prefers-reduced-motion` 时 token 降为 0ms |
+| 焦点 | 全键盘可达，`:focus-visible` 使用 2px accent 环 + `--focus-ring`，禁止用 `outline: none` 去掉焦点 |
 
-核心 CSS 变量（`packages/ui/src/theme/tokens.css`）：
+核心 CSS 变量（`packages/ui/src/theme/tokens.css`，以实现为准）：
 
 ```css
 :root[data-theme="dark"] {
-  --bg-app:        #0d0d0f;   /* 窗口底 */
-  --bg-sidebar:    #131316;
-  --bg-surface:    #1a1a1e;   /* 卡片/工具块 */
-  --bg-elevated:   #22222a;   /* 弹层 */
-  --bg-input:      #17171b;
-  --border-subtle: #26262d;
-  --border-strong: #34343d;
-  --fg-primary:    #ececf1;
-  --fg-secondary:  #a1a1aa;
-  --fg-muted:      #6e6e78;
-  --accent:        #4d9fff;   /* 主色：链接/选中/发送 */
-  --accent-fg:     #ffffff;
-  --ok:            #3fb950;
-  --warn:          #d29922;
-  --danger:        #f85149;
-  --thinking:      #8b7fd4;   /* 思考块专用 */
+  --bg-app:        #212121;   /* 窗口底（codex 中性灰） */
+  --bg-sidebar:    #171717;
+  --bg-surface:    #2a2a2a;
+  --bg-elevated:   #303030;
+  --bg-input:      #2f2f2f;
+  --fg-primary:    #ececec;
+  --fg-secondary:  #b4b4b4;
+  --fg-muted:      #8f8f8f;
+  --accent:        #6ea8fe;
+  --accent-fg:     #1a1a1a;
+  --btn-primary-bg:#ececec;   /* 发送等主按钮：反色实心 */
+  --btn-primary-fg:#1a1a1a;
+  --ok:            #5cc873;
+  --warn:          #e3b341;
+  --danger:        #f8776b;
+  --thinking:      #a99cea;
   --diff-add-bg:   #12261a;
   --diff-del-bg:   #2d1416;
 }
@@ -1372,31 +1372,36 @@ AgentDesk  ›  重构 Pi Bridge  ✎        [42.1k/200k ▓▓▓░░]   打�
 
 ### 9.8 快捷键
 
-| 快捷键 | 动作 |
-|---|---|
-| `⌘N` / `Ctrl+N` | 新对话 |
-| `⌘⇧N` | 新窗口 |
-| `⌘K` | 全局搜索 |
-| `⌘P` | 命令面板 |
-| `⌘B` | 折叠/展开侧栏 |
-| `⌘,` | 设置 |
-| `` ⌘` `` | 终端面板 |
-| `⌘⇧E` | 文件树 |
-| `⌘⇧T` | 会话树 |
-| `⏎` / `⇧⏎` | 发送 / 换行 |
-| `Esc` | 停止当前回合 |
-| `Esc Esc` | 会话树 / fork（跟随 `doubleEscapeAction`） |
-| `⌘⏎` / `⌘⌫` | 批准 / 拒绝当前审批 |
-| `⌘⌥←/→` | 切换会话标签 |
-| `⌘/` | 切换思考块显示 |
-| `⌘⇧M` | 打开模型选择器 |
-| `⌘⇧A` | 切换审批模式 |
+修饰键：**macOS = ⌘（meta）**，**Windows/Linux = Ctrl**（实现见 `use-keyboard.ts` + `utils/platform.ts`，禁止混收 meta\|\|ctrl）。输入框聚焦时应用级快捷键让路，避免抢占文本编辑。
+
+| 动作 | macOS | Windows / Linux |
+|---|---|---|
+| 新对话 | `⌘N` | `Ctrl+N` |
+| 新窗口 | `⌘⇧N` | `Ctrl+Shift+N` |
+| 全局搜索 | `⌘K` | `Ctrl+K` |
+| 命令面板 | `⌘P` | `Ctrl+P` |
+| 折叠/展开侧栏 | `⌘B` | `Ctrl+B` |
+| 设置 | `⌘,` | `Ctrl+,` |
+| 终端面板 | `` ⌘` `` | `` Ctrl+` `` |
+| 文件树 | `⌘⇧E` | `Ctrl+Shift+E` |
+| 会话树 | `⌘⇧T` | `Ctrl+Shift+T` |
+| 发送 / 换行 | `⏎` / `⇧⏎` | 同左 |
+| 停止当前回合 | `Esc`（无弹层时） | 同左 |
+| 打开会话树 | `Esc Esc`（400ms 内双击） | 同左 |
+| 批准 / 拒绝审批 | `⌘⏎` / `⌘⌫` | `Ctrl+Enter` / `Ctrl+Backspace` |
+| 切换会话 | `⌘⌥←/→` | `Ctrl+Alt+←/→` |
+| 切换思考块显示 | `⌘/` | `Ctrl+/` |
+| 打开模型选择器 | `⌘⇧M` | `Ctrl+Shift+M` |
+| 循环审批模式 | `⌘⇧A` | `Ctrl+Shift+A` |
+| 关闭顶层弹层 | `Esc`（`useDismissable` 弹层栈） | 同左 |
+
+界面展示文案由 `utils/shortcut.ts` 按平台改写，与真实绑定一致。
 
 ### 9.9 国际化与无障碍
 
-- i18n：`zh-CN`（默认）+ `en`，`i18next` + 类型安全 key；所有面向用户的字符串禁止硬编码。
+- i18n：`zh-CN`（默认）+ `en`，类型安全 key；所有面向用户的字符串禁止硬编码（`pnpm verify:i18n`）。
 - 日期/数字/相对时间用 `Intl`；成本按用户区域格式化。
-- a11y：所有交互元素有 `aria-label`；消息流用 `role="log" aria-live="polite"`；审批卡用 `role="alertdialog"`；对比度 ≥ WCAG AA；完整键盘导航（含工具卡展开/折叠）。
+- a11y：交互元素有 `aria-label`；消息流用 `role="log" aria-live="polite"`；**审批卡 `role="alertdialog"`**（Esc 守卫走 store 弹层栈，不依赖 DOM role 选择器）；对比度 ≥ WCAG AA；完整键盘导航。
 
 ---
 
